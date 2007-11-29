@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   dm_phys/server/src/kinfo.c
+ * \file   dm_phys/server/src/kinfo.cc
  * \brief  L4 kernel info page handling
  *
  * \date   02/05/2002

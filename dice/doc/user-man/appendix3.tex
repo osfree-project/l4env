@@ -50,30 +50,3 @@ whether the server loop should respond to the message or not. If you
 return \verb|DICE_REPLY| the server loop will send a reply message.
 To skip the reply message, the default function returns \verb|DICE_NO_REPLY|.
 
-\section{L4 version X.0}
-The handling of pagefaults in version X.0 is similar to the handling
-of pagefaults in version 2. A pagefault is here determined by the
-first double word of a message being zero. The second double word
-is the pagefault address and the third the instruction pointer. This
-implies two differences:
-
-\begin{enumerate}
-\item the server loop determines a pagefault by the opcode 0 and
-\item the pagefault handler function has to extract the address and
-instruction pointer from a different position.
-\end{enumerate}
-
-The second problem is solved by using a different implementation of the
-default function for the two L4 version. The example in appendix~\ref{app:pf_handler}
-already includes code for version X.0.
-
-The first problem is solved ``by accident''. The default function
-is called for every opcode the server loop cannot match to one of its
-own opcodes. Since it only knows opcodes starting with \verb|0xC000'0001|
-and increasing, it does not know opcode 0. Thus it calls the call-back
-for this opcode as well.
-
-Therefore you may use the same IDL with the shown adaptations in
-the pagefault handler function to write a pager for L4 version 2 and
-L4 version X.0.
-

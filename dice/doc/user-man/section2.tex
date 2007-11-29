@@ -15,19 +15,17 @@ library example
 \end{verbatim}
 
 \section{Invoking \dice{}}
-\dice{} generates per default code for both client and
-server side. To translate the above example into target
-code for the C language and the L4 version 2 ABI on a
-\verb|x86| architecture, call:
+\dice{} generates per default code for both client and server side. To
+translate the above example into target code for the C language and the
+L4.Fiasco ABI on a \verb|x86| architecture, call:
 
 \begin{verbatim}
 dice test.idl
 \end{verbatim}
 
-The target language C, as well as the L4 version 2 ABI and
-the \verb|x86| architecture are default setting for the
-respective options. The above call will generate five
-files.
+The target language C, as well as the L4.Fiasco ABI and the \verb|x86|
+architecture are default setting for the respective options. The above call
+will generate five files.
 
 \begin{enumerate}
 \item \verb|test-client.h|
@@ -37,61 +35,56 @@ files.
 \item \verb|test-sys.h|
 \end{enumerate}
 
-The file \verb|test-sys.h| contains the opcodes for the
-interface as described in Section~\ref{sec:opcode}. The 
-client and server side code is contained in the respective
-files.
+The file \verb|test-sys.h| contains the opcodes for the interface as described
+in Section~\ref{sec:opcode}. The client and server side code is contained in
+the respective files.
 
 \section{Client Code}
-The client side code packs the \verb|in| data into a 
-message buffer that is send via IPC to the server.
-The declaration of the client function looks like this:
+The client side code packs the \verb|in| data into a message buffer that is
+send via IPC to the server.  The declaration of the client function looks like
+this:
 
 \begin{verbatim}
 void example_first_foo_call(CORBA_Object _dice_corba_obj,
      int parameter,
      CORBA_Environment *_dice_corba_env);
 \end{verbatim}
-		
-There are several things noteworthy. Two additional parameters have been 
-added to the function. According to the CORBA C Language
-Mapping \cite{corba-clm}. The first identifies the server, which is on 
-L4 a pointer to the thread ID (\verb|l4_threadid_t|) of the server.
-{\em \verb|CORBA_Object| is a type alias for a pointer to an
-L4 thread ID.}
-The last parameter is the CORBA
-environment, which is a collection of information denoting the
-context of the call. For more detailed information about
-the \verb|CORBA_Environment| see Section~\ref{sec:environment}.
 
-If using C as target language, the name of the function is composed of the 
-name of the library or module (\verb|example|), the name of the
-interface (\verb|first|), and the name of the function (\verb|foo|).
+There are several things noteworthy. Two additional parameters have been added
+to the function. According to the CORBA C Language Mapping \cite{corba-clm}.
+The first identifies the server, which is on L4 a pointer to the thread ID
+(\verb|l4_threadid_t|) of the server.  {\em \verb|CORBA_Object| is a type
+alias for a pointer to an L4 thread ID.} The last parameter is the CORBA
+environment, which is a collection of information denoting the context of the
+call. For more detailed information about the \verb|CORBA_Environment| see
+Section~\ref{sec:environment}.
+
+If using C as target language, the name of the function is composed of the
+name of the library or module (\verb|example|), the name of the interface
+(\verb|first|), and the name of the function (\verb|foo|).
 
 \section{Server Code}
 The function template generated for the server looks similar to the client
-side code. The only difference is the function's name. The 
-parameter list is the same as the client side function.
+side code. The only difference is the function's name. The
+parameter list is almost the same as the client side function.
 
 \begin{verbatim}
 void example_first_foo_component(CORBA_Object _dice_corba_obj,
      int parameter,
-     CORBA_Environment *_dice_corba_env);
+     CORBA_Server_Environment *_dice_corba_env);
 \end{verbatim}
 
 At the server side the \verb|CORBA_Object| parameter does not contain the ID
 of the server, but instead the ID of the sender. It can be used to identify
 the sender of a request.
 
-By default the server function is only declared in the server
-header file, but no implementation exists. One of the options
-\verb|-t| or \verb|--template| will 
-add an additional file which ends on \verb|-template.c| to
-the list of generated files. It contains function skeletons for the
-server functions. Copy these skeletons and add the
-functionality of the server. Note that every new invocation 
-of \dice{} with the mentioned options will regenerate these
-templates.
+By default the server function is only declared in the server header file, but
+no implementation exists. The option \verb|-t| or \verb|--template| will add
+an additional file which ends on \verb|-template.c| to the list of generated
+files. It contains function skeletons for the server functions. Copy these
+skeletons and add the functionality of the server. Note that every new
+invocation of \dice{} with the mentioned option will regenerate the template
+file.
 
 \section{Server Loop}
 The server's side of the communication implements
@@ -101,7 +94,7 @@ to the client. This process can be separated into the
 following steps:
 
 \begin{enumerate}
-\item receive any message
+\item wait for a new message
 \item get opcode from message
 \item check opcode, and depending on it
 \item unmarshal the \verb|in| parameters
@@ -111,10 +104,9 @@ following steps:
 \item start from the beginning (step 1)
 \end{enumerate}
 
-For performance reasons the reply and wait for new messages
-is usually combined into one step. Accordingly to the above steps,
-\dice{} generates helper functions which have the following
-endings:
+For performance reasons step 7 and 1 are usually combined into one step.
+Accordingly to the above steps, \dice{} generates helper functions which have
+the following endings:
 
 \begin{enumerate}
 \item[1.] and 2. \verb|<interface>_wait_any|
@@ -125,13 +117,13 @@ endings:
 \item[7.] and 8. \verb|<interface>_reply_and_wait|
 \end{enumerate}
 
-The functions to \verb|<interfac>_wait_any|, \verb|<interface>_dispatch|,
-and \verb|<interface>_reply_and_wait| are called inside of the 
-\verb|<interface>_server_loop| function. The \verb|<function>_*| 
+The functions \verb|<interfac>_wait_any|, \verb|<interface>_dispatch|,
+and \verb|<interface>_reply_and_wait| are called inside of the
+\verb|<interface>_server_loop| function. The \verb|<function>_*|
 functions are called in the \verb|<interface>_dispatch| function.
 
 The place holders \verb|<interface>| and \verb|<function>| show that
-the name is either interface of function specific. 
+the name is either interface of function specific.
 The aforementioned example produces
 an \verb|<interface>|-specific function with the name
 \verb|example_first_wait_any| and a \verb|<function>|-specific function
@@ -152,12 +144,12 @@ server functions.
 
 \section{Function Identifiers --- Opcodes}
 \label{sec:opcode}
-To distinguish the messages from one another, e.g. to know which 
-function should be called, the message contains at a defined position
-a number, consisting of an interface identifier and a function identifier 
- --- the {\em opcode}. This opcode is a number, which is determined by 
-the sequence of the declaration of the functions inside the interface 
-definition. For example does \dice{} generate for the following IDL:
+To distinguish the messages from one another, e.g. to know which function
+should be called, the message contains at a defined position in the message a
+number, consisting of an interface identifier and a function identifier ---
+the {\em opcode}. This opcode is a number, which is determined by the sequence
+of the declaration of the functions inside the interface definition. For
+example does \dice{} generate for the following IDL:
 
 \begin{verbatim}
 interface simple
@@ -196,11 +188,11 @@ map to the following function identifiers:
 \end{enumerate}
 
 The functions \verb|func1| and \verb|func4| are only different in the
-interface identifier, which is 1 for \verb|simple| and 2 for 
-\verb|derived|. The resulting opcode is generated by shifting the 
+interface identifier, which is 1 for \verb|simple| and 2 for
+\verb|derived|. The resulting opcode is generated by shifting the
 interface identifier left by \verb|DICE_IID_BITS|\footnote{The value
 is currently set to 20 and is defined in one of the dice header files.}
-and then AND the function identifier bitwise. Thus the opcode for 
+and then AND the function identifier bitwise. Thus the opcode for
 \verb|func1| is \verb|0x100001| and for \verb|func4| is \verb|0x200001|.
 
 \subsection{Defining Opcodes}
@@ -209,7 +201,7 @@ To determine the interface and function identifiers yourself,
 you may use the \verb|uuid|\footnote{{\tt uuid} stands for Universal
 Unique Identifier and is supposed to contain a 128 bit number. The DCE
 Specification allows the {\tt uuid} attribute only for interfaces. We
-(mis)use it for interface and function identifiers.} attribute for the 
+(mis)use it for interface and function identifiers.} attribute for the
 interface or functions. If used with the interface, for example:
 
 \begin{verbatim}
@@ -219,7 +211,7 @@ interface other
 ...
 \end{verbatim}
 
-it will only effect the interface identifier. Valid values for interface 
+it will only effect the interface identifier. Valid values for interface
 identifiers range from 1 to $0xFFF$. If you specify an interface
 identifier, which is already used by a base interface, the function
 identifiers of the derived interface will be counted starting
@@ -240,7 +232,7 @@ generate the function identifiers:
 \end{enumerate}
 
 You may use the \verb|uuid| attribute with functions as
-well. Valid values are within the range of $0$ to $0xF'FFFF$. 
+well. Valid values are within the range of $0$ to $0xF'FFFF$.
 Function identifiers are first assigned
 using the \verb|uuid| attribute. Then the remaining functions are
 numbered starting from the lowest, not-assigned number. For example:
@@ -292,17 +284,19 @@ will generate the following identifiers:
 \item \verb|func5|: 6.
 \end{enumerate}
 
-This implies that any changes to the IDL of a base interface 
-imply regeneration of code generated for derived interfaces.
+This implies that any changes to the IDL of a base interface imply
+regeneration of code generated for derived interfaces.
 
-It is possible to use constants instead of numbers
-with the \verb|uuid| attribute.
+It is possible to use constants or enumeration instead of numbers with the
+\verb|uuid| attribute.  If you derive an new interface from multiple base
+interfaces use the \verb|uuid| to distinguish the different base interfaces.
+This is necessary because base interfaces can be compiled separately.
 
 \section{CORBA Environment}
 \label{sec:environment}
 
 The CORBA Environment is split into two types.  One environment for the client
-side and one for the server side.  This is done because client wrapper 
+side and one for the server side.  This is done because client wrapper
 functions often declare the environment on the stack.  To keep the memory
 footprint small, the client side environment is a reduced version of the
 server side environment.
@@ -310,12 +304,12 @@ server side environment.
 The respective definitions can be found in Appendix~\ref{app:corba_env}.
 
 The first elements of the \verb|CORBA_Environment| are defined
-by the CORBA C language mapping. The first is of type 
+by the CORBA C language mapping. The first is of type
 \verb|CORBA_exception_type| (an \verb|int|), which consists of
 a \verb|major| exception number, and a \verb|repos_id|. The major
 number defines whether the exception was a system exception (e.g.
-communication error) or a user defined exception. The second 
-member defines a minor exception number. 
+communication error) or a user defined exception. The second
+member defines a minor exception number.
 
 The \verb|repos_id| can also be used as an index into a
 repository with descriptions of the exceptions. It can be
@@ -335,7 +329,7 @@ was an IPC error, no exception could be transmitted.
 
 \subsection{CORBA Environment Functions}
 
-There are a few functions defined by the CORBA C Language 
+There are a few functions defined by the CORBA C Language
 mapping \cite{corba-clm} to manipulate the CORBA Environment.
 
 \begin{verbatim}
@@ -347,7 +341,7 @@ void CORBA_exception_set(
 \end{verbatim}
 
 The above function is used to set the exception part
-of the environment. It receives a pointer to an 
+of the environment. It receives a pointer to an
 environment structure to be initialized. It first calls
 \verb|CORBA_exception_free| for the environment. Then
 it sets the \verb|major| member of the environment and
@@ -368,8 +362,10 @@ as described in table~\ref{tab:reposid}.
 \caption{\label{tab:reposid} Stored exception descriptions.}
 \begin{tabular}{|l|l|} \hline
 \verb|repos_id| & stored string \\ \hline \hline
-\verb|CORBA_DICE_EXCEPTION_NONE| & {\texttt none} \\ \hline
-\verb|CORBA_DICE_EXCEPTION_WRONG_OPCODE| & {\texttt wrong opcode} \\ \hline
+\verb|CORBA_DICE_EXCEPTION_NONE| & {\tt none} \\ \hline
+\verb|CORBA_DICE_EXCEPTION_WRONG_OPCODE| & {\tt wrong opcode} \\ \hline
+\verb|CORBA_DICE_EXCEPTION_IPC_ERROR| & {\tt ipc error} \\ \hline
+\verb|CORBA_DICE_INTERNAL_IPC_ERROR| & {\tt internal ipc error} \\ \hline
 \end{tabular}
 \end{table}
 
@@ -407,13 +403,13 @@ window for received flexpages. It is of type
 \verb|l4_fpage_t|.
 
 The \verb|ipc_error| value is set if an IPC error
-occurred to the value of \verb|L4_IPCERROR(result)|,
+occurred to the value of \verb|L4_IPC_ERROR(result)|,
 where \verb|result| is the result variable of the
 IPC\footnote{An L4 IPC returns a result variable,
 which contains information about the transferred number
 of double words and indirect parts. If there occurred an
 error during the IPC, the result variable contains
-further information about the kind of the error.}. 
+further information about the kind of the error.}.
 If there was no IPC error the value is undefined.
 To determine if there was an IPC error test the
 \verb|major| member of the environment for
@@ -422,14 +418,13 @@ To determine if there was an IPC error test the
 The \verb|user_data| member is of type \verb|void *| and
 can be used freely by the user. It is ignored by the generated
 stubs and not transferred from the client to the server,
-but consistent within the scope of the server loop or
-client stubs.
+but consistent within the scope of the server loop.
 
 The \verb|malloc| and \verb|free| members are a function pointers
 to memory allocation reoutines of type
 \begin{verbatim}
-void* (*malloc) (unsigned long);
-void (free) (void*);
+void* (*dice_malloc_func) (unsigned long);
+void (*dice_free_func) (void*);
 \end{verbatim}
 which are used to allocate and free memory. These function pointers
 are currently used by default.
@@ -448,31 +443,23 @@ using \verb|dice_malloc_func| and \verb|dice_free_func| respectively.
 
 \section{Buffer Management}
 
-This section explains the different kinds to manage memory buffers with 
-\dice{}.
-
 \section{Memory Management for Indirect Parts}
 \label{sec:mem-indirect-parts}
-Since the server loop is auto generated, it has to use heuristics
-to provide the receive buffer for indirect parts. The default
-approach is to dynamically allocate the memory using the
-\verb|malloc| member of the \verb|CORBA_Environment| of the server
-loop. If this member is not set it uses the \verb|CORBA_alloc| 
-function. You can force the usage of \verb|CORBA_alloc| by using
-the option {\tt --fforce-corba-alloc} (see Section~\ref{sec:force-corba-alloc}). 
-Another alternative is the use of the \verb|init_rcvstring| 
-attribute (see below for explanation).
+Since the server loop is auto generated, it has to use heuristics to provide
+the receive buffer for indirect parts. The default approach is to dynamically
+allocate the memory using the \verb|malloc| member of the
+\verb|CORBA_Environment| of the server loop.  If the
+\verb|-fforce-corba-alloc| option is specified the \verb|CORBA_alloc| function
+is used (see Section~\ref{sec:force-corba-alloc}).
 
 \subsection{{\tt malloc} and {\tt CORBA's alloc}}
 
-The \verb|malloc| member of \verb|CORBA_Environment| and 
-the \verb|CORBA_alloc| functions have the same
-syntax as the libc \verb|malloc| function. They take the desired
-size of the memory as parameter and return a \verb|void *| to the
-allocated memory.
+The \verb|malloc| member of \verb|CORBA_Environment| and the
+\verb|CORBA_alloc| functions have the same signature as the libc \verb|malloc|
+function. They take the desired size of the memory as parameter and return a
+\verb|void *| to the allocated memory.
 
-Example for \verb|malloc| member of \verb|CORBA_Environment| (the
-IDL file has to be translated using \verb|-fserver-parameter|):
+Example for \verb|malloc| member of \verb|CORBA_Environment|:
 \begin{verbatim}
 CORBA_Environment env = dice_default_environment;
 env.malloc = (dice_malloc_func)malloc;
@@ -488,21 +475,19 @@ void* CORBA_alloc(unsigned long size)
 }
 \end{verbatim}
 
-The server loop will call the \verb|malloc| or \verb|CORBA_alloc|
-function for every receive buffer it should set. It defines the
-size of the buffer by the maximum of all receivable indirect parts.
-To determine the size of an indirect part, \dice{} uses the
-maximum values defined either in brackets or using the \verb|max_is|
-attribute. If the parameter is still considered variable sized, a
-heuristic is used to determine the maximum size: all variable sized
-strings are ``defined'' to have a maximum size of $512$ bytes. All
-other variable sized arrays are defined to have a maximum size of
-$1024$ bytes. If you want to send data larger than these sizes use
-the \verb|max_is| attribute to give \dice{} a hint for the receive
-buffer.
+The server loop will call the \verb|malloc| or \verb|CORBA_alloc| function for
+every receive buffer it should set. It defines the size of the buffer by the
+maximum of all indirect parts that can be received into this buffer.  To
+determine the size of an indirect part, \dice{} uses the maximum values
+defined either in brackets or using the \verb|max_is| attribute. If neither is
+given, a heuristic is used to determine the maximum size: all variable sized
+strings are ``defined'' to have a maximum size of $512$ bytes. All other
+variable sized arrays are defined to have a maximum size of $1024$ bytes. If
+you want to send data larger than these sizes use the \verb|max_is| attribute
+to give \dice{} a hint.
 
 \subsection{\tt init rcvstring}
-Example for \verb|init_rcvstring|: first the IDL file, then the 
+Example for \verb|init_rcvstring|: first the IDL file, then the
 needed additional code:
 \begin{verbatim}
 [init_rcvstring(my_alloc)]
@@ -519,9 +504,9 @@ like this:
 
 \begin{verbatim}
 void
-my_alloc(int nb, 
-  l4_umword_t *addr, 
-  l4_umword_t *size, 
+my_alloc(int nb,
+  l4_umword_t *addr,
+  l4_umword_t *size,
   CORBA_Environment *env)
 {
   *addr = my_buffers[nb];
@@ -529,9 +514,9 @@ my_alloc(int nb,
 }
 \end{verbatim}
 
-It receives four parameters: 
+It receives four parameters:
 \begin{enumerate}
-\item a zero based index indicating which of the strings should 
+\item a zero based index indicating which of the strings should
 be set (\verb|nb|),
 \item a pointer to the variable which should hold the address of the
 buffer (\verb|addr|),
