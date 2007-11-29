@@ -686,7 +686,7 @@ app_pager_thread(void *data)
 	      else
 		{
 		  /* unknown fault */
-		  dbg_pf("Fault (%c, eip=%08lx, type=%d) %08lx. Can't handle.",
+		  dbg_pf("Fault (%c, eip=%08lx, type=%ld) %08lx. Can't handle.",
 			  dw1 & 2 ? 'w' : 'r', l4_msgtag_label(tag),
                           dw2, dw1 & ~3);
 

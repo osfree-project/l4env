@@ -67,6 +67,8 @@ OBJS_root_inits.o = $(patsubst %.c,%.o,$(SRC_C_root_inits.o))
 
 $(OBJS_root_inits.o): .general.d
 
+-include $(foreach file,$(OBJS_root_inits.o),$(dir $(file)).$(notdir $(file)).d)
+
 root_inits.o: $(OBJS_root_inits.o)
 	@$(LINK_MESSAGE)
 	$(VERBOSE)$(LD) -m $(LD_EMULATION) -r -o $@ \

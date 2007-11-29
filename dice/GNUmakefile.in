@@ -657,7 +657,7 @@ doc:
 	@cd doc; $(MAKE); cd ..
 
 install-data-local:
-	@cd doc/manual; $(MAKE) install; cd ../..
+	@cd doc/manpage; $(MAKE) install; cd ../..
 
 cleanall: maintainer-clean
 	@cp Makefile.template Makefile
