@@ -15,7 +15,6 @@
 
 #include <l4/log/l4log.h>
 #include <l4/ore/ore.h>
-#include <l4/dde_linux/dde.h>
 #include <l4/dm_generic/types.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/env/errno.h>
@@ -30,6 +29,7 @@
 #ifndef CONFIG_ORE_DDE24
 #include <l4/dde/linux26/dde26.h>
 #else
+#include <l4/dde_linux/dde.h>
 #include "linuxemul.h"
 #endif
 #include <l4/ore/worker-server.h>

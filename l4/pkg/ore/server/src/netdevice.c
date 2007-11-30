@@ -14,7 +14,9 @@
 #include <l4/sys/types.h>
 #include <l4/util/l4_macros.h>
 #include <l4/rmgr/librmgr.h>
+#ifdef CONFIG_ORE_DDE24
 #include <l4/dde_linux/dde.h>
+#endif
 #include <l4/names/libnames.h>
 
 #include "ore-local.h"

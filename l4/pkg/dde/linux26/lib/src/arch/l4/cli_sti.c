@@ -9,7 +9,7 @@ static atomic_t _irq_counter = ATOMIC_INIT(0);
 /** Initialize the global IRQ lock. */
 void l4dde26_init_locks(void)
 {
-	ddekit_lock_init(&_irq_lock);
+	ddekit_lock_init_unlocked(&_irq_lock);
 }
 core_initcall(l4dde26_init_locks);
 
