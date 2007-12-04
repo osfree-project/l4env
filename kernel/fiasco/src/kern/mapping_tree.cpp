@@ -785,7 +785,7 @@ Mapping_tree::flush(Mapping *parent, bool me_too, unsigned restricted,
 	  space = m->space();
 	  m_depth = m->depth();
 
-	  if (restricted 
+	  if (restricted
 	      // Check for immediate child -- see comment above
 	      && m_depth == p_depth + 1
 	      && m->tag() != restricted)
@@ -794,7 +794,11 @@ Mapping_tree::flush(Mapping *parent, bool me_too, unsigned restricted,
 
 	      // Skip over subtree of not-to-be-flushed child.
 	      skip_subtree = true;
-	      start_of_deletions++;
+#ifndef NDEBUG
+	      if (start_of_deletions != m)
+		_empty_count += m - start_of_deletions;
+#endif
+	      start_of_deletions = m + 1;
 	      continue;
 	    }
 	}
