@@ -81,9 +81,11 @@ struct l4_utcb_exception
 
 L4_INLINE l4_utcb_t *l4_utcb_get(void)
 {
-  volatile l4_utcb_t *utcb;
-  utcb = *(volatile l4_utcb_t **)0xffffd000;
-  return (l4_utcb_t *)utcb;
+  register l4_utcb_t *utcb asm ("r0");
+  asm volatile ("mov lr, pc          \n"
+                "mov pc, #0xffffff00 \n"
+                : "=r"(utcb) : : "lr");
+  return utcb;
 }
 
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)

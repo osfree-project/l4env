@@ -30,7 +30,7 @@
 #include <l4/log/l4log.h>
 
 /*** IDL INCLUDES ***/
-#include <flips-internal-server.h>
+#include <flips-server.h>
 
 /****************************/
 /*** NET IO IDL INTERFACE ***/

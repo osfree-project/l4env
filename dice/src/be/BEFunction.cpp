@@ -407,6 +407,23 @@ CBEFunction::WriteParameter(CBEFile& pFile,
 	pParameter->WriteType(pFile, bUseConst);
 	pFile << " ";
 	pDeclarator->WriteDeclaration(pFile);
+
+	if (pParameter == GetObject() ||
+		pParameter == GetEnvironment())
+		return;
+	bool bIn = pParameter->m_Attributes.Find(ATTR_IN);
+	bool bOut = pParameter->m_Attributes.Find(ATTR_OUT);
+	if (!bIn && !bOut)
+		return;
+
+	pFile << " /* ";
+	if (bIn)
+		pFile << "in";
+	if (bIn && bOut)
+		pFile << ", ";
+	if (bOut)
+		pFile << "out";
+	pFile << " */";
 }
 
 /** \brief writes the body of the function to the target file

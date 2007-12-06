@@ -37,9 +37,9 @@ endif
 DEFAULT_RELOC  = 0x01900000
 SYSTEMS        = x86-l4v2
 
-SERVERIDL_flips       = flips.idl
-SERVERIDL_flips-lxdrv = flips.idl
-SERVERIDL_flips-ore   = flips.idl
+SERVERIDL_flips       = flips.idl flips-internal.idl
+SERVERIDL_flips-lxdrv = flips.idl flips-internal.idl
+SERVERIDL_flips-ore   = flips.idl flips-internal.idl
 CLIENTIDL_flips       = flips-internal.idl
 CLIENTIDL_flips-lxdrv = flips-internal.idl
 CLIENTIDL_flips-ore   = flips-internal.idl

@@ -218,7 +218,10 @@ setup_regexps (void)
 
   if (strcmp (wanted_executable_name, executable_name))
     {
-      return;
+      /* support two binary names (e.g. for arch-foo-X and X) */
+      if (!gendep_getenv (&wanted_executable_name, "BINARY_ALT1")
+          || strcmp (wanted_executable_name, executable_name))
+	return;
     }
 
   gendep_getenv(&depfile_name, "DEPFILE");

@@ -199,12 +199,7 @@ ifeq ($(INT_CPP_NAME_SWITCH), y)
 		rm -f $$X $$X.{o,out};
 endif
 ifeq ($(INT_LD_NAME_SWITCH), y)
-	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
-		rm -f $$X.out ; $(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X. \
-		GENDEP_OUTPUT=$$X.out $(CC) $$X -o $$X.; \
-		test -e $$X.out; echo INT_LD_NAME=`cat $$X.out` \
-			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{,out};
+	$(VERBOSE) set -e; echo INT_LD_NAME=$$($(LD) 2>&1 | perl -p -e 's,^(.+/)?(.+):.+,$$2,') >> $(DROPSCONF_CONFIG_MK)
 endif
 
 libgendep:

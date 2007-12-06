@@ -125,7 +125,7 @@ endif
 
 $(TARGET): $(OBJS) $(LIBDEPS) $(CRT0) $(CRTN)
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME)) $(LINK_PROGRAM) -o $@ $(CRT0) $(OBJS) $(LDFLAGS) $(CRTN)
+	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME),,,ld) $(LINK_PROGRAM) -o $@ $(CRT0) $(OBJS) $(LDFLAGS) $(CRTN)
 	@$(BUILT_MESSAGE)
 
 endif	# architecture is defined, really build

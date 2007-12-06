@@ -253,6 +253,7 @@ ifneq ($(HAVE_LDSO),)
 # arg2 - [opt] compiler target. Will be written as target within the
 # 	       dependency file
 # arg3 - [opt] name of the dependency file. If unset, .<arg2>.d will be used.
+# arg4 - [opt] alternative binary name
 ifeq ($(origin BID_LIBGENDEP), undefined)
 BID_LIBGENDEP := $(firstword $(wildcard $(call absfilename, \
 				$(OBJ_BASE)/tool/gendep/libgendep.so \
@@ -266,7 +267,8 @@ ifeq ($(HOST_SYSTEM),darwin)
 	LD_PRELOAD = DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES
 endif
 MAKEDEP=$(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_TARGET=$(if $(2),$(2),$@) \
-		    GENDEP_BINARY=$(1) $(if $(3),GENDEP_DEPFILE=$(3))
+		    GENDEP_BINARY=$(1) $(if $(3),GENDEP_DEPFILE=$(3)) \
+		    $(if $(4),GENDEP_BINARY_ALT1=$(4))
 endif
 
 # macros used here and in packages
