@@ -2,7 +2,7 @@ PKGDIR          ?= ../..
 L4DIR           ?= $(PKGDIR)/../..
 
 TARGET          = libl4png.a
-SYSTEMS         = x86
+SYSTEMS         = x86 amd64 arm
 
 SRC_C           = pngerror.c pngget.c pngpread.c pngrio.c pngrutil.c \
 		  pngvcrd.c pngwrite.c pngwutil.c png.c pnggccrd.c \

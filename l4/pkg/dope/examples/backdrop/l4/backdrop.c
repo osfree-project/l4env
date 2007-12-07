@@ -19,6 +19,7 @@
 /*** L4 INCLUDES ***/
 #include <l4/dope/dopelib.h>
 #include <l4/dope/vscreen.h>
+#include <l4/sys/l4int.h>
 #include <l4/log/l4log.h>
 #include <l4/libpng/l4png_wrap.h>
 

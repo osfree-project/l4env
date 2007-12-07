@@ -1,4 +1,4 @@
-SYSTEMS         := x86-l4v2 amd64-l4v2
+SYSTEMS         := x86-l4v2 amd64-l4v2 arm-l4v2
 PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
 
@@ -20,5 +20,5 @@ imagedata.png: $(PICTURE)
 	ln -sf $^ $@
 
 %.o: %.png
-	ld -r --oformat default -o $@ -b binary $^
+	$(LD) -r --oformat $(OFORMAT) -o $@ -b binary $^
 

@@ -2,7 +2,7 @@ PKGDIR          ?= ../..
 L4DIR           ?= $(PKGDIR)/../..
 
 TARGET          = libl4png_wrap.a
-SYSTEMS		= x86-l4v2
+SYSTEMS		= x86-l4v2 amd64-l4v2 arm-l4v2
 
 SRC_C           = png_stream.c l4png_wrap.c 
 

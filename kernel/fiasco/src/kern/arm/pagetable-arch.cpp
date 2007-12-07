@@ -430,6 +430,7 @@ void Page_table::activate(unsigned long asid)
     {
       _current = this;
       asm volatile (
+	  "mcr p15, 0, r0, c7, c5, 6    \n" // bt flush
 	  "mcr p15, 0, r0, c7, c10, 4   \n"
 	  "mcr p15, 0, %0, c2, c0       \n" // pdbr
 	  "mcr p15, 0, %1, c13, c0, 1   \n"
