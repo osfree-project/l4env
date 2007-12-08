@@ -10,21 +10,21 @@
 /* IPC operation to use in ping thread - short call
  * send timeout never, receive timeout never */
 #define WHATTODO_SHORT_PING \
-  if (l4_ipc_call(pong_id, L4_IPC_SHORT_MSG, 0x12345678, 0x87654321, L4_IPC_SHORT_MSG, &data, &data, L4_IPC_NEVER, &dope)) printf("IPC pong short error\n");
+  if (l4_ipc_call(pong_id, L4_IPC_SHORT_MSG, 0x12345678, 0x87654321, L4_IPC_SHORT_MSG, &data, &data, L4_IPC_NEVER, &dope)) printf("IPC ping short error\n");
 
 /* IPC operation to use in pong thread - short reply
  * send timeout 0, receive timeout never */
 #define WHATTODO_SHORT_PONG \
-  if (l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 0x89abcde, 0xedcba98, &ping_id, L4_IPC_SHORT_MSG, &data, &data, L4_IPC_SEND_TIMEOUT_0, &dope)) printf("IPC ping short error\n");
+  if (l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 0x89abcde, 0xedcba98, &ping_id, L4_IPC_SHORT_MSG, &data, &data, L4_IPC_SEND_TIMEOUT_0, &dope)) printf("IPC pong short error\n");
 
 /* IPC operating to use in ping thread - send timeout 0, receive with (long) timeout */
 #define WHATTODO_SHORT_TO_PING \
-  l4_ipc_call(pong_id, L4_IPC_SHORT_MSG, 0x12345678, 0x87654321, L4_IPC_SHORT_MSG, &data, &data, l4_timeout(L4_IPC_TIMEOUT_0, l4_timeout_rel(250, 30)), &dope);
+  if (l4_ipc_call(pong_id, L4_IPC_SHORT_MSG, 0x12345678, 0x87654321, L4_IPC_SHORT_MSG, &data, &data, l4_timeout(L4_IPC_TIMEOUT_0, l4_timeout_rel(250, 30)), &dope)) printf("IPC ping short error\n");
 
 /* IPC operation to use in pong thread - short reply
  * send timeout 0, receive with (long) timeout */
 #define WHATTODO_SHORT_TO_PONG \
-  l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 0x89abcde, 0xedcba98, &ping_id, L4_IPC_SHORT_MSG, &data, &data, l4_timeout(L4_IPC_TIMEOUT_0, l4_timeout_rel(250, 30)), &dope);
+  if (l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 0x89abcde, 0xedcba98, &ping_id, L4_IPC_SHORT_MSG, &data, &data, l4_timeout(L4_IPC_TIMEOUT_0, l4_timeout_rel(250, 30)), &dope)) printf("IPC pong short error\n");
 
 /* IPC operation to use in ping thread - short send, receive long
  * send timeout never, receive timeout never */

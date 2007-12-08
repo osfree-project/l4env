@@ -19,7 +19,7 @@ void Sensor::DefaultIncludes(CBEFile& pFile)
 		return;
 
 	pFile << "#include <l4/util/l4_macros.h> /* l4util_idfmt, l4util_idstr */\n";
-	pFile << "#include <l4/sys/ktrace.h> /* fiasco_tbuf_log */\n";
+	pFile << "#include <l4/sys/ktrace.h> /* fiasco_tbuf_log_binary */\n";
 	pFile << "#include <stdio.h> /* snprintf */\n";
 }
 
@@ -44,8 +44,9 @@ void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 		del = "=";
 
 	pFile << "\t{\n";
-	++pFile << "\tunion __attribute__((packed)) {\n";
-	++pFile << "\tchar msg[31];\n";
+	++pFile << "\tint i;\n";
+	pFile << "\tunion __attribute__((packed)) {\n";
+	++pFile << "\tunsigned char msg[31];\n";
 	pFile << "\tstruct __attribute__((packed)) {\n";
 	++pFile << "\tunsigned char _pad1;\n";
 	pFile << "\tunsigned long if_id;\n";
@@ -54,11 +55,16 @@ void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	pFile << "\tl4_threadid_t from;\n";
 	pFile << "\tchar iname[14];\n";
 	--pFile << "\t} entry;\n";
-	--pFile << "\t} msg = { " << dot << "entry" << del << " { " << dot << "_pad1" << del << "0, " << dot <<
-		"if_id" << del << sOpcodeVar << " >> DICE_IID_BITS, " << dot << "op" << del << " " << sOpcodeVar <<
-		" & DICE_FID_MASK, " << dot << "tid" << del << " l4_myself(), " << dot << "from" << del << " *(" <<
-		sObj <<	"), " << dot << "iname" << del << " \"" << pClass->GetName().substr(0,14) << "\"} };\n";
-	pFile << "\tfiasco_tbuf_log(msg.msg);\n";
+	--pFile << "\t} msg;\n";
+	pFile << "\tfor (i=0; i<31; i++)\n";
+	++pFile << "\tmsg.msg[i] = 0;\n";
+	--pFile << "\tmsg.entry._pad1" << del << "0;\n";
+	pFile << "\tmsg.entry.if_id" << del << " (" << sOpcodeVar << " >> DICE_IID_BITS) & 0xfff;\n";
+	pFile << "\tmsg.entry.op" << del << " " << sOpcodeVar << " & DICE_FID_MASK;\n";
+	pFile << "\tmsg.entry.tid" << del << " l4_myself();\n";
+	pFile << "\tmsg.entry.from" << del << " *(" << sObj <<	");\n";
+	pFile << "\tstrncpy(msg.entry.iname, \"" << pClass->GetName().substr(0,14) << "\", 14);\n";
+	pFile << "\tfiasco_tbuf_log_binary(msg.msg);\n";
 
 	--pFile << "\t}\n";
 }
