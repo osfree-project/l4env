@@ -85,7 +85,7 @@ typedef struct
 /**
  * Return tracebuffer status.
  * \ingroup api_calls_fiasco
- * 
+ *
  * \return Pointer to tracebuffer status struct.
  */
 L4_INLINE l4_tracebuffer_status_t *
@@ -94,7 +94,7 @@ fiasco_tbuf_get_status(void);
 /**
  * Return the physical address of the tracebuffer status struct.
  * \ingroup api_calls_fiasco
- * 
+ *
  * \return physical address of status struct.
  */
 L4_INLINE l4_addr_t
@@ -105,7 +105,7 @@ fiasco_tbuf_get_status_phys(void);
  * \ingroup api_calls_fiasco
  *
  * \param  text   Logging text
- * \return Pointer to tracebuffer entry 
+ * \return Pointer to tracebuffer entry
  */
 L4_INLINE l4_umword_t
 fiasco_tbuf_log(const char *text);
@@ -125,15 +125,25 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3);
 
 /**
+ * Create new tracebuffer entry with binary data.
+ * \ingroup api_calls_fiasco
+ *
+ * \param  data       binary data
+ * \return Pointer to tracebuffer entry
+ */
+L4_INLINE l4_umword_t
+fiasco_tbuf_log_binary(const unsigned char *data);
+
+/**
  * Clear tracebuffer.
- * \ingroup api_calls_fiasco 
+ * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_tbuf_clear(void);
 
 /**
  * Dump tracebuffer to kernel console.
- * \ingroup api_calls_fiasco 
+ * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_tbuf_dump(void);
@@ -175,8 +185,8 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log(const char *text)
 {
   l4_umword_t offset;
-  asm volatile("int $3; cmpb $29, %%al" 
-	      : "=a" (offset) 
+  asm volatile("int $3; cmpb $29, %%al"
+	      : "=a" (offset)
 	      : "a" (1), "d" (text));
   return offset;
 }
@@ -185,8 +195,8 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3)
 {
   l4_umword_t offset;
-  asm volatile("int $3; cmpb $29, %%al" 
-	      : "=a" (offset) 
+  asm volatile("int $3; cmpb $29, %%al"
+	      : "=a" (offset)
 	      : "a" (4), "d" (text), "c" (v1), "S" (v2), "D" (v3));
   return offset;
 }
@@ -213,6 +223,16 @@ L4_INLINE void
 fiasco_timer_enable(void)
 {
   asm volatile("int $3; cmpb $29, %%al" : : "a" (7));
+}
+
+L4_INLINE l4_umword_t
+fiasco_tbuf_log_binary(const unsigned char *data)
+{
+  l4_umword_t offset;
+  asm volatile("int $3; cmpb $29, %%al"
+               : "=a" (offset)
+               : "a" (8), "d" (data));
+  return offset;
 }
 
 #endif

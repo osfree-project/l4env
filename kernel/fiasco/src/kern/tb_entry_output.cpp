@@ -661,6 +661,22 @@ formatter_task_new(Tb_entry *tb, const char *tidstr, unsigned tidlen,
   return maxlen;
 }
 
+// kernel event log binary data
+static
+unsigned
+formatter_ke_bin(Tb_entry *tb, const char *tidstr, unsigned tidlen,
+	         char *buf, int maxlen)
+{
+  Tb_entry_ke_bin *e = static_cast<Tb_entry_ke_bin*>(tb);
+  char ip_buf[32];
+
+  snprintf(ip_buf, sizeof(ip_buf), " @ "L4_PTR_FMT, e->ip());
+  my_snprintf(buf, maxlen, "ke:  %-*s BINDATA %s",
+      tidlen, tidstr, e->ip() ? ip_buf : "");
+
+  return maxlen;
+}
+
 STATIC_INITIALIZER(init_formatters);
 
 // register all available format functions
@@ -686,4 +702,5 @@ init_formatters()
   Jdb_tbuf_output::register_ff(Tbuf_id_nearest, formatter_id_nearest);
   Jdb_tbuf_output::register_ff(Tbuf_jean1, formatter_jean1);
   Jdb_tbuf_output::register_ff(Tbuf_task_new, formatter_task_new);
+  Jdb_tbuf_output::register_ff(Tbuf_ke_bin, formatter_ke_bin);
 }

@@ -23,6 +23,7 @@ enum {
   Tbuf_id_nearest         = 17,
   Tbuf_jean1              = 18,
   Tbuf_task_new           = 19,
+  Tbuf_ke_bin             = 20,
   Tbuf_max                = 32,
   Tbuf_hidden             = 0x20,
 };
@@ -221,6 +222,16 @@ private:
   Context	*_sched_owner2;
 };
 
+/** logged binary kernel event. */
+class Tb_entry_ke_bin : public Tb_entry
+{
+public:
+  enum { SIZE = 31 };
+private:
+  char		_bin[SIZE];	///< binary data
+};
+
+
 
 IMPLEMENTATION:
 
@@ -251,6 +262,7 @@ extern "C" void _wrong_sizeof_tb_entry_preemption(void);
 extern "C" void _wrong_sizeof_tb_entry_id_nearest(void);
 extern "C" void _wrong_sizeof_tb_entry_jean1     (void);
 extern "C" void _wrong_sizeof_tb_entry_task_new  (void);
+extern "C" void _wrong_sizeof_tb_entry_ke_bin    (void);
 
 STATIC_INITIALIZE(Tb_entry_fit);
 
@@ -298,6 +310,8 @@ Tb_entry_fit::init()
     _wrong_sizeof_tb_entry_jean1();
   if (sizeof(Tb_entry_task_new)   > Tb_entry_size)
     _wrong_sizeof_tb_entry_task_new();
+  if (sizeof(Tb_entry_ke_bin)	  > Tb_entry_size)
+    _wrong_sizeof_tb_entry_ke_bin();
   init_arch();
 }
 
@@ -1022,3 +1036,18 @@ PUBLIC inline
 Context*
 Tb_entry_jean1::sched_owner2()
 { return _sched_owner2; }
+
+
+
+PUBLIC inline
+void
+Tb_entry_ke_bin::set(Context *ctx, Address ip)
+{ set_global(Tbuf_ke_bin, ctx, ip); }
+
+PUBLIC inline
+void
+Tb_entry_ke_bin::set_buf(unsigned i, char c)
+{
+  if (i < sizeof(_bin)-1)
+    _bin[i] = c;
+}

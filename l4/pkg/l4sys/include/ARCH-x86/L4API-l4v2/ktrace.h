@@ -1,4 +1,3 @@
-/* $Id$ */
 /*****************************************************************************/
 /*!
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/ktrace.h
@@ -153,6 +152,16 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3);
 
 /**
+ * Create new tracebuffer entry with binary data.
+ * \ingroup api_calls_fiasco
+ *
+ * \param  data       binary data
+ * \return Pointer to tracebuffer entry
+ */
+L4_INLINE l4_umword_t
+fiasco_tbuf_log_binary(const unsigned char *data);
+
+/**
  * Clear tracebuffer.
  * \ingroup api_calls_fiasco
  */
@@ -241,6 +250,16 @@ L4_INLINE void
 fiasco_timer_enable(void)
 {
   asm volatile("int $3; cmpb $29, %%al" : : "a" (7));
+}
+
+L4_INLINE l4_umword_t
+fiasco_tbuf_log_binary(const unsigned char *data)
+{
+  l4_umword_t offset;
+  asm volatile("int $3; cmpb $29, %%al"
+               : "=a" (offset)
+               : "a" (8), "d" (data));
+  return offset;
 }
 
 #endif

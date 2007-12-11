@@ -183,6 +183,18 @@ Jdb::handle_int3_threadctx_generic(Trap_state *ts)
 	    case 7: // fiasco_timer_enable
 	      Timer::enable();
 	      break;
+            case 8: // fiasco_tbuf_log_binary()
+              // interrupts are disabled in handle_slow_trap()
+              Jdb_log_frame *regs = reinterpret_cast<Jdb_log_frame*>(ts);
+              Tb_entry_ke_bin *tb =
+                static_cast<Tb_entry_ke_bin*>(Jdb_tbuf::new_entry());
+              str = regs->str();
+              tb->set(t, ip-1);
+              for (len=0; len < Tb_entry_ke_bin::SIZE; len++)
+                tb->set_buf(len, s->peek(str++, user));
+              regs->set_tb_entry(tb);
+              Jdb_tbuf::commit_entry();
+              break;
 	    }
 	  break;
 	case 30:

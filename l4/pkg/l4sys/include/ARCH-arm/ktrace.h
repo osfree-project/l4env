@@ -118,6 +118,16 @@ L4_INLINE l4_umword_t
 fiasco_tbuf_log_3val(const char *text, unsigned v1, unsigned v2, unsigned v3);
 
 /**
+ * Create new tracebuffer entry with binary data.
+ * \ingroup api_calls_fiasco
+ *
+ * \param  data       binary data
+ * \return Pointer to tracebuffer entry
+ */
+L4_INLINE l4_umword_t
+fiasco_tbuf_log_binary(const unsigned char *data);
+
+/**
  * Clear tracebuffer.
  * \ingroup api_calls_fiasco
  */
@@ -130,6 +140,12 @@ fiasco_tbuf_clear(void);
  */
 L4_INLINE void
 fiasco_tbuf_dump(void);
+
+L4_INLINE void
+fiasco_timer_disable(void);
+
+L4_INLINE void
+fiasco_timer_enable(void);
 
 /*****************************************************************************
  *** Implementation
@@ -164,6 +180,24 @@ L4_INLINE void
 fiasco_tbuf_dump(void)
 {
   __KDEBUG_ARM_PARAM_1(29, 3);
+}
+
+L4_INLINE void
+fiasco_timer_disable(void)
+{
+  __KDEBUG_ARM_PARAM_1(29, 6);
+}
+
+L4_INLINE void
+fiasco_timer_enable(void)
+{
+  __KDEBUG_ARM_PARAM_1(29, 6);
+}
+
+L4_INLINE l4_umword_t
+fiasco_tbuf_log_binary(const unsigned char *data)
+{
+  return __KDEBUG_ARM_PARAM_2(29, 8, data);
 }
 
 #endif
