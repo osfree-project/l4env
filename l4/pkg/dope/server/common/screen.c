@@ -365,7 +365,7 @@ static int scr_drawbehind(SCREEN *scr, WIDGET *win,
 	next = win->gen->get_next(win);
 
 	/* if maximum depth is reached, just paint a black box */
-	if (transparency_depth >= 1) {
+	if (transparency_depth >= 2) {
 		if (!origin) win->gen->draw_bg(win, scr->sd->scr_ds, x, y, w, h, NULL, 1);
 		return 0;
 	}
@@ -609,6 +609,9 @@ static void scr_back(SCREEN *scr, WIDGET *win) {
 	/* search for window position before DOpE default background */
 	cw = scr->sd->first_win;
 	for (; cw && cw->wd->next && cw->wd->next->wd->next; cw = cw->wd->next);
+
+	if (cw == scr->sd->first_win && !scr->sd->first_win->wd->next)
+	  cw = NULL;
 
 	/* insert window at the tail of the window list */
 	chain_window(scr, win, cw);

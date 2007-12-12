@@ -37,6 +37,7 @@ static struct dopelib_app first_app;
 /*** INTERFACE: REGISTER NEW DOpE APPLICATION ***/
 long dope_init_app(const char *app_name) {
 	int id;
+	DICE_DECLARE_ENV(_env);
 	struct dopelib_app *app;
 	char buf[128];
 
@@ -65,7 +66,7 @@ long dope_init_app(const char *app_name) {
 	dopelib_start_listener(id);
 
 	CORBA_Object_to_ident(&app->listener, buf, sizeof(buf));
-	app->app_id = dope_manager_init_app_call(dope_server, app_name, buf, &app->env);
+	app->app_id = dope_manager_init_app_call(dope_server, app_name, buf, &_env);
 	return id;
 }
 
@@ -73,10 +74,11 @@ long dope_init_app(const char *app_name) {
 /*** INTERFACE: UNREGISTER DOpE APPLICATION ***/
 long dope_deinit_app(long id) {
 	struct dopelib_app *app = dopelib_apps[id];
+	DICE_DECLARE_ENV(_env);
 	if (!app) return -1;
 
 	/* notify DOpE to destroy the application's namespace */
-	dope_manager_deinit_app_call(dope_server, app->app_id, &app->env);
+	dope_manager_deinit_app_call(dope_server, app->app_id, &_env);
 
 	dopelib_stop_listener(id);
 
@@ -98,9 +100,10 @@ long dope_deinit_app(long id) {
  */
 int dope_req(long id, char *res, int res_max, const char *cmd) {
 	struct dopelib_app *app = dopelib_apps[id];
+	DICE_DECLARE_ENV(_env);
 	if (!app || !cmd || !dope_server) return -1;
 	return dope_manager_exec_req_call(dope_server, app->app_id,
-	                                  cmd, res, &res_max, &app->env);
+	                                  cmd, res, &res_max, &_env);
 }
 
 
@@ -131,10 +134,9 @@ int dope_reqf(long app_id, char *res, int res_max, const char *format, ...) {
  * but does not provide it to the caller.
  */
 int dope_cmd(long id, const char *cmd) {
-	struct dopelib_app *app;
+	DICE_DECLARE_ENV(_env);
 	if (!cmd || (id < 0) || (id >= MAX_DOPE_CLIENTS) || !dopelib_apps[id]) return -1;
-	app = dopelib_apps[id];
-	return dope_manager_exec_cmd_call(dope_server, app->app_id, cmd, &app->env);
+	return dope_manager_exec_cmd_call(dope_server, dopelib_apps[id]->app_id, cmd, &_env);
 }
 
 
@@ -156,10 +158,12 @@ int dope_cmdf(long app_id, const char *format, ...) {
 
 
 long dope_get_keystate(long id, long keycode) {
-	return dope_manager_get_keystate_call(dope_server, keycode, &dopelib_apps[id]->env);
+	DICE_DECLARE_ENV(_env);
+	return dope_manager_get_keystate_call(dope_server, keycode, &_env);
 }
 
 
 char dope_get_ascii(long id, long keycode) {
-	return dope_manager_get_ascii_call(dope_server, keycode, &dopelib_apps[id]->env);
+	DICE_DECLARE_ENV(_env);
+	return dope_manager_get_ascii_call(dope_server, keycode, &_env);
 }

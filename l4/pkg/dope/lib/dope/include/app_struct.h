@@ -32,7 +32,6 @@ struct dopelib_app {
 	unsigned long last;
 	long app_id;
 	struct dopelib_sem *queue_sem;
-	CORBA_Environment env;
 	CORBA_Object_base listener;
 	void *listener_ptid;         /* only used by the linux version */
 };
