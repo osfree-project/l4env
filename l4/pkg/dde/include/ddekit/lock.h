@@ -33,6 +33,12 @@ int  _ddekit_lock_try_lock(struct ddekit_lock **mtx);
  */
 void _ddekit_lock_unlock  (struct ddekit_lock **mtx);
 
+/** Get lock owner.
+ *
+ * \ingroup DDEKit_synchronization
+ */
+int _ddekit_lock_owner(struct ddekit_lock **mtx);
+
 // definition of ddekit_lock_t
 typedef struct ddekit_lock *ddekit_lock_t;
 
@@ -68,6 +74,10 @@ static INLINE int  ddekit_lock_try_lock(ddekit_lock_t *mtx) {
 }
 static INLINE void ddekit_lock_unlock(ddekit_lock_t *mtx) {
 	_ddekit_lock_unlock(mtx);
+}
+
+static INLINE int ddekit_lock_owner(ddekit_lock_t *mtx) {
+	return _ddekit_lock_owner(mtx);
 }
 
 #endif

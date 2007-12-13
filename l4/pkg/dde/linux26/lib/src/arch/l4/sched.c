@@ -131,4 +131,5 @@ void __sched io_schedule(void)
 long __sched io_schedule_timeout(long timeout)
 {
 	WARN_UNIMPL;
+	return -1;
 }

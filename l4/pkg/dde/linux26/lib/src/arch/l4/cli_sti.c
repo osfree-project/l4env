@@ -2,9 +2,42 @@
 
 #include <linux/kernel.h>
 
+/**
+ * DDE local IRQ handling
+ *
+ * Linux allows CPUs to locally disable and enable interrupts, e.g.
+ * by setting the IF flag in X86' EFLAGS. In DDE, we can't allow to
+ * do this globally, because we don't want our driver to influence
+ * independent L4 tasks.
+ *
+ * Instead, we could simply leave the routines below empty, because
+ * each DDE thread is a separate "virtual" CPU and therefore cannot
+ * be interrupted. Global variables are secured by spinlocks, which
+ * also work without IRQs disabled. However, DDE threads might run
+ * in different priorities which could lead to a priority inversion
+ * situation, where a high-prio thread spins on a spinlock held by
+ * a low-prio thread. Therefore, we use a DDEKit lock to ensure that
+ * all VCPUs that try to switch off IRQs locally are serialized.
+ *
+ * In addition to the lock, we need to keep track of the number of
+ * times irq_disable() has been called. This is because it is quite
+ * common for Linux drivers to call this multiple times in a row and
+ * then only call irqs_enable() once. In our case we then need to
+ * release the lock as many times as we acquired it, because the
+ * underlying L4 lock implementation implements recursive locking.
+ *
+ * Furthermore, we need to be able to check whether IRQs are on or
+ * off. Linux does this by having a look at the IF flag. In our case,
+ * we return the current reference count during save_flags() and use
+ * this value to restore the current state later on.
+ */
+
+/* The IRQ lock */
 static ddekit_lock_t _irq_lock = NULL;
-// counter of threads with currently disabled irqs
-static atomic_t _irq_counter = ATOMIC_INIT(0);
+/* IRQ lock reference counter */
+static atomic_t      _refcnt   = ATOMIC_INIT(0);
+
+#define DDE26_DEBUG_IRQLOCK    0
 
 /** Initialize the global IRQ lock. */
 void l4dde26_init_locks(void)
@@ -13,58 +46,70 @@ void l4dde26_init_locks(void)
 }
 core_initcall(l4dde26_init_locks);
 
-
-/* 
- * Check whether IRQs are disabled by checking no. of IRQ disabled
- * threads.
+/* Check whether IRQs are currently disabled.
+ *
+ * This is the case, if flags is greater than 0.
  */
+
 int raw_irqs_disabled_flags(unsigned long flags)
 {
-	return atomic_read(&_irq_counter) != 0;
+#if DDE26_DEBUG_IRQLOCK
+	DEBUG_MSG("flags %x", flags);
+#endif
+	return ((int)flags > 0);
 }
 
-
-/*
- * This fn is used to return the current state of IRQ flags. In our case
- * we return the local IRQ counter
+/* Store the current flags state.
+ *
+ * This is done by returning the current refcnt.
+ *
+ * XXX: Up to now, flags was always 0 at this point and
+ *      I assume that this is always the case. Prove?
  */
 unsigned long __raw_local_save_flags(void)
 {
-	unsigned long old = atomic_read(&_irq_counter);
-	return old;
+#if DDE26_DEBUG_IRQLOCK
+	DEBUG_MSG("flags %x", atomic_read(&_refcnt));
+#endif
+	return (unsigned long)atomic_read(&_refcnt);
 }
 
-
-/*
- * Restore previous IRQ state. If the prev. state was higher than the
- * current count, we need to call disable(), otherwise we need to call
- * enable().
- */
+/* Restore IRQ state. */
 void raw_local_irq_restore(unsigned long flags)
 {
-	if (flags > atomic_read(&_irq_counter))
-		raw_local_irq_disable();
-	else if (flags < atomic_read(&_irq_counter))
-		raw_local_irq_enable();
+#if DDE26_DEBUG_IRQLOCK
+	DEBUG_MSG("flags %d, refcount %d", (int)flags, atomic_read(&_refcnt));
+#endif
+	raw_local_irq_enable();
 }
 
-
+/* Disable IRQs by grabbing the IRQ lock. */
 void raw_local_irq_disable(void)
 {
-	atomic_inc(&_irq_counter);
+#if DDE26_DEBUG_IRQLOCK
+	DEBUG_MSG("owner %x", ddekit_lock_owner(&_irq_lock));
+#endif
+
 	ddekit_lock_lock(&_irq_lock);
+	atomic_inc(&_refcnt);
+
+#if DDE26_DEBUG_IRQLOCK
+	DEBUG_MSG("count: %d, new owner %x", atomic_read(&_refcnt),
+	          ddekit_lock_owner(&_irq_lock));
+#endif
 }
 
-
+/* Unlock the IRQ lock until refcnt is 0. */
 void raw_local_irq_enable(void)
 {
-	/*
-	 * Make sure we only unlock if there is anything locked.
-	 */
-	if (atomic_read(&_irq_counter) > 0) {
+	int i = atomic_read(&_refcnt);
+#if DDE26_DEBUG_IRQLOCK
+	DEBUG_MSG("owner %x, count: %d",
+	          ddekit_lock_owner(&_irq_lock), atomic_read(&_refcnt));
+#endif
+	for (i; i > 0; --i)
 		ddekit_lock_unlock(&_irq_lock);
-		atomic_dec(&_irq_counter);
-	}
+	atomic_set(&_refcnt, 0);
 }
 
 
