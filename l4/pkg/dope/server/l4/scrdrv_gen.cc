@@ -24,6 +24,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/util/macros.h>
 #include <l4/generic_io/libio.h>
+#include <l4/sys/cache.h>
 
 #include "dopestd.h"
 #include "scrdrv.h"
@@ -211,6 +212,8 @@ static void update_area(long x1, long y1, long x2, long y2) {
 		src += scr_width * bpp;
 		dst += scr_linelength * bpp;
 	}
+	l4_sys_cache_clean_range((unsigned long)((u8*)scr_adr + (y1*scr_linelength + x1) * bpp),
+	                         (unsigned long)dst - (scr_linelength * bpp));
 
 #if USE_RT_MON
 	{
