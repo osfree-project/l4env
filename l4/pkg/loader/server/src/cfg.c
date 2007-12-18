@@ -74,6 +74,7 @@ cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id,
   memset(ct, 0, sizeof(*ct));
 
   ct->flags       = cfg_task_template.flags & ~CFG_F_TEMPLATE;
+  ct->taskno      = 0;
   ct->prio        = cfg_task_template.prio;
   ct->mcp         = cfg_task_template.mcp;
   ct->ds_image    = ds;
@@ -308,6 +309,27 @@ cfg_new_ioport(int low, int high)
 
   for (i=low; i<=high; i++)
     (*cfg_task_current)->iobitmap[i/8] |= (1 << (i%8));
+
+  return 0;
+}
+
+
+/** Set task number of task we currently working on. */
+int
+cfg_task_no(unsigned int no)
+{
+  if (!*cfg_task_current)
+    /* cfg_task_prio before cfg_new_task */
+    {
+      printf("Set no of which task?\n");
+      return -L4_EINVAL;
+    }
+
+  (*cfg_task_current)->taskno = no;
+  
+  if (cfg_verbose>0)
+    printf("  <%s>: taskno: %02x\n", 
+	(*cfg_task_current)->task.fname, (*cfg_task_current)->taskno);
 
   return 0;
 }

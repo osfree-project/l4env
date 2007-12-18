@@ -22,31 +22,20 @@
 
 #include "debug.h"
 
-int
-l4ts_free_task(const l4_taskid_t *taskid)
+
+static int
+__do_free_task(const l4_taskid_t *taskid,
+               long (*func)(const_CORBA_Object _dice_corba_obj,
+                            const l4_taskid_t *taskid,
+                            CORBA_Environment *_dice_corba_env))
 {
   CORBA_Environment _env = dice_default_environment;
   int error;
-//  l4_taskid_t ret;
 
   if (!l4ts_connected())
     return -L4_ENOTFOUND;
-#if 0
-  /* If we used allocate2() to get this task, we need
-   * to retransfer ownership to the task server
-   */
-  if (taskid->id.chief == l4_myself().id.task)
-    {
-      LOG("retransferring ownership of "l4util_idfmt" to TS.",
-          l4util_idstr(*taskid));
-      ret = l4_task_new(*taskid, l4ts_server_id.id.task,
-                        0, 0, L4_NIL_ID);
-      if (l4_is_nil_id(ret))
-          LOG_Error("Error returning task.");
-    }
-#endif
 
-  if ((error = l4_ts_free_call(&l4ts_server_id, taskid, &_env)) < 0
+  if ((error = func(&l4ts_server_id, taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))
     {
       LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
@@ -55,4 +44,16 @@ l4ts_free_task(const l4_taskid_t *taskid)
     }
 
   return 0;
+}
+
+int
+l4ts_free_task(const l4_taskid_t *taskid)
+{
+  return __do_free_task(taskid, l4_ts_free_call);
+}
+
+int
+l4ts_free2_task(const l4_taskid_t *taskid)
+{
+  return __do_free_task(taskid, l4_ts_free2_call);
 }

@@ -54,6 +54,7 @@ typedef struct
 typedef struct
 {
   l4_threadid_t		tid;		/**< L4 task id. */
+  unsigned int          taskno;         /**< L4 task number (if configured) */
   int			hi_first_msg;	/**< true if first message. */
   l4env_infopage_t	*env;		/**< ptr to environment infopage. */
   app_area_t		app_area[MAX_APP_AREA]; /**< pager regions. */

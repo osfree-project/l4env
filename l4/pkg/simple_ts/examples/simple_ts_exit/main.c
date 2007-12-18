@@ -85,7 +85,7 @@ app(int id, int num_create, l4_threadid_t caller)
        * may be that the new task's pager doesn't know anything about the
        * new task (because the task already runs before the task create to
        * the task server returns */
-      if ((error = l4_ts_allocate_call(&ts_id, &tid, &_env))
+      if ((error = l4_ts_allocate_call(&ts_id, 0, &tid, &_env))
 	  || DICE_HAS_EXCEPTION(&_env))
 	{
 	  /* most probably we have reached the maximum number of tasks */

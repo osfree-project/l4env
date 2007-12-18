@@ -40,20 +40,22 @@ l4ts_connect(void);
 
 /**
  * \brief Allocate a task ID.
+ * \param  taskno       a dedicated task ID is required if != 0
  * \retval taskid	allocated task ID.
  * \return		0 on success
  *			error code otherwise. */
 int
-l4ts_allocate_task(l4_taskid_t *taskid);
+l4ts_allocate_task(unsigned int taskno, l4_taskid_t *taskid);
 
 /**
  * \brief Allocate a task ID and become the task's chief.
- * \retval taskid   allocated task ID
- * \return          0 on success
- *                  error code otherwise
+ * \param  taskno       a dedicated task ID is required if != 0
+ * \retval taskid       allocated task ID
+ * \return              0 on success
+ *                      error code otherwise
  */
 int
-l4ts_allocate_task2(l4_taskid_t *taskid);
+l4ts_allocate_task2(unsigned int taskno, l4_taskid_t *taskid);
 
 /**
  * \brief Start a previously allocated task.
@@ -99,6 +101,12 @@ l4ts_create_task2(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
  * \param taskid	ID of the task to free. */
 int
 l4ts_free_task(const l4_taskid_t *taskid);
+
+/**
+ * \brief Free a task number and return chief rights.
+ * \param taskid	ID of the task to free. */
+int
+l4ts_free2_task(const l4_taskid_t *taskid);
 
 
 #define	L4TS_KILL_SYNC	1 /* wait for freeing resources */

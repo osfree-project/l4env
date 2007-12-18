@@ -58,7 +58,7 @@ int yyparse(void);
 %token <string>  FIASCO_SYMBOLS FIASCO_LINES KERNEL_QUOTA USE_QUOTA
 %token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE ALLOW_VGA ALLOW_BIOS
 %token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER CAP_HANDLER
-%token <string>  NO_SIGMA0 SHOW_APP_AREAS ALL_SECTS_WRITABLE
+%token <string>  NO_SIGMA0 SHOW_APP_AREAS ALL_SECTS_WRITABLE TASKNO
 %token <string>  UNSIGNED STRING L4ENV_BINARY ALLOW_IPC DENY_IPC
 %token <string>  INTEGRITY_PARENT_ID INTEGRITY_ID HASH_MODULES
 
@@ -180,6 +180,14 @@ task_constraint	: task_modspec
 		| IOPORT ioconstraint
 			{
 			}
+                | TASKNO number
+                        {
+                          if (cfg_task_no($2))
+                            {
+                              yyerror("Error setting task numer");
+                              YYABORT;
+                            }
+                        }
 		| PRIORITY number
 			{ 
 			  if (cfg_task_prio($2))

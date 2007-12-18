@@ -30,7 +30,7 @@
 #include "emul_linux.h"
 #include "elf.h"
 
-#define MMAP_ENTRIES	64
+#define MMAP_ENTRIES	96
 
 #if DEBUG_LEVEL>1
 #define INFO		1

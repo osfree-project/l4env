@@ -72,6 +72,7 @@ typedef struct
   cfg_mem_t        mem[CFG_MAX_MEM];       /**< memory blocks */
   cfg_mem_t        *next_mem;              /**< next free memory block */
   char             *iobitmap;              /**< I/O permission bitmap */
+  unsigned int     taskno;                 /**< task number */
   unsigned int     prio;                   /**< priority of thread x.0 */
   unsigned int     mcp;                    /**< mcp of thread x.0 */
   l4_threadid_t    fprov_id;               /**< file provider to read modules
@@ -122,6 +123,7 @@ int  cfg_new_mem(l4_size_t size, l4_addr_t low, l4_addr_t high,
 	         l4_umword_t flags);
 int  cfg_new_ioport(int low, int high);
 cfg_task_t** cfg_next_task(void);
+int  cfg_task_no  (unsigned int no);
 int  cfg_task_prio(unsigned int prio);
 int  cfg_task_mcp (unsigned int mcp);
 int  cfg_task_flag(unsigned int flag);

@@ -359,7 +359,7 @@ static void fork_tasks(void)
     {
 	l4_taskid_t t;
 	// allocate task id
-	if (l4ts_allocate_task(&t))
+	if (l4ts_allocate_task(0, &t))
 	{
 	    printf("Could not allocate task %d\n", i);
 	    break;

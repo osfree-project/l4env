@@ -26,21 +26,23 @@ library l4
        * and can tell the new task ID to the pager in the next step. Finally
        * we create the task. 
        * 
+       * \param  taskno         if != 0, use the specific task number
        * \retval taskid		Id of new task assigned to calling client
        * \return 		0 on success (\a taskid contains a valid id),
        * 			error code otherwise:
        * 			- -#L4_ENOTASK  no unused task id available */
-      long allocate([out] l4_taskid_t *taskid);
+      long allocate([in] unsigned long taskno, [out] l4_taskid_t *taskid);
 
       /** Allocate a new task in the same way as allocate(). However, this
        * _really_ transfers ownership to the client by making it the
        * new task's chief.
        *
+       * \param  taskno         if != 0, use the specific task number
        * \retval taskid		Id of new task assigned to calling client
        * \return 		0 on success (\a taskid contains a valid id),
        * 			error code otherwise:
        * 			- -#L4_ENOTASK  no unused task id available */
-      long allocate2([out] l4_taskid_t *taskid);
+      long allocate2([in] unsigned long taskno, [out] l4_taskid_t *taskid);
 
       /** Create the task. The taskid must be owned by the client.
        * 
@@ -67,6 +69,14 @@ library l4
        * \return 		0 on success
        *			-#L4_ENOTFOUND if invalid task */
       long free([in] l4_taskid_t taskid);
+
+      /**
+       * Free previously allocated task id and return chief rights.
+       *
+       * \param  taskid		Id of the task to free.
+       * \return 		0 on success
+       *			-#L4_ENOTFOUND if invalid task */
+      long free2([in] l4_taskid_t taskid);
 
       /** Terminate task. 
        *

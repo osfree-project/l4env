@@ -182,6 +182,7 @@ create_app_desc(app_t **new_app)
 	      memset(a, 0, sizeof(*a));
 	      a->env          = (l4env_infopage_t*)1; /* mark as allocated */
 	      a->tid          = L4_INVALID_ID;	/* tid still unknown */
+	      a->taskno       = 0;		/* tid not configured */
 	      a->hi_first_msg = is_fiasco();	/* highlight first message */
 	      a->last_pf      = ~0U;
 	      a->last_pf_eip  = ~0U;
@@ -295,6 +296,7 @@ app_find_free_virtual_area(app_t *app, l4_size_t size,
     }
 
   /* we went through. Our address may be after the last area. */
+  // XXX what's this!!!?!!
   if (addr >= 0xC0000000 || addr >= high)
     return 0;
 
@@ -1127,7 +1129,7 @@ app_create_tid(app_t *app)
   int error;
 
   /* ask task server to create new task */
-  if ((error = l4ts_allocate_task(&app->tid)))
+  if ((error = l4ts_allocate_task(app->taskno, &app->tid)))
     {
       app_msg(app, "Error %d (%s) allocating task",
 		   error, l4env_errstr(error));
@@ -1443,8 +1445,6 @@ app_cont_interp(app_t *app)
   app_msg(app, "Starting %s at %08lx via %08lx",
 	       interp, app->env->entry_1st, app->eip);
 
-  l4_imb();
-
   if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
                                  app->mcp,
                                  &app_pager_id, &app->caphandler,
@@ -1584,6 +1584,7 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   env->magic      = L4ENV_INFOPAGE_MAGIC;
   env->fprov_id   = ct->fprov_id;
   env->memserv_id = ct->dsm_id;
+  app->taskno     = ct->taskno;
   app->prio       = ct->prio;
   app->mcp        = ct->mcp;
   app->fname      = strdup(ct->task.fname);

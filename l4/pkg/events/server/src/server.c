@@ -349,8 +349,11 @@ send_ack_event(l4events_nr_t enr)
 	  if (send_error)
 	    {
 	      LOGd(DEBUGLVL(3), "giving ack failed");
-	      /* notification failed */
-	      curr_ack->threadid = L4_INVALID_ID;
+              /* Notification failed. This is no problem if the client was
+               * just not ready (l4events_get_ack_open()) call. We will retry
+               * later. */
+              if (send_error != L4_IPC_SETIMEOUT)
+                curr_ack->threadid = L4_INVALID_ID;
 	    }
 	  else
 	    {

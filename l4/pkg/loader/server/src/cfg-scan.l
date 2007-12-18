@@ -49,6 +49,7 @@ fiasco_symbols		{ count(); return FIASCO_SYMBOLS; }
 fiasco_lines		{ count(); return FIASCO_LINES; }
 memdump			{ count(); return MEMDUMP; }
 sleep			{ count(); return SLEEP; }
+taskno                  { count(); return TASKNO; }
 memory			{ count(); return MEMORY; }
 ioport			{ count(); return IOPORT; }
 kb|Kb|kB|KB		{ count(); return KB; }

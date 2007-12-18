@@ -192,10 +192,15 @@ task_init(void)
 static l4_uint32_t
 task_alloc(l4_threadid_t *caller, l4_uint32_t taskno)
 {
-  unsigned n = taskno - taskno_min;
+  unsigned n;
 
   if (taskno != ANY_TASKNO)
     {
+      if (taskno < taskno_min || taskno >= taskno_min + task_cnt)
+	return -L4_ENOTASK;
+
+      n = taskno - taskno_min;
+
       if (!l4util_test_and_set_bit(n, task_used))
 	{
 	  __tasks[n].owner = *caller;
@@ -380,13 +385,14 @@ task_kill_recursive(l4_threadid_t caller, l4_taskid_t taskid)
  */
 long
 l4_ts_allocate_component (CORBA_Object client,
+                          unsigned long taskno_user,
                           l4_taskid_t *taskid,
                           CORBA_Server_Environment *_dice_corba_env)
 {
   l4_int32_t taskno; /* UGLY, taskno can also be an error code */
 
   /* allocate new task number */
-  if ((taskno = task_alloc(client, ANY_TASKNO)) < 0)
+  if ((taskno = task_alloc(client, taskno_user ? taskno_user : ANY_TASKNO)) < 0)
     return -L4_ENOTASK;
 
   *taskid = __tasks[taskno - taskno_min].id;
@@ -401,13 +407,14 @@ l4_ts_allocate_component (CORBA_Object client,
  */
 long
 l4_ts_allocate2_component(CORBA_Object client,
+                          unsigned long taskno_user,
                           l4_taskid_t *taskid,
                           CORBA_Server_Environment *_dice_corba_env)
 {
   l4_int32_t taskno;
   l4_taskid_t ret;
 
-  if ((taskno = task_alloc(client, ANY_TASKNO)) < 0)
+  if ((taskno = task_alloc(client, taskno_user ? taskno_user : ANY_TASKNO)) < 0)
     return -L4_ENOTASK;
 
   /* Hmmm. During init() we returned all tasks to RMGR. This client
@@ -441,6 +448,24 @@ long
 l4_ts_free_component(CORBA_Object client, const l4_taskid_t *taskid,
 		     CORBA_Server_Environment *_dice_corba_env)
 {
+  return task_free(client, taskid->id.task);
+}
+
+/**
+ *  Free task number and give back chief rights.
+ *
+ * \param taskid	Task ID to free
+ * \return		0 on succes
+ *			-L4_ENOTFOUND if task doesn't exist
+ *			-L4_ENOTOWNER if caller isn't the owner
+ */
+long
+l4_ts_free2_component(CORBA_Object client, const l4_taskid_t *taskid,
+		      CORBA_Server_Environment *_dice_corba_env)
+{
+  /* as we create tasks through RMGR, return the L4 task right back to RMGR */
+  l4_task_new(*taskid, (l4_umword_t)rmgr_id.raw, 0, 0, L4_NIL_ID);
+
   return task_free(client, taskid->id.task);
 }
 

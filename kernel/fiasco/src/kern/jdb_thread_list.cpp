@@ -434,15 +434,19 @@ Jdb_list_threads::list_threads_show_thread(Thread *t)
 {
   char to[24];
   int  waiting_for = 0;
-  
+  bool is_monitored  = t->space()->task_caps_enabled();
+  bool is_privileged = t->has_privileged_iopl();
+
   *to = '\0';
 
   Kconsole::console()->getchar_chance();
 
-  if (t->has_privileged_iopl() && !long_output)
+  if (is_privileged && !long_output)
     printf("%s", Jdb::esc_emph);
+  else if (is_monitored && !long_output)
+    putstr(Jdb::esc_emph2);
   t->print_uid(3);
-  if (t->has_privileged_iopl() && !long_output)
+  if ((is_privileged || is_monitored) && !long_output)
     putstr("\033[m");
 
   const char *name = get_thread_name(t->id());

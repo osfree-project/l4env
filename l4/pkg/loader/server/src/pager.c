@@ -23,6 +23,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kernel.h>
+#include <l4/sys/cache.h>
 #include <l4/thread/thread.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/l4rm/l4rm.h>
@@ -541,8 +542,9 @@ app_pager_thread(void *data)
               && !l4_msgtag_is_sigma0(tag))
             {
               printf("Cannot handle IPC type %ld from "
-                     l4util_idfmt"\n",
-                     l4_msgtag_label(tag), l4util_idstr(src_tid));
+                     l4util_idfmt" (%lx,%lx)\n",
+                     l4_msgtag_label(tag), l4util_idstr(src_tid),
+                     dw1, dw2);
               skip_reply = 1;
             }
           else
@@ -716,6 +718,13 @@ app_pager_thread(void *data)
 	  if (skip_reply)
 	    break;
 
+	  if (reply == L4_IPC_SHORT_FPAGE)
+	    {
+	      l4_fpage_t fp;
+	      fp.raw = dw2;
+	      l4_sys_cache_clean_range(fp.fp.page << L4_LOG2_PAGESIZE,
+                                       (fp.fp.page << L4_LOG2_PAGESIZE) + (1 << fp.fp.size));
+	    }
 	  error = l4_ipc_reply_and_wait_tag(src_tid, reply, dw1, dw2,
 					l4_msgtag(0, 0, 0, 0), &src_tid, L4_IPC_SHORT_MSG, &dw1, &dw2,
 					L4_IPC_SEND_TIMEOUT_0,

@@ -110,6 +110,10 @@ private:
   static Vendor			_vendor;
   static char			_model_str[32];
 
+  static Unsigned32             _arch_perfmon_info_eax;
+  static Unsigned32             _arch_perfmon_info_ebx;
+  static Unsigned32             _arch_perfmon_info_ecx;
+
   static Vendor_table const	intel_table[];
   static Vendor_table const	amd_table[];
   static Vendor_table const	cyrix_table[];
@@ -181,6 +185,10 @@ Unsigned8	Cpu::_virt_bits = 32;
 
 Cpu::Vendor     Cpu::_vendor;
 char		Cpu::_model_str[32];
+
+Unsigned32      Cpu::_arch_perfmon_info_eax;
+Unsigned32      Cpu::_arch_perfmon_info_ebx;
+Unsigned32      Cpu::_arch_perfmon_info_ecx;
 
 Cpu::Vendor_table const Cpu::intel_table[] FIASCO_INITDATA =
 {
@@ -609,6 +617,15 @@ Cpu::have_syscall()
 { return ext_amd_features() & FEATA_SYSCALL; }
 
 PUBLIC static inline
+void
+Cpu::arch_perfmon_info(Unsigned32 *eax, Unsigned32 *ebx, Unsigned32 *ecx)
+{
+  *eax = _arch_perfmon_info_eax;
+  *ebx = _arch_perfmon_info_ebx;
+  *ecx = _arch_perfmon_info_ecx;
+}
+
+PUBLIC static inline
 Mword
 Cpu::virt_bits()
 { return _virt_bits; }
@@ -794,7 +811,7 @@ Cpu::identify()
   set_flags (eflags ^ EFLAGS_ID);
   if ((get_flags() ^ eflags) & EFLAGS_ID) {
 
-    Unsigned32 max, i;
+    Unsigned32 max, i, dummy;
     char vendor_id[12];
 
     cpuid (0, &max, (Unsigned32 *)(vendor_id),
@@ -811,6 +828,10 @@ Cpu::identify()
       {
       default:
 	// All cases fall through!
+      case 10:
+        cpuid(10, &_arch_perfmon_info_eax,
+                  &_arch_perfmon_info_ebx,
+                  &_arch_perfmon_info_ecx, &dummy);
       case 2:
         if (_vendor == Vendor_intel)
           cache_tlb_intel();

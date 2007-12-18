@@ -197,7 +197,7 @@ main(void)
        * may be that the new task's pager doesn't know anything about the
        * new task (because the task already runs before the task create to
        * the task server returns */
-      if ((error = l4ts_allocate_task(&tid)))
+      if ((error = l4ts_allocate_task(0, &tid)))
 	{
 	  /* most probably we have reached the maximum number of tasks */
 	  printf("Expected error allocating task: %d\n", error);
@@ -261,7 +261,7 @@ main(void)
   
   printf("Task "l4util_idfmt" freed\n", l4util_idstr(tid));
 
-  if ((error = l4ts_allocate_task(&tid)))
+  if ((error = l4ts_allocate_task(0, &tid)))
     {
       printf("Error %d allocating task "l4util_idfmt"\n", 
 	      error, l4util_idstr(tid));

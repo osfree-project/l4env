@@ -58,6 +58,7 @@ class Perf_cnt_p5 : public Perf_cnt_arch {};
 class Perf_cnt_p6 : public Perf_cnt_arch {};
 class Perf_cnt_k7 : public Perf_cnt_p6   {};
 class Perf_cnt_p4 : public Perf_cnt_arch {};
+class Perf_cnt_ap : public Perf_cnt_p6   {};
 
 IMPLEMENTATION [{ia32,ux,amd64}-perf_cnt]:
 
@@ -89,6 +90,7 @@ static Perf_cnt_p5 perf_cnt_p5 __attribute__ ((init_priority(101)));
 static Perf_cnt_p6 perf_cnt_p6 __attribute__ ((init_priority(101)));
 static Perf_cnt_k7 perf_cnt_k7 __attribute__ ((init_priority(101)));
 static Perf_cnt_p4 perf_cnt_p4 __attribute__ ((init_priority(101)));
+static Perf_cnt_ap perf_cnt_ap __attribute__ ((init_priority(101)));
 
 enum
 {
@@ -140,6 +142,14 @@ enum
   P4_cccr_compare	= (1<<18),
   P4_cccr_required	= (3<<16),
   P4_cccr_enable	= (1<<12),
+
+  Msr_ap_perfctr0       = 0xC1,
+  Msr_ap_evntsel0       = 0x186,
+  AP_evntsel_enable     = P6_evntsel_enable,
+  AP_evntsel_int        = P6_evntsel_int,
+  AP_evntsel_user       = P6_evntsel_user,
+  AP_evntsel_kern       = P6_evntsel_kern,
+  AP_evntsel_edge       = P6_evntsel_edge,
 };
 
 // -----------------------------------------------------------------------
@@ -158,6 +168,7 @@ enum
   Perfctr_x86_intel_pentm	= 14,
   Perfctr_x86_amd_k7		= 9,
   Perfctr_x86_amd_k8		= 13,
+  Perfctr_x86_arch_perfmon      = 14,
 };
 
 enum perfctr_unit_mask_type
@@ -437,6 +448,53 @@ static Mword k7_read_pmc_3() { return Cpu::rdpmc(3, 0xC0010007); }
 
 static Perf_cnt::Perf_read_fn k7_read_pmc_fns[] =
 { &k7_read_pmc_0, &k7_read_pmc_1, &k7_read_pmc_2, &k7_read_pmc_3 };
+
+
+//--------------------------------------------------------------------
+// Arch Perfmon. Intel Core architecture
+PUBLIC inline NOEXPORT
+Perf_cnt_ap::Perf_cnt_ap()
+  : Perf_cnt_p6(Msr_ap_evntsel0, Msr_ap_perfctr0, 2, 1)
+{
+  Unsigned32 eax, ebx, ecx;
+  Cpu::arch_perfmon_info(&eax, &ebx, &ecx);
+  _nr_regs = (eax & 0x0000ff00) >> 8;
+}
+
+void
+Perf_cnt_ap::start_pmc(Mword reg_nr)
+{
+  Unsigned64 msr;
+
+  msr = Cpu::rdmsr(_sel_reg0 + reg_nr);
+  msr |= AP_evntsel_enable;
+  Cpu::wrmsr(msr, _sel_reg0 + reg_nr);
+}
+
+void
+Perf_cnt_ap::init_watchdog()
+{
+  Unsigned64 msr;
+
+  msr = AP_evntsel_int    // Int enable: enable interrupt on overflow
+        | AP_evntsel_kern // Monitor kernel-level events
+        | AP_evntsel_user // Monitor user-level events
+        | 0x3C;           // #clocks CPU is running
+  Cpu::wrmsr(msr, _sel_reg0 + pmc_watchdog);
+}
+
+void
+Perf_cnt_ap::init_loadcnt()
+{
+  Unsigned64 msr;
+
+  msr = AP_evntsel_kern   // Monitor kernel-level events
+        | AP_evntsel_user // Monitor user-level events
+        | 0x3C;           // #clocks CPU is running
+  Cpu::wrmsr(msr, _sel_reg0 + pmc_loadcnt);
+
+  printf("Load counter initialized (read with rdpmc(0x%02lX))\n", pmc_loadcnt);
+}
 
 
 //--------------------------------------------------------------------
@@ -803,105 +861,117 @@ void
 Perf_cnt::init()
 {
   Mword perfctr_type = Perfctr_x86_generic;
+  Unsigned32 eax, ebx, ecx;
 
   for (Mword i=0; i<Perf_cnt::Max_slot; i++)
     read_pmc_fn[i] = dummy_read_pmc;
 
   if (Cpu::have_tsc() && Cpu::can_wrmsr())
     {
-      if (Cpu::vendor() == Cpu::Vendor_intel)
-	{
-	  // Intel
-	  switch (Cpu::family())
-	    {
-	    case 5:
-	      perf_event_type  = P5;
-	      if (Cpu::local_features() & Cpu::Lf_rdpmc)
-		{
-		  perfctr_type  = Perfctr_x86_intel_p5mmx;
-		  perf_type_str = "P5MMX";
-		  read_pmc_fns  = p6_read_pmc_fns;
-		}
-	      else
-		{
-		  perfctr_type  = Perfctr_x86_intel_p5;
-		  perf_type_str = "P5";
-		  read_pmc_fns  = p5_read_pmc_fns;
-		}
-	      pcnt = &perf_cnt_p5;
-	      break;
+      Cpu::arch_perfmon_info(&eax, &ebx, &ecx);
+      if ((eax & 0xff) && (((eax>>8) & 0xff) > 1))
+        {
+          perfctr_type  = Perfctr_x86_arch_perfmon;
+          perf_type_str = "PA";
+          read_pmc_fns  = p6_read_pmc_fns;
+          pcnt = &perf_cnt_ap;
+        }
+      if (perfctr_type == Perfctr_x86_generic)
+        {
+          if (Cpu::vendor() == Cpu::Vendor_intel)
+            {
+              // Intel
+              switch (Cpu::family())
+                {
+                case 5:
+                  perf_event_type  = P5;
+                  if (Cpu::local_features() & Cpu::Lf_rdpmc)
+                    {
+                      perfctr_type  = Perfctr_x86_intel_p5mmx;
+                      perf_type_str = "P5MMX";
+                      read_pmc_fns  = p6_read_pmc_fns;
+                    }
+                  else
+                    {
+                      perfctr_type  = Perfctr_x86_intel_p5;
+                      perf_type_str = "P5";
+                      read_pmc_fns  = p5_read_pmc_fns;
+                    }
+                  pcnt = &perf_cnt_p5;
+                  break;
 
-	    case 6:
-	      perf_event_type = P6;
-	      if (Cpu::model() == 9 || Cpu::model() == 13)
-		{
-		  perfctr_type  = Perfctr_x86_intel_pentm;
-		  perf_type_str = "PntM";
-		}
-	      else if (Cpu::model() >= 7)
-		{
-		  perfctr_type  = Perfctr_x86_intel_piii;
-		  perf_type_str = "PIII";
-		}
-	      else if (Cpu::model() >= 3)
-		{
-		  perfctr_type  = Perfctr_x86_intel_pii;
-		  perf_type_str = "PII";
-		}
-	      else
-		{
-		  perfctr_type  = Perfctr_x86_intel_p6;
-		  perf_type_str = "PPro";
-		}
-	      read_pmc_fns = p6_read_pmc_fns;
-	      pcnt = &perf_cnt_p6;
-	      break;
+                case 6:
+                  perf_event_type = P6;
+                  if (Cpu::model() == 9 || Cpu::model() == 13)
+                    {
+                      perfctr_type  = Perfctr_x86_intel_pentm;
+                      perf_type_str = "PntM";
+                    }
+                  else if (Cpu::model() >= 7)
+                    {
+                      perfctr_type  = Perfctr_x86_intel_piii;
+                      perf_type_str = "PIII";
+                    }
+                  else if (Cpu::model() >= 3)
+                    {
+                      perfctr_type  = Perfctr_x86_intel_pii;
+                      perf_type_str = "PII";
+                    }
+                  else
+                    {
+                      perfctr_type  = Perfctr_x86_intel_p6;
+                      perf_type_str = "PPro";
+                    }
+                  read_pmc_fns = p6_read_pmc_fns;
+                  pcnt = &perf_cnt_p6;
+                  break;
 
-	    case 15:
-	      perf_event_type = P4;
-	      if (Cpu::model() >= 3)
-		{
-		  perfctr_type = Perfctr_x86_intel_p4m3;
-		  perf_type_str = "P4M3";
-		}
-	      else if (Cpu::model() >= 2)
-		{
-		  perfctr_type = Perfctr_x86_intel_p4m2;
-		  perf_type_str = "P4M2";
-		}
-	      else
-		{
-		  perfctr_type = Perfctr_x86_intel_p4;
-		  perf_type_str = "P4";
-		}
-	      read_pmc_fns = p4_read_pmc_fns;
-	      pcnt = &perf_cnt_p4;
-	      break;
-	    }
-	}
-      else if (Cpu::vendor() == Cpu::Vendor_amd)
-	{
-	  // AMD
-	  switch (Cpu::family())
-	    {
-	    case 6:
-	    case 15:
-	      if (Cpu::family() == 15)
-		{
-		  perf_type_str = "K8";
-		  perfctr_type  = Perfctr_x86_amd_k8;
-		}
-	      else
-		{
-		  perf_type_str = "K7";
-		  perfctr_type  = Perfctr_x86_amd_k7;
-		}
-	      perf_event_type = P6;
-	      read_pmc_fns    = k7_read_pmc_fns;
-	      pcnt            = &perf_cnt_k7;
-	      break;
-	    }
-	}
+                case 15:
+                  perf_event_type = P4;
+                  if (Cpu::model() >= 3)
+                    {
+                      perfctr_type = Perfctr_x86_intel_p4m3;
+                      perf_type_str = "P4M3";
+                    }
+                  else if (Cpu::model() >= 2)
+                    {
+                      perfctr_type = Perfctr_x86_intel_p4m2;
+                      perf_type_str = "P4M2";
+                    }
+                  else
+                    {
+                      perfctr_type = Perfctr_x86_intel_p4;
+                      perf_type_str = "P4";
+                    }
+                  read_pmc_fns = p4_read_pmc_fns;
+                  pcnt = &perf_cnt_p4;
+                  break;
+                }
+            }
+          else if (Cpu::vendor() == Cpu::Vendor_amd)
+            {
+              // AMD
+              switch (Cpu::family())
+                {
+                case 6:
+                case 15:
+                  if (Cpu::family() == 15)
+                    {
+                      perf_type_str = "K8";
+                      perfctr_type  = Perfctr_x86_amd_k8;
+                    }
+                  else
+                    {
+                      perf_type_str = "K7";
+                      perfctr_type  = Perfctr_x86_amd_k7;
+                    }
+                  perf_event_type = P6;
+                  read_pmc_fns    = k7_read_pmc_fns;
+                  pcnt            = &perf_cnt_k7;
+                  break;
+                }
+            }
+        }
 
       // set PCE-Flag in CR4 to enable read of performace measurement
       // counters in usermode. PMC were introduced in Pentium MMX and

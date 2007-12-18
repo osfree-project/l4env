@@ -23,7 +23,7 @@
 #include "debug.h"
 
 int
-l4ts_allocate_task(l4_taskid_t *taskid)
+l4ts_allocate_task(unsigned int taskno, l4_taskid_t *taskid)
 {
   CORBA_Environment _env = dice_default_environment;
   int error;
@@ -31,7 +31,7 @@ l4ts_allocate_task(l4_taskid_t *taskid)
   if (!l4ts_connected())
     return -L4_ENOTFOUND;
 
-  if ((error = l4_ts_allocate_call(&l4ts_server_id, taskid, &_env)) < 0
+  if ((error = l4_ts_allocate_call(&l4ts_server_id, taskno, taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))
     {
       LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
@@ -43,7 +43,7 @@ l4ts_allocate_task(l4_taskid_t *taskid)
 }
 
 int
-l4ts_allocate_task2(l4_taskid_t *taskid)
+l4ts_allocate_task2(unsigned int taskno, l4_taskid_t *taskid)
 {
   CORBA_Environment _env = dice_default_environment;
   int error;
@@ -51,7 +51,7 @@ l4ts_allocate_task2(l4_taskid_t *taskid)
   if (!l4ts_connected())
     return -L4_ENOTFOUND;
 
-  if ((error = l4_ts_allocate2_call(&l4ts_server_id, taskid, &_env)) < 0
+  if ((error = l4_ts_allocate2_call(&l4ts_server_id, taskno, taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))
     {
       LOGd(DEBUG_TASK, "failed (server=" l4util_idfmt", ret=%d, exc %d)",
