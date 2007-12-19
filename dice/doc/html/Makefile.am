@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 DOXYGEN=	@DOXYGEN@
-RM_F=		rm -f
+RM_F=          rm -f
 
 DOXFILES=	mainpage.dox backend.dox frontend.dox
 EXTRA_DIST=	$(DOXFILES)
@@ -18,18 +18,18 @@ $(manual_HTML):	$(DOXFILES) Doxyfile
 
 else
 all-local:
-	@echo *********************************************************
-	@echo I cannot build the reference manual pages for dice, 
-	@echo because doxygen could not be found during configure. 
-	@echo To build the manual run 'doxygen' in the doc/html 
-	@echo directory manually, or install doxygen and run configure 
-	@echo again.
-	@echo *********************************************************
+	@${ECHO} *********************************************************
+	@${ECHO} I cannot build the reference manual pages for dice,
+	@${ECHO} because doxygen could not be found during configure.
+	@${ECHO} To build the manual run 'doxygen' in the doc/html
+	@${ECHO} directory manually, or install doxygen and run configure
+	@${ECHO} again.
+	@${ECHO} *********************************************************
 
 endif
 
 version.dox:
-	@echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
+	@${ECHO} PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
-	@rm -rf html/
+	@${RM_F} -r html/

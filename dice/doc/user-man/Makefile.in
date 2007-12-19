@@ -109,6 +109,7 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PDFLATEX = @PDFLATEX@
 RANLIB = @RANLIB@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -168,7 +169,7 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 RM_F = rm -f
-#NUMB=		>/dev/null 
+#NUMB=		>/dev/null
 NUMB = 
 #REAL_NUMB=	${NUMB} 2>&1
 REAL_NUMB = ${NUMB}
@@ -367,7 +368,7 @@ uninstall-am:
 @HAS_LATEX_TRUE@all-local:      version.tex tex-stamp $(manual_PDF)
 
 @HAS_LATEX_TRUE@%.dvi: %.tex
-@HAS_LATEX_TRUE@	@echo Generating $*.dvi ...
+@HAS_LATEX_TRUE@	@${ECHO} Generating $*.dvi ...
 @HAS_LATEX_TRUE@	@${LATEX} $< ${NUMB_LATEX}
 @HAS_LATEX_TRUE@	@grep '\citation' `ls *.aux` ${NUMB_GREP} && ${BIBTEX} $* ${NUMB_BIBTEX} || true
 @HAS_LATEX_TRUE@	@(export size=1 ; touch $*.dvi;\
@@ -377,7 +378,7 @@ uninstall-am:
 @HAS_LATEX_TRUE@	done)
 
 @HAS_LATEX_TRUE@%.pdf: %.tex
-@HAS_LATEX_TRUE@	@echo Generating $*.pdf ...
+@HAS_LATEX_TRUE@	@${ECHO} Generating $*.pdf ...
 @HAS_LATEX_TRUE@	@${PDFLATEX} $< ${NUMB_PDFLATEX}
 @HAS_LATEX_TRUE@	@${BIBTEX} $* ${NUMB_BIBTEX}
 @HAS_LATEX_TRUE@	@(while grep -q '${ERROR_PDF}' manual.log; do \
@@ -386,22 +387,22 @@ uninstall-am:
 @HAS_LATEX_TRUE@	@${RM_F} `ls *.aux` ${NUMB_RM_F}
 
 @HAS_LATEX_TRUE@%.ps: %.dvi
-@HAS_LATEX_TRUE@	@echo Generating $*.ps ...
+@HAS_LATEX_TRUE@	@${ECHO} Generating $*.ps ...
 @HAS_LATEX_TRUE@	@${DVIPS} $< -o ${NUMB_DVIPS}
 
 @HAS_LATEX_TRUE@%.toc: %.tex
-@HAS_LATEX_TRUE@	@echo Generating $*.toc ...
+@HAS_LATEX_TRUE@	@${ECHO} Generating $*.toc ...
 @HAS_LATEX_TRUE@	@${LATEX} $< ${NUMB_LATEX}
 @HAS_LATEX_TRUE@	@${RM_F} $*.dvi ${NUMB_RM_F}
 
 @HAS_LATEX_TRUE@%.bbl: %.aux
-@HAS_LATEX_TRUE@	@echo Generating $*.bbl ...
+@HAS_LATEX_TRUE@	@${ECHO} Generating $*.bbl ...
 @HAS_LATEX_TRUE@	@${BIBTEX} $* ${NUMB_BIBTEX}
 @HAS_LATEX_TRUE@	@${LATEX} $*.tex ${NUMB_LATEX}
 @HAS_LATEX_TRUE@	@${RM_F} $*.dvi ${NUMB_RM_F}
 
 @HAS_LATEX_TRUE@%.aux: %.tex
-@HAS_LATEX_TRUE@	@echo Generating $*.aux ...
+@HAS_LATEX_TRUE@	@${ECHO} Generating $*.aux ...
 @HAS_LATEX_TRUE@	@${LATEX} $< ${NUMB_LATEX}
 @HAS_LATEX_TRUE@	@${RM_F} $*.dvi ${NUMB_RM_F}
 
@@ -413,16 +414,16 @@ uninstall-am:
 @HAS_LATEX_TRUE@manual.pdf:	$(TEXFILES)
 
 version.tex:
-	@echo \\newcommand{\\Version}{${VERSION}} > $@
+	@${ECHO} \\newcommand{\\Version}{${VERSION}} > $@
 
 tex-stamp: $(TEXFILES)
-	@echo Generating tex-stamp ...
+	@${ECHO} Generating tex-stamp ...
 	@for F in $(TEXFILES); do \
 	 if test ! -f $${F} -a ! -L $${F}; then \
 	   ${LN_S} $(srcdir)/$${F} $${F}; \
 	 fi \
 	done
-	@echo timestamp > tex-stamp 2>/dev/null
+	@${ECHO} timestamp > tex-stamp 2>/dev/null
 
 clean-local:
 	@$(RM_F) *.dvi *.aux *.log *~ *.bbl *.blg *.toc *.ps *.pdf *.out

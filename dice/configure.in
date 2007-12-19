@@ -63,7 +63,7 @@ esac
 dnl
 dnl now YACC is most probably `bison -y', thus replace the ` -y' -- we need the original bison invocation
 dnl
-YACC=`echo -n $YACC|sed -e 's/ -y//'`
+YACC=`echo ${ECHO_N} $YACC|sed -e 's/ -y//'`
 AC_SUBST(YACC)
 dnl
 dnl check for `ln -s'

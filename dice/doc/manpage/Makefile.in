@@ -113,6 +113,7 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PDFLATEX = @PDFLATEX@
 RANLIB = @RANLIB@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -409,19 +410,19 @@ uninstall-man: uninstall-man1
 @HAS_DOXYGEN_TRUE@	$(VERBOSE)$(LN_S) -f man/man1/dice.1
 
 @HAS_DOXYGEN_FALSE@all-local:
-@HAS_DOXYGEN_FALSE@	@echo *********************************************************
-@HAS_DOXYGEN_FALSE@	@echo I cannot build the manual page for dice, because doxygen
-@HAS_DOXYGEN_FALSE@	@echo could not be found during configure. To build the manual
-@HAS_DOXYGEN_FALSE@	@echo run 'doxygen' in the doc/manual directory manually, or
-@HAS_DOXYGEN_FALSE@	@echo install doxygen and run configure again.
-@HAS_DOXYGEN_FALSE@	@echo *********************************************************
+@HAS_DOXYGEN_FALSE@	@${ECHO} *********************************************************
+@HAS_DOXYGEN_FALSE@	@${ECHO} I cannot build the manual page for dice, because doxygen
+@HAS_DOXYGEN_FALSE@	@${ECHO} could not be found during configure. To build the manual
+@HAS_DOXYGEN_FALSE@	@${ECHO} run 'doxygen' in the doc/manual directory manually, or
+@HAS_DOXYGEN_FALSE@	@${ECHO} install doxygen and run configure again.
+@HAS_DOXYGEN_FALSE@	@${ECHO} *********************************************************
 
 version.dox:
-	echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
+	@${ECHO} PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
-	rm -rf man/ man1/
-	rm -f dice.1
+	$(RM_F) -r man/ man1/
+	$(RM_F) dice.1
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

@@ -192,8 +192,7 @@ protected:
 	virtual void WriteDefaultFunction(CBEHeaderFile& pFile);
 
 	int GetOperationNumber(CFEOperation *pFEOperation);
-	bool IsPredefinedID(map<unsigned int, std::string> *pFunctionIDs,
-		int nNumber);
+	bool IsPredefinedID(map<unsigned int, std::string> *pFunctionIDs, int nNumber);
 	int GetMaxOpcodeNumber(CFEInterface *pFEInterface);
 	int GetUuid(CFEOperation *pFEOperation);
 	bool HasUuid(CFEOperation *pFEOperation);

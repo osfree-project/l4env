@@ -877,7 +877,7 @@ string CBENameFactory::GetHeaderDefine(std::string sFilename)
 	string sReturn;
 	sReturn = "__" + sFilename + "__";
 	// make uppercase
-	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
+	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 	// replace "nonconforming characters"
 	string::size_type pos;
 	while ((pos = sReturn.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")) != string::npos)
@@ -903,7 +903,7 @@ string CBENameFactory::GetTypeDefine(std::string sTypedefName)
 	string sReturn;
 	sReturn = "__typedef_" + sTypedefName + "__";
 	// make uppercase
-	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
+	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 	// replace "nonconforming characters"
 	string::size_type pos;
 	while ((pos = sReturn.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")) != string::npos)
@@ -980,7 +980,7 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 		sReturn += (pClass->GetName()) + "_";
 	sReturn += pFunction->GetName() + "_opcode";
 	// make upper case
-	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
+	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s(BE: %s) = %s\n", __func__,
 		pFunction->GetName().c_str(), sReturn.c_str());
@@ -1018,7 +1018,7 @@ string CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation, bool bSecond)
 	if (bSecond)
 		sReturn += "_2";
 	// make upper case
-	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
+	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBENameFactory::%s(FE: %s) = %s\n", __func__,
@@ -1048,7 +1048,7 @@ string CBENameFactory::GetOpcodeConst(CBEClass * pClass)
 		sReturn += (pNameSpace->GetName()) + "_";
 	sReturn += pClass->GetName() + "_base_opcode";
 	// make upper case
-	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
+	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBENameFactory::%s(C: %s) = %s\n", __func__,

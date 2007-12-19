@@ -23,19 +23,19 @@ $(man_MANS):	version.dox $(DOXFILES) Doxyfile
 
 else
 all-local:
-	@echo *********************************************************
-	@echo I cannot build the manual page for dice, because doxygen
-	@echo could not be found during configure. To build the manual
-	@echo run 'doxygen' in the doc/manual directory manually, or
-	@echo install doxygen and run configure again.
-	@echo *********************************************************
+	@${ECHO} *********************************************************
+	@${ECHO} I cannot build the manual page for dice, because doxygen
+	@${ECHO} could not be found during configure. To build the manual
+	@${ECHO} run 'doxygen' in the doc/manual directory manually, or
+	@${ECHO} install doxygen and run configure again.
+	@${ECHO} *********************************************************
 
 endif
 
 version.dox:
-	echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
+	@${ECHO} PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
-	rm -rf man/ man1/
-	rm -f dice.1
+	$(RM_F) -r man/ man1/
+	$(RM_F) dice.1
 

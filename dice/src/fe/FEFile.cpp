@@ -95,7 +95,7 @@ CFEFile::CFEFile(std::string sFileName,
 
 	// make file extension lower case
 	transform(m_sFileExtension.begin(), m_sFileExtension.end(),
-		m_sFileExtension.begin(), _tolower);
+		m_sFileExtension.begin(), tolower);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilename: %s\n", __func__,
 		m_sFilename.c_str());
@@ -421,7 +421,7 @@ CFEConstDeclarator *CFEFile::FindConstDeclarator(std::string sName)
 bool CFEFile::HasExtension(std::string sExtension)
 {
 	// make sExtension lower case
-	transform(sExtension.begin(), sExtension.end(), sExtension.begin(), _tolower);
+	transform(sExtension.begin(), sExtension.end(), sExtension.begin(), tolower);
 	// if no extension, this file cannot be of this extension
 	return m_sFileExtension == sExtension;
 }

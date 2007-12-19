@@ -289,7 +289,7 @@ string CL4BENameFactory::GetMsgBufferSizeDopeConst(CBETypedDeclarator* pMsgBuffe
 	{
 		//         use the msg buffer's alias and attach a "_SIZE_INIT"
 		sName = pMsgBuffer->m_Declarators.First()->GetName();
-		transform(sName.begin(), sName.end(), sName.begin(), _toupper);
+		transform(sName.begin(), sName.end(), sName.begin(), toupper);
 		sName += "_SIZE_INIT";
 	}
 	return sName;

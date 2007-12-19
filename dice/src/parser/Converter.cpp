@@ -51,7 +51,7 @@ IntType dice::parser::int_type (char *str)
 	// if "ll" or "ull" -> longlong
 	// could end on u,ul,ull,l,ll,lu,llu
 	std::string s(str);
-	std::transform(s.rbegin(), s.rend(), s.rbegin(), _tolower);
+	std::transform(s.rbegin(), s.rend(), s.rbegin(), tolower);
 
 	std::string::size_type l = s.length();
 	if (l > 3 && (s.substr(l-3) == "ull" || s.substr(l-3) == "llu"))

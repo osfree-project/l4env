@@ -20,7 +20,7 @@ c_parser_driver::~c_parser_driver ()
 bool c_parser_driver::is_header (const std::string& f)
 {
 	string ext = f.substr(f.rfind(".")+1);
-	std::transform(ext.begin(), ext.end(), ext.begin(), _tolower);
+	std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
 	if (ext == string("h") ||
 		ext == string("hh"))
 		return true;

@@ -59,7 +59,7 @@ parser_driver::~parser_driver()
 int parser_driver::determine_filetype(std::string f)
 {
 	string ext = f.substr(f.rfind(".")+1);
-	std::transform(ext.begin(), ext.end(), ext.begin(), _tolower);
+	std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
 
 	if (ext == "idl")
 		return USE_FILE_IDL;

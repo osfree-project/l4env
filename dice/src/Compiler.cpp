@@ -248,7 +248,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 				{
 					// make upper case
 					string sArg(optarg);
-					transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+					transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 					while (sArg[0] == '=')
 						sArg.erase(sArg.begin());
 					if (sArg == "EXTERN")
@@ -374,7 +374,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 				// make upper case
 				string sArg = optarg;
 				string sOrig = sArg;
-				transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+				transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 				// test first letter
 				char cFirst = sArg[0];
 				switch (cFirst)
@@ -692,7 +692,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			{
 				// make upper case
 				string sArg(optarg);
-				transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+				transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 
 				// test first letter
 				// p - platform
@@ -788,7 +788,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			else
 			{
 				string sArg(optarg);
-				transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+				transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 				if (sArg == "XML")
 				{
 					CMessages::Error("Option -EXML is deprecated.\n");
@@ -840,7 +840,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 				{
 					// make upper case
 					string sArg = optarg;
-					transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+					transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 					if (sArg == "M")
 						SetDependsOption(PROGRAM_DEPEND_MM);
 					else if (sArg == "D")
@@ -883,7 +883,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			else
 			{
 				string sArg = optarg;
-				transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+				transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 				if (sArg == "ALL")
 				{
 					SetWarningLevel(PROGRAM_WARNING_ALL);
@@ -970,7 +970,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		case 'x':
 			{
 				string sArg = optarg;
-				transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
+				transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
 				if (sArg == "CORBA")
 				{
 					Verbose(PROGRAM_VERBOSE_OPTIONS,

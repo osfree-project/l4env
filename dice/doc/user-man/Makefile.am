@@ -5,12 +5,12 @@ BIBTEX=         @BIBTEX@
 DVIPS=          @DVIPS@
 PDFLATEX=       @PDFLATEX@
 FIG2DEV=	@FIG2DEV@
-RM_F=		rm -f
-#NUMB=		>/dev/null 
-NUMB=		
+RM_F=          rm -f
+#NUMB=		>/dev/null
+NUMB=
 #REAL_NUMB=	${NUMB} 2>&1
 REAL_NUMB=	${NUMB}
-NUMB_RM_F= 	${NUMB}
+NUMB_RM_F=	${NUMB}
 NUMB_LATEX=	${REAL_NUMB}
 NUMB_BIBTEX=	${NUMB}
 NUMB_PDFLATEX=	${NUMB}
@@ -42,7 +42,7 @@ if HAS_LATEX
 all-local:      version.tex tex-stamp $(manual_PDF)
 
 %.dvi: %.tex
-	@echo Generating $*.dvi ...
+	@${ECHO} Generating $*.dvi ...
 	@${LATEX} $< ${NUMB_LATEX}
 	@grep '\citation' `ls *.aux` ${NUMB_GREP} && ${BIBTEX} $* ${NUMB_BIBTEX} || true
 	@(export size=1 ; touch $*.dvi;\
@@ -50,9 +50,9 @@ all-local:      version.tex tex-stamp $(manual_PDF)
 	  export size=`ls -o $*.dvi | awk '{print $$4}'` ;\
 	  ${LATEX} $< ${NUMB_LATEX};\
 	done)
-									
+
 %.pdf: %.tex
-	@echo Generating $*.pdf ...
+	@${ECHO} Generating $*.pdf ...
 	@${PDFLATEX} $< ${NUMB_PDFLATEX}
 	@${BIBTEX} $* ${NUMB_BIBTEX}
 	@(while grep -q '${ERROR_PDF}' manual.log; do \
@@ -61,22 +61,22 @@ all-local:      version.tex tex-stamp $(manual_PDF)
 	@${RM_F} `ls *.aux` ${NUMB_RM_F}
 
 %.ps: %.dvi
-	@echo Generating $*.ps ...
+	@${ECHO} Generating $*.ps ...
 	@${DVIPS} $< -o ${NUMB_DVIPS}
 
 %.toc: %.tex
-	@echo Generating $*.toc ...
+	@${ECHO} Generating $*.toc ...
 	@${LATEX} $< ${NUMB_LATEX}
 	@${RM_F} $*.dvi ${NUMB_RM_F}
 
 %.bbl: %.aux
-	@echo Generating $*.bbl ...
+	@${ECHO} Generating $*.bbl ...
 	@${BIBTEX} $* ${NUMB_BIBTEX}
 	@${LATEX} $*.tex ${NUMB_LATEX}
 	@${RM_F} $*.dvi ${NUMB_RM_F}
 
 %.aux: %.tex
-	@echo Generating $*.aux ...
+	@${ECHO} Generating $*.aux ...
 	@${LATEX} $< ${NUMB_LATEX}
 	@${RM_F} $*.dvi ${NUMB_RM_F}
 
@@ -85,7 +85,7 @@ if HAS_FIG2DEV
 	@${FIG2DEV} -L ps -p dummy $< $*.eps ${NUMB_FIG2DEV}
 
 endif
-		
+
 manual.dvi:     manual.toc manual.bbl $(TEXFILES)
 manual.ps:      manual.dvi
 manual.pdf:	$(TEXFILES)
@@ -93,20 +93,20 @@ manual.pdf:	$(TEXFILES)
 endif
 
 version.tex:
-	@echo \\newcommand{\\Version}{${VERSION}} > $@
+	@${ECHO} \\newcommand{\\Version}{${VERSION}} > $@
 
 tex-stamp: $(TEXFILES)
-	@echo Generating tex-stamp ...
+	@${ECHO} Generating tex-stamp ...
 	@for F in $(TEXFILES); do \
 	 if test ! -f $${F} -a ! -L $${F}; then \
 	   ${LN_S} $(srcdir)/$${F} $${F}; \
 	 fi \
 	done
-	@echo timestamp > tex-stamp 2>/dev/null
+	@${ECHO} timestamp > tex-stamp 2>/dev/null
 
 clean-local:
 	@$(RM_F) *.dvi *.aux *.log *~ *.bbl *.blg *.toc *.ps *.pdf *.out
 	@for F in $(TEXFILES); do \
           test ! -L $${F} || ${RM_F} $${F}; \
         done
-	
+

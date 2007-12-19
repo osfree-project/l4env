@@ -68,11 +68,11 @@ stats:
 
 svnversion.h.new:
 	if [ -d .svn ]; then \
-	    ver=`svnversion -nc . | sed -e 's/^[^:]*://;s/[A-Za-z]//'`; \
-	    echo "#define SVNVERSION \"svn r$$ver\"" > $@; \
+	    ver=`svnversion -nc . | ${SED} -e 's/^[^:]*://;s/[A-Za-z]//'`; \
+	    ${ECHO} "#define SVNVERSION \"svn r$$ver\"" > $@; \
 	elif [ -s SNAPSHOT ]; then \
-	    ver=`sed -e '/^Revision: */!d;s///;q' SNAPSHOT`; \
-	    echo "#define SVNVERSION \"svn r$$ver\"" > $@; \
+	    ver=`${SED} -e '/^Revision: */!d;s///;q' SNAPSHOT`; \
+	    ${ECHO} "#define SVNVERSION \"svn r$$ver\"" > $@; \
 	else \
 	    touch $@; \
 	fi
