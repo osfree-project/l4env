@@ -45,7 +45,7 @@ dice_LDADD=	\
 if HOST_DARWIN
 # Darwin's _toupper and _tolower are macros, so using these as function
 # pointers creates a linker error, which we avoid with some symbol mapping.
-dice_LDFLAGS = -Wl,-i__toupper:_toupper -Wl,-i__tolower:_tolower
+dice_LDFLAGS =
 else
 dice_LDFLAGS = -export-dynamic
 endif
