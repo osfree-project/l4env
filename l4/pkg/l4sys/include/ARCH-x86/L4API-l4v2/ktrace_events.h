@@ -33,6 +33,7 @@ enum
     l4_ktrace_tbuf_id_nearest         = 17,
     l4_ktrace_tbuf_jean1              = 18,
     l4_ktrace_tbuf_task_new           = 19,
+    l4_ktrace_tbuf_ke_bin             = 20,
     l4_ktrace_tbuf_max                = 32,
     l4_ktrace_tbuf_hidden             = 0x20,
 };
