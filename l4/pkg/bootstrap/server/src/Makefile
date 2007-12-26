@@ -8,9 +8,8 @@ DEFAULT_RELOC_amd64 := 0x002d0000
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
 
-SYSTEMS		:= x86 amd64
+SYSTEMS		:= x86 amd64 arm
 ifeq ($(BUILD_ARCH),arm)
-SYSTEMS		:= arm-l4v2
 # ARM always uses single image mode
 ENTRY		:= auto-build-entry
 endif
@@ -21,12 +20,12 @@ PRIVATE_INCDIR	 = $(SRC_DIR) $(SRC_DIR)/ARCH-$(ARCH)
 # special include directories only needed for <l4/sys/kernel.h>
 PRIVATE_INCDIR_init_kip_v2.o      = $(OBJ_BASE)/include/$(ARCH)/l4v2 \
                                     $(DROPS_STDDIR)/include/$(ARCH)/l4v2
-PRIVATE_INCDIR_init_arm_kip.o     = $(OBJ_BASE)/include/$(ARCH)/$(L4ABI) \
-                                    $(DROPS_STDDIR)/include/$(ARCH)/$(L4ABI)
+PRIVATE_INCDIR_init_arm_kip.o     = $(OBJ_BASE)/include/$(ARCH)/l4v2 \
+                                    $(DROPS_STDDIR)/include/$(ARCH)/l4v2
 
 TARGET		:= bootstrap
 TARGET_BIN	 = $(TARGET)
-MODE		 = sigma0
+MODE		 = tiny
 
 LIBC_SUPPORT_C_x86             := libc_support.c
 LIBC_SUPPORT_C_amd64           := libc_support.c
@@ -35,11 +34,11 @@ LIBC_SUPPORT_CC_arm-isg        := libc_support+.cc
 LIBC_SUPPORT_CC_arm-integrator := libc_support+.cc
 LIBC_SUPPORT_CC_arm-rv         := libc_support+.cc
 
-SRC_C		+= exec.c module.c base_critical.c patch.c
+SRC_C		+= exec.c module.c patch.c
 SRC_CC		:= region.cc startup.cc init_kip_v2.cc init_kip_v4.cc
-SRC_C_x86	+= serial.c 
-SRC_C_amd64	+= serial.c
-SRC_CC_arm-l4v2	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_PLATFORM_TYPE))
+SRC_C_x86	+= serial.c base_critical.c
+SRC_C_amd64	+= serial.c base_critical.c
+SRC_CC_arm	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_PLATFORM_TYPE))
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 
@@ -49,7 +48,7 @@ ifeq ($(ARCH),arm)
 ifeq ($(ARM_PLATFORM_TYPE),)
 $(error For ARM architecture builds, ARM_PLATFORM_TYPE must be set to some valid platform name)
 endif
-DRV_LIBS	:= -larm_drv-$(ARM_PLATFORM_TYPE) -larm_uart -lcxx_base -lcxx_io -lcxx_io_kdebug
+DRV_LIBS	:= -larm_drv-$(ARM_PLATFORM_TYPE) -larm_uart -lcxx_base -lcxx_io
 CPPFLAGS	+= -DARCH_arm_$(ARM_PLATFORM_TYPE)
 endif
 CRT0		 =
@@ -60,7 +59,7 @@ vpath serial.c        $(SRC_DIR)/ARCH-x86
 vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
 vpath crt0.S	      $(SRC_DIR)/ARCH-$(ARCH)
 
-MODULE_PATH     ?= $(INSTALLDIR_LOCAL)
+MODULE_PATH     ?= $(OBJ_BASE)/bin/$(SYSTEM)/$(BUILD_ABI)
 MODULE_LIST     ?= $(SRC_DIR)/modules.list
 
 # can be overwritten by Makeconf.local
@@ -99,7 +98,7 @@ INSTALL_TARGET	 = bootstrap.load
 endif
 
 ifneq ($(LOADER_MBI),0)
-SRC_C		+= loader_mbi.c
+SRC_CC		+= loader_mbi.cc
 MOD_ADDR	 = 0x00150000
 CPPFLAGS	+= -DLOADER_MBI
 endif
@@ -159,10 +158,7 @@ CPPFLAGS	+= -DMODADDR=$(MOD_ADDR)
 
 L4LIBS		 = $(DRV_LIBS)
 
-LIBCLIB_diet	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -ldiet_c $(GCCLIB)
-LIBCLIB_uc	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -luc_c $(GCCLIB)
-
-LIBCLIBS	 = $(LIBCLIB_$(LIBC_TYPE))
+LIBCLIBS	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -luc_c $(GCCLIB)
 
 SRC_C		+= $(LIBC_SUPPORT_C_$(ARCH)) \
 		   $(LIBC_SUPPORT_C_$(ARCH)-$(ARM_PLATFORM_TYPE))
@@ -219,16 +215,13 @@ ifneq ($(SYSTEM),)
 clean::
 	$(VERBOSE)$(RM) mod.make.inc mod*.bin mbi_modules.bin $(LDSCRIPT)
 	$(VERBOSE)$(RM) setup.o.img bootsect.o.img
+	$(VERBOSE)$(RM) mod*.bin
 	$(VERBOSE)$(RM) $(SRC32_C:.c=.o32) $(SRC32_S:.S=.o32)
 
 cleanall::
 	$(VERBOSE)$(RM) bootstrap_* bootstrap.*
 
 endif
-
-clean cleanall::
-	$(VERBOSE)PWD=$(call absfilename,$(SRC_DIR)/ARCH-amd64/libc32) \
-	  $(MAKE) -C $(SRC_DIR)/ARCH-amd64/libc32 $@
 
 ifeq ($(ARCH),amd64)
 
@@ -269,5 +262,9 @@ bootstrap32.bin: $(TARGET)
 	@$(COMP_MESSAGE)
 	$(VERBOSE)$(CC32) -o $@ -c $(DEPEND_FLAG) \
 	  $(CPPFLAGS) $(CFLAGS32) $(call absfilename,$<)
+
+clean cleanall::
+	$(VERBOSE)PWD=$(call absfilename,$(SRC_DIR)/ARCH-amd64/libc32) \
+	  $(MAKE) -C $(SRC_DIR)/ARCH-amd64/libc32 $@
 
 endif

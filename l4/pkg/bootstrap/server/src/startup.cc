@@ -795,7 +795,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
 
 #ifdef REALMODE_LOADING
   /* create synthetic multi bott info */
-  mbi = init_loader_mbi(realmode_si, 0);
+  mbi = init_loader_mbi(realmode_si);
 #else
   assert(flag == L4UTIL_MB_VALID); /* we need to be multiboot-booted */
 #endif

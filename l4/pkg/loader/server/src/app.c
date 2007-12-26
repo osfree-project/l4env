@@ -296,8 +296,7 @@ app_find_free_virtual_area(app_t *app, l4_size_t size,
     }
 
   /* we went through. Our address may be after the last area. */
-  // XXX what's this!!!?!!
-  if (addr >= 0xC0000000 || addr >= high)
+  if (addr > l4util_memdesc_vm_high() || addr >= high)
     return 0;
 
   return addr;

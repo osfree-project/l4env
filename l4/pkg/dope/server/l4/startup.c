@@ -78,7 +78,7 @@ static void do_args(int argc, char **argv) {
 
 	/* read command line arguments */
 	while (1) {
-		c = getopt_long(argc, argv, "if", long_options, NULL);
+		c = getopt_long(argc, argv, "fdtecrb:m", long_options, NULL);
 
 		if (c == -1)
 			break;

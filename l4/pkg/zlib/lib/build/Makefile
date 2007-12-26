@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libl4z.a
-SYSTEMS		= x86 arm
+SYSTEMS		= x86 arm amd64
 
 SRC_C		= adler32.c compress.c crc32.c gzio.c \
 		  uncompr.c deflate.c trees.c zutil.c inflate.c \

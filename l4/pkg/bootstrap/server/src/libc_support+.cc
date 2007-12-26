@@ -29,6 +29,31 @@
 #include <l4/arm_drivers_c/hw.h>
 #include <l4/crtx/crt0.h>
 
+#include <l4/cxx/iostream.h>
+
+// IO Stream backend
+namespace L4 {
+
+  class BootstrapIOBackend : public IOBackend
+  {
+  protected:
+    void write(char const *str, unsigned len);
+  };
+  
+  void BootstrapIOBackend::write(char const *str, unsigned len)
+  {
+    ::write(STDOUT_FILENO, str,len);
+  }
+
+  namespace {
+    BootstrapIOBackend iob;
+  };
+  
+  BasicOStream cout(&iob);
+  BasicOStream cerr(&iob);
+};
+
+
 extern "C" int have_hercules(void);
 int have_hercules(void)
 {

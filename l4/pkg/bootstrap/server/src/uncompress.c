@@ -28,12 +28,8 @@ static void *filestart;
 l4_addr_t
 gunzip_upper_mem_linalloc(void)
 {
-#ifdef ARCH_arm
-  return RAM_BASE + 0x03400000;
-#else
   extern l4_addr_t _mod_addr;
   return (_mod_addr - 1) & ~3;
-#endif
 }
 
 /*
@@ -108,8 +104,8 @@ decompress(const char *name, void *start, void *destbuf,
   if ((read_size = grub_read(destbuf, size_uncompressed + 10))
       != size_uncompressed)
     {
-      printf("Uncorrect decompression: should be %d bytes but got %d bytes.\n",
-             size_uncompressed, read_size);
+      printf("Uncorrect decompression: should be %d bytes but got %d bytes. Errnum = %d\n",
+             size_uncompressed, read_size, errnum);
       return NULL;
     }
 

@@ -56,6 +56,6 @@ crt0_l4env_infopage:
 
 	.global crt0_stack_low
 crt0_stack_low:
-	.space	4096
+	.space	8192
 	.global crt0_stack_high
 crt0_stack_high:

@@ -312,9 +312,7 @@ Boot_info::init()
             _fb_size += ~Config::SUPERPAGE_MASK;
             _fb_size &=  Config::SUPERPAGE_MASK;        // Round up to 4 MB
 
-            /* Input memory buffer. This is a superpage because it's in
-             * upper space */
-            _input_size  = Config::SUPERPAGE_SIZE;
+            _input_size  = Config::PAGE_SIZE;
           }
         break;
 
@@ -427,8 +425,8 @@ Boot_info::init()
 
   if (! quiet)
     printf ("Mapped %lu MB Memory + %lu KB Framebuffer + "
-            "%lu MB Input Area on FD %d\n\n",
-            memsize >> 20, _fb_size >> 10, _input_size >> 20, _fd);
+            "%lu KB Input Area on FD %d\n\n",
+            memsize >> 20, _fb_size >> 10, _input_size >> 10, _fd);
 
   mbi             = mbi_virt();
   mbi->flags      = Multiboot_info::Memory | Multiboot_info::Cmdline |

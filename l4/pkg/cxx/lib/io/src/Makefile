@@ -5,7 +5,7 @@ MODE		= libc
 LIBCLIBS	= -nostdlib $(GCCLIB)
 LIBCINCDIR	= -nostdinc
 SRC_CC		= iob_write.cc
-SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
+SYSTEMS		= x86 arm amd64
 TARGET		= libcxx_io
 
 include $(PKGDIR)/lib/Makefile.inc
