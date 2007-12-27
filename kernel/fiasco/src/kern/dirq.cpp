@@ -19,6 +19,7 @@ private:
 
 IMPLEMENTATION:
 
+#include "cpu_lock.h"
 #include "initcalls.h"
 #include "pic.h"
 #include "receiver.h"
@@ -50,7 +51,7 @@ Dirq::Dirq(unsigned irqnum) : Irq(irqnum)
 {}
 
 
-PUBLIC inline NEEDS["pic.h"]
+PUBLIC inline NEEDS["pic.h", "cpu_lock.h"]
 void
 Dirq::mask()
 {
@@ -60,7 +61,7 @@ Dirq::mask()
 }
 
 
-PUBLIC inline NEEDS["pic.h"]
+PUBLIC inline NEEDS["pic.h", "cpu_lock.h"]
 void
 Dirq::mask_and_ack()
 {

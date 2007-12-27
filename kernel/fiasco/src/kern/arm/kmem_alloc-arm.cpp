@@ -59,11 +59,7 @@ Kmem_alloc::Kmem_alloc()
     {
       Mem_region r = Kip::k()->last_free();
       if (r.start > r.end)
-	{
-	  Kip::k()->print();
-
-	  panic("Corrupt memory descscriptor in KIP...");
-	}
+        panic("Corrupt memory descscriptor in KIP...");
 
       if (r.start == r.end)
 	{

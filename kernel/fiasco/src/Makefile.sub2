@@ -54,14 +54,14 @@ endif # ! maintainer mode
 
 compilertest:
 ifeq ($(CCVER_MAJOR),2)
-	@echo -e "\033[31m\n"\
+	@$(ECHO_E) "\033[31m\n"\
   "  ERROR: gcc version "$(CCVER_MAJOR).$(CCVER_MINOR)" is not supported for"\
   "Fiasco -- \n"\
   "         please update gcc to version 3.{3-4}.\033[m\n"; exit -1
 endif
 ifeq ($(CCVER_MAJOR),3)
 ifeq ($(findstring $(CCVER_MINOR),2 3 4),)
-	@echo -e "\033[31m\n"\
+	@$(ECHO_E) "\033[31m\n"\
   "  WARNING: gcc version $(CCVER_MAJOR).$(CCVER_MINOR) is not supported for"\
   "Fiasco -- please use gcc\n"\
   "           version 3.{3-4}. Be prepared to observe bugs in this kernel!\n"\
@@ -74,7 +74,7 @@ ifneq ($(shell $(CXX) -dumpversion | cut -d . -f1-2),3.4)
 	@echo "Checking initcalls"
 	$(VERBOSE)$(srcdir)/../tool/checkinitcalls \
 	  -k $(if $(wildcard fiasco.image),fiasco.image,kernel.image) \
-	  -Werror $(filter-out kernel.image, $^) \
+	  -Werror $(filter-out $(if $(wildcard fiasco.image),fiasco.image,kernel.image), $^) \
 	  $(if $(SYSTEM_TARGET),-t $(SYSTEM_TARGET)) && \
 	echo "Initcalls OK"
 else

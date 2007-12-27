@@ -9,6 +9,7 @@ IMPLEMENTATION [arm-debug]:
 #include "vkey.h"
 #include "static_init.h"
 #include "thread.h"
+#include "timer.h"
 
 static void outchar(Thread *, Entry_frame *r)
 { putchar(r->r[0] & 0xff); }

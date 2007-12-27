@@ -56,7 +56,7 @@ tas (Mword *l)
 {
   Mword ret;
   asm volatile ( "    swp %0, %2, [%1] \n "
-		 : "=r"(ret)
+		 : "=&r"(ret)
 		 : "r"(l), "r" (1)
 		 : "memory"
 		 );

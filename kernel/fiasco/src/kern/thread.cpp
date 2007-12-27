@@ -4,6 +4,7 @@ INTERFACE:
 #include "l4_types.h"
 #include "config.h"
 #include "deadline_timeout.h"
+#include "entry_frame.h"
 #include "helping_lock.h"
 #include "mem_layout.h"
 #include "preemption.h"

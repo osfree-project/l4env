@@ -195,7 +195,7 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			dirq fpu_alloc long_msg kernel_thread pic cmdline \
 			preemption k_sa1100 buddy_alloc trap_state warn \
 			bootstrap virq uart_console vkey kern_lib_page \
-			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
+			watchdog perf_cnt jdb_extensions kernel_task \
 			cap_space cap_space_alloc ram_quota ram_quota_alloc \
 			obj_space obj_space_alloc \
 			utcb_init utcb_support prio_list sys_call_page
@@ -263,7 +263,8 @@ JDB_INTERFACES		:= jdb_handler_queue jdb_module jdb_pic            \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region   \
 			   jdb_kern_info_kip jdb_mapdb                     \
 			   jdb_trace jdb_trace_set jdb_entry_frame         \
-			   jdb_thread_names jdb_util jdb_space jdb_utcb
+			   jdb_thread_names jdb_util jdb_space jdb_utcb    \
+			   kern_cnt
 
 
 JDB_TBUF_IFS		:= jdb_tbuf jdb_tbuf_init jdb_tbuf_output          \
