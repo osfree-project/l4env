@@ -82,14 +82,6 @@ int contxt_getchar(void);
  * \return -1 if no character is available. */
 int contxt_trygetchar(void);
 
-/** Read a character
- * \ingroup contxt_if
- *
- * \return  a character
- *
- * This function reads a character. (OSKit) */
-int direct_cons_getchar(void);
-
 /** Try to get next character. Return -1 no character is available. */
 int direct_cons_trygetchar(void);
 
@@ -156,9 +148,4 @@ int contxt_get_graphmode(void);
  * This function fills the screen with the current background color */
 void contxt_clrscr(void);
 
-
-/** overwrite direct_cons_getchar from oskit10_support_l4env library */
-asm(".globl direct_cons_getchar");
-
 #endif
-

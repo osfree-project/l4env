@@ -67,7 +67,6 @@ int want_vc = 0;			/* the vc we want to switch to */
 					 * don't switch to USED VCs, only to
 					 * that in OUT/INOUT mode */
 int update_id;				/* 1=redraw vc id */
-int use_s0 = 0;				/* Use sigma0 direct, dfl: no */
 l4lock_t want_vc_lock = L4LOCK_UNLOCKED;/* mutex for want_vc */
 l4_threadid_t ev_partner_l4id = L4_NIL_ID;/* current event handler */
 l4_threadid_t vc_partner_l4id = L4_NIL_ID;/* current active client */
@@ -932,10 +931,6 @@ main(int argc, const char *argv[])
 #endif
 		    'e', "events", "use event server to free resources",
 		    PARSE_CMD_SWITCH, 1, &use_events,
-#ifdef ARCH_x86
-		    's', "sigma0", "sigma0 direct mode",
-		    PARSE_CMD_SWITCH, 1, &use_s0,
-#endif
 		    'l', "nolog", "don't connect to logserver",
 		    PARSE_CMD_SWITCH, 1, &nolog,
 		    'm', "nomouse", "don't transmit mouse events to clients",

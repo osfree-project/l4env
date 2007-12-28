@@ -29,5 +29,7 @@
 #define EV_CON_BACKGROUND  2		/**< tells client that it looses
 					     the framebuffer */
 
+int l4con_map_keyinput_to_ascii(unsigned value, unsigned shift);
+
 #endif
 

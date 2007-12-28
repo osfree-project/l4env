@@ -301,6 +301,22 @@ con_vc_puts_component(CORBA_Object _dice_corba_obj,
 	return vc ? vc->canvas->puts(vc->canvas, s, len, x, y, fg, bg) : 0;
 }
 
+long
+con_vc_puts_scale_component(CORBA_Object _dice_corba_obj,
+                            const char *s,
+                            int len,
+                            short x,
+                            short y,
+                            l4con_pslim_color_t fg,
+                            l4con_pslim_color_t bg,
+                            short scale_x,
+                            short scale_y,
+                            CORBA_Server_Environment *_dice_corba_env) {
+	struct vc *vc = l4thread_data_get_current(tls_key);
+	// XXX: scale missing, possible in proxygon?
+	return vc ? vc->canvas->puts(vc->canvas, s, len, x, y, fg, bg) : 0;
+}
+
 
 /*** DRAW ANSI STRING ***/
 long

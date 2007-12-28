@@ -196,17 +196,16 @@ vc_font_init(void)
   return 0;
 }
 
-void 
+void
 vc_init()
 {
   int i;
 
-  if (!use_s0)
-    vc_l4io_init();
+  vc_l4io_init();
   vc_font_init();
   vc_init_gr();
 
-  for (i = 0; i < MAX_NR_L4CONS; i++) 
+  for (i = 0; i < MAX_NR_L4CONS; i++)
     {
       /* malloc */
       vc[i] = malloc(sizeof(struct l4con_vc));
@@ -459,10 +458,10 @@ vc_puts(struct l4con_vc *vc, int from_user,
     return 0;
 
   for (i=0; i<len; i++, str++)
-    {	
+    {
       /* optimization: collect spaces */
       for (j=0; (i<len) && (*str == ' '); i++, j++, str++)
-	;	  
+	;
 
       if (j>0)
 	{
@@ -476,7 +475,7 @@ vc_puts(struct l4con_vc *vc, int from_user,
 	{
 	  l4con_pslim_rect_t rect = { x, y, FONT_XRES, FONT_YRES };
 
-	  pslim_bmap(vc, from_user, &rect, fg_color, bg_color, 
+	  pslim_bmap(vc, from_user, &rect, fg_color, bg_color,
 		     (void*) &_binary_font_psf_start[rect.h * (*str)+4],
 		     pSLIM_BMAP_START_MSB);
 	  x += FONT_XRES;
@@ -692,7 +691,7 @@ vc_show_cpu_load(struct l4con_vc *this_vc)
 
   else
     {
-      history_val[sizeof(history_val)-1] = (new_pmc-pmc) / 
+      history_val[sizeof(history_val)-1] = (new_pmc-pmc) /
 					   ((new_tsc-tsc)/status_area);
 
       if (cpu_load_history == 0)
@@ -748,7 +747,7 @@ vc_clear(struct l4con_vc *vc)
   const l4con_pslim_color_t fgc = 0x00223344;
   const l4con_pslim_color_t bgc = 0x00000000;
   l4con_pslim_rect_t rect = { 0, 0, vc->client_xres, vc->client_yres };
-  
+
   vc_fill(vc, 0, &rect, bgc);
 
   /* special case is console 0 */
@@ -761,16 +760,16 @@ vc_clear(struct l4con_vc *vc)
       scale_y_1 = (vc->client_yres*6/10) / (1*FONT_YRES);
       x = vc->client_xofs + (vc->client_xres-5*FONT_XRES*scale_x_1)/2;
       y = vc->client_yofs + (vc->client_yres-1*FONT_YRES*scale_y_1)*3/7;
-      vc_puts_scale(vc, 0, 
+      vc_puts_scale(vc, 0,
 			"TUDOS", 5,
 		        x, y, fgc, bgc, scale_x_1, scale_y_1);
       scale_x_2 = scale_x_1*10/90;
       scale_y_2 = scale_y_1*10/90;
       x = vc->client_xofs + (vc->client_xres-36*FONT_XRES*scale_x_2)/2;
       y += 1*FONT_YRES*scale_y_1*12/14;
-      vc_puts_scale(vc, 0, 
-			"The Dresden Operating System Project", 36,
-    			x, y, fgc, bgc, scale_x_2, scale_y_2);
+      vc_puts_scale(vc, 0,
+                    "The Dresden Operating System Project", 36,
+                    x, y, fgc, bgc, scale_x_2, scale_y_2);
     }
 }
 
@@ -783,15 +782,15 @@ con_vc_smode_component (CORBA_Object _dice_corba_obj,
                         CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc*)(_dice_corba_env->user_data);
-  
+
   if (vc->mode == CON_OPENING)
     {
       /* inital state */
       vc->ev_partner_l4id = *ev_handler;
       return vc_open(vc, mode & CON_INOUT, *ev_handler);
     }
-  else 
-    { 
+  else
+    {
       /* set new event handler */
       vc->ev_partner_l4id = mode & CON_IN ? *ev_handler : L4_NIL_ID;
       return 0;
@@ -814,7 +813,7 @@ con_vc_gmode_component (CORBA_Object _dice_corba_obj,
   *sbuf_1size = vc->sbuf1_size;
   *sbuf_2size = vc->sbuf2_size;
   *sbuf_3size = vc->sbuf3_size;
-	
+
   return 0;
 }
 
@@ -858,37 +857,37 @@ con_vc_revoke_component (CORBA_Object _dice_corba_obj,
 
 /**
  * Close current virtual console */
-long 
+long
 con_vc_close_component(CORBA_Object _dice_corba_obj,
 		       l4_int16_t *_dice_reply,
 		       CORBA_Server_Environment *_dice_corba_env)
 {
   long ret;
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
-  
+
   ret = vc_close(vc);
   if (vc->mode == CON_CLOSING)
     {
       /* mark vc as free */
       vc->mode = CON_CLOSED;
-      
+
       /* send answer */
       con_vc_close_reply(_dice_corba_obj, ret, _dice_corba_env);
-      
-      /* stop thread ... there should be no problem 
-       * if main_thread races here, since everything 
+
+      /* stop thread ... there should be no problem
+       * if main_thread races here, since everything
        * is done for now. */
       l4thread_exit();
     }
 
-  /* If we didn't close the console, return the return value 
+  /* If we didn't close the console, return the return value
    * and proceed. */
   return ret;
 }
 
 /**
  * Setup graphics mode of current virtual console. */
-long 
+long
 con_vc_graph_smode_component(CORBA_Object _dice_corba_obj,
 			     l4_uint8_t g_mode,
 			     CORBA_Server_Environment *_dice_corba_env)
@@ -898,7 +897,7 @@ con_vc_graph_smode_component(CORBA_Object _dice_corba_obj,
 
 /**
  * Get graphics mode of current virtual console. */
-long 
+long
 con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
 			     l4_uint8_t *g_mode,
 			     l4_uint32_t *xres,
@@ -912,7 +911,7 @@ con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
 			     CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
-  
+
   *g_mode          = vc->gmode;
   *xres            = vc->client_xres;
   *yres            = vc->client_yres;
@@ -956,7 +955,7 @@ con_vc_graph_get_rgb_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-long 
+long
 con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
                              unsigned long fb_offset,
 			     l4_snd_fpage_t *page,
@@ -1033,7 +1032,7 @@ con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
 }
 
 
-long 
+long
 con_vc_ev_sflt_component(CORBA_Object _dice_corba_obj,
 			 unsigned long filter,
 			 CORBA_Server_Environment *_dice_corba_env)
@@ -1041,7 +1040,7 @@ con_vc_ev_sflt_component(CORBA_Object _dice_corba_obj,
   return -CON_ENOTIMPL;
 }
 
-long 
+long
 con_vc_ev_gflt_component(CORBA_Object _dice_corba_obj,
 			 unsigned long *filter,
 			 CORBA_Server_Environment *_dice_corba_env)
@@ -1051,14 +1050,14 @@ con_vc_ev_gflt_component(CORBA_Object _dice_corba_obj,
 
 /**
  * Fill rectangular area of virtual framebuffer with color. */
-long 
+long
 con_vc_pslim_fill_component(CORBA_Object _dice_corba_obj,
 			    const l4con_pslim_rect_t *rect,
 			    l4con_pslim_color_t color,
 			    CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
-  
+
   /* need fb_lock for drawing */
   l4lock_lock(&vc->fb_lock);
   vc_fill(vc, 1, (l4con_pslim_rect_t*)rect, color);
@@ -1067,13 +1066,13 @@ con_vc_pslim_fill_component(CORBA_Object _dice_corba_obj,
   if (vc->fb_mapped)
     vc->do_sync();
   l4lock_unlock(&vc->fb_lock);
-  
+
   return 0;
 }
 
 /**
  * Copy rectangular area of virtual framebuffer to (dx,dy). */
-long 
+long
 con_vc_pslim_copy_component(CORBA_Object _dice_corba_obj,
 			    const l4con_pslim_rect_t *rect,
 			    l4_int16_t dx,
@@ -1084,7 +1083,7 @@ con_vc_pslim_copy_component(CORBA_Object _dice_corba_obj,
 
   if ((vc->mode & CON_OUT)==0)
     return -CON_EPERM;
-  
+
   /* need fb_lock for drawing */
   l4lock_lock(&vc->fb_lock);
   if(vc->fb != 0)
@@ -1101,7 +1100,7 @@ con_vc_pslim_copy_component(CORBA_Object _dice_corba_obj,
 /**
  * Set rectangular area of virtual framebuffer with foreground and background
  * color mask in bitmap. */
-long 
+long
 con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 			    const l4con_pslim_rect_t *rect,
 			    l4con_pslim_color_t fg_color,
@@ -1113,7 +1112,7 @@ con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 {
   void *map = (void*)bmap;
   struct l4con_vc *this_vc = (struct l4con_vc*)(_dice_corba_env->user_data);
-  
+
   if ((this_vc->mode & CON_OUT)==0)
     return -CON_EPERM;
 
@@ -1122,8 +1121,8 @@ con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 
   /* need fb_lock for drawing */
   l4lock_lock(&this_vc->fb_lock);
-  if(this_vc->fb != 0)
-    pslim_bmap(this_vc, 1, (l4con_pslim_rect_t*)rect, 
+  if (this_vc->fb != 0)
+    pslim_bmap(this_vc, 1, (l4con_pslim_rect_t*)rect,
 	       fg_color, bg_color, map, bmap_type);
   l4lock_unlock(&this_vc->fb_lock);
 
@@ -1132,7 +1131,7 @@ con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 
 /**
  * Set rectangular area of virtual framebuffer with color in pixelmap. */
-long 
+long
 con_vc_pslim_set_component(CORBA_Object _dice_corba_obj,
 			   const l4con_pslim_rect_t *rect,
 			   const l4_uint8_t* pmap,
@@ -1150,7 +1149,7 @@ con_vc_pslim_set_component(CORBA_Object _dice_corba_obj,
   if(vc->fb != 0)
     pslim_set(vc, 1, (l4con_pslim_rect_t*)rect, map);
   l4lock_unlock(&vc->fb_lock);
-  
+
   return 0;
 }
 
@@ -1197,7 +1196,7 @@ con_vc_pslim_cscs_component (CORBA_Object _dice_corba_obj,
 	}
     }
   l4lock_unlock(&vc->fb_lock);
-  
+
   return 0;
 }
 
@@ -1215,9 +1214,33 @@ con_vc_puts_component (CORBA_Object _dice_corba_obj,
 {
   long ret;
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
-  
+
   l4lock_lock(&vc->fb_lock);
   ret = vc_puts(vc, 1, s, len, x, y, fg_color, bg_color);
+  l4lock_unlock(&vc->fb_lock);
+
+  return ret;
+}
+
+/**
+ * Set rectangular area of virtual framebuffer with color in pixelmap. */
+long
+con_vc_puts_scale_component(CORBA_Object _dice_corba_obj,
+                            const char *s,
+                            int len,
+                            short x,
+                            short y,
+                            l4con_pslim_color_t fg_color,
+                            l4con_pslim_color_t bg_color,
+                            short scale_x,
+                            short scale_y,
+                            CORBA_Server_Environment *_dice_corba_env)
+{
+  long ret;
+  struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
+
+  l4lock_lock(&vc->fb_lock);
+  ret = vc_puts_scale(vc, 1, s, len, x, y, fg_color, bg_color, scale_x, scale_y);
   l4lock_unlock(&vc->fb_lock);
 
   return ret;

@@ -234,7 +234,7 @@ library con
        *
        * \param g_mode		con protocol macro describing graphics
        *			mode. Currently not implemented because
-       *			the DROPS console uses the video mode
+       *			the TUDOS console uses the video mode
        *			which is activated at boottime.
        *
        * \return 0 for success, negative error codes otherwise
@@ -319,7 +319,7 @@ library con
        * This is an extension of the original SLIM protocol to reduce
        * the communication overhead of large text strings. Otherwise
        * we would have to transmit graphics data between client and
-       * DROPS console to write text.
+       * TUDOS console to write text.
        * \ingroup idl_con_vc
        *
        * \param  s		string containing char
@@ -336,6 +336,28 @@ library con
       		[in] short y,
 		[in] l4con_pslim_color_t fg_color,
 		[in] l4con_pslim_color_t bg_color);
+
+      /** Put string at x, y.
+       * \ingroup idl_con_vc
+       *
+       * \param  s		string containing char
+       * \param  len		length of string
+       * \param  x		destination x coordinate
+       * \param  y		dito for y coordinate
+       * \param  fg_color	foreground color
+       * \param  bg_color	background color
+       * \param  scale_x 	Horizontal scale factor
+       * \param  scale_y 	Vertical scale factor
+       *
+       * \return 0 for success, */
+      long puts_scale([in, ref, size_is(len)] char* s,
+	              [in] int len,
+		      [in] short x,
+      		      [in] short y,
+		      [in] l4con_pslim_color_t fg_color,
+		      [in] l4con_pslim_color_t bg_color,
+		      [in] short scale_x,
+		      [in] short scale_y);
 
       /** Put colored string at x, y.
        * An extended version of puts especially designed for Linux.
@@ -357,7 +379,7 @@ library con
        * virtual framebuffer into the console. If something of the
        * virtual framebuffer changes, the client sends an update
        * event (using direct_update). This mechanism was especially
-       * designed for use with the XFree86 stub of the DROPS console.
+       * designed for use with the XFree86 stub of the TUDOS console.
        * \ingroup idl_con_vc
        *
        * \param  data_ds	dataspace of virtual framebuffer

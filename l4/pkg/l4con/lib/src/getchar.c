@@ -92,12 +92,6 @@ getchar(void)
 
 
 int
-direct_cons_getchar(void)
-{
-  return contxt_getchar();
-}
-
-int
 trygetchar(void)
 {
   return contxt_trygetchar();

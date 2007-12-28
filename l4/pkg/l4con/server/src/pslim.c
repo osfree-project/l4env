@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>		/* needed for memmove */
 
+#include <l4/sys/cache.h>
+
 /* local includes */
 #include "main.h"
 #include "l4con.h"
@@ -314,6 +316,8 @@ _bmap16lsb(l4_uint8_t *vfb,
 	 else
 	    *(l4_uint16_t*) (&vfb[2*j]) = (l4_uint16_t) (bgc & 0xffff);
       }
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*2);
       vfb += bwidth;
    }
 }
@@ -347,6 +351,8 @@ _bmap16msb(l4_uint8_t *vfb,
 	  b += mask & 1;
 	  mask = (mask >> 1) | (mask << 7); /* gcc optimizes this into ROR */
 	}
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*2);
       vfb += bwidth;
       nobits += offset->endskip_x;
    }
@@ -382,6 +388,8 @@ _bmap24lsb(l4_uint8_t *vfb,
 	    vfb[3*j+2] = (l4_uint8_t) (bgc >> 16);
 	 }
       }
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*3);
       vfb += bwidth;
    }
 }
@@ -416,6 +424,8 @@ _bmap24msb(l4_uint8_t *vfb,
 	    vfb[3*j+2] = (l4_uint8_t) (bgc >> 16);
 	 }
       }
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*3);
       vfb += bwidth;
       /* length of one line in bmap parsed */
       nobits += offset->endskip_x;
@@ -448,6 +458,8 @@ _bmap32lsb(l4_uint8_t *vfb,
 	    ? fgc & 0xffffffff
 	    : bgc & 0xffffffff;
       }
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*4);
       vfb += bwidth;
    }
 }
@@ -478,6 +490,8 @@ _bmap32msb(l4_uint8_t *vfb,
 	 else
 	    *(l4_uint32_t*) (&vfb[4*j]) = (l4_uint32_t) (bgc & 0x00ffffff);
       }
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*4);
       vfb += bwidth;
       /* length of one line in bmap parsed */
       nobits += offset->endskip_x;
@@ -523,6 +537,8 @@ _set16(l4_uint8_t *vfb,
 	{
 	  pmap += 2 * offset->preskip_x;
 	  memcpy(vfb, pmap, w*2);
+	  l4_sys_cache_clean_range((unsigned long)vfb,
+                                   (unsigned long)vfb + w*2);
 	  vfb  += bwidth;
 	  pmap += pwidth;
 	}
@@ -543,6 +559,8 @@ _set24(l4_uint8_t *vfb,
     {
       pmap += 3 * offset->preskip_x;
       memcpy(vfb, pmap, w*3);
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*3);
       vfb  += bwidth;
       pmap += pwidth;
     }
@@ -562,6 +580,8 @@ _set32(l4_uint8_t *vfb,
     {
       pmap += 4 * offset->preskip_x;
       memcpy(vfb, pmap, w*4);
+      l4_sys_cache_clean_range((unsigned long)vfb,
+                               (unsigned long)vfb + w*4);
       vfb  += bwidth;
       pmap += pwidth;
    }
