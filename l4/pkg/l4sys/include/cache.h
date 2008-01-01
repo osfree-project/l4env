@@ -16,7 +16,23 @@
 
 #include <l4/sys/compiler.h>
 
+/**
+ * \defgroup api_cache Cache functionality
+ */
+
+/**
+ * \brief   Instruction memory barrier.
+ * \ingroup api_cache
+ */
 L4_INLINE void l4_imb(void);
+
+/**
+ * \brief   Instruction memory barrier.
+ * \ingroup api_cache
+ *
+ * \param start Start of range
+ * \param end   End of range
+ */
 L4_INLINE void l4_sys_cache_clean_range(unsigned long start, unsigned long end);
 
 

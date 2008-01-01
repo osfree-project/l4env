@@ -47,6 +47,7 @@ LIBS		= --whole-archive \
 		    $(LOADERLIBS_$(LIBC_TYPE)) \
 		    -lgeneric_ts.p \
 		    $(TASKLIB-$(USE_TASKLIB)) \
+		    -lgeneric_fprov.p \
 		    -lloaderif.p \
 		    -ll4util_root.p \
 		    -lsigma0.p \

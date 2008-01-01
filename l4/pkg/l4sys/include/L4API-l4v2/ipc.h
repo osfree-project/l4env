@@ -75,8 +75,8 @@
  * \ingroup api_types_msg
  * \hideinitializer
  *
- * \param   port         I/O flexpage receive window base port
- * \param   iosize       Receive window size
+ * \param   taskno       Task number
+ * \param   order        Receive window size
  */
 #define L4_IPC_CAPMAPMSG(taskno, order)  \
      ((void *)(l4_umword_t)( L4_IPC_CAPMAPMSG_BASE | ((taskno) << 12) | ((order) << 2) \
@@ -296,7 +296,7 @@ typedef struct {
  *                       - #L4_IPC_IOMAPMSG(port, iosize) Only an I/O flexpage
  *                         or up to two 32-bit words (in \a rcv_dword0 and
  *                         \a rcv_dword1) are accepted.
- *                       - #L4_IPC_CAPAPMSG(taskno, order) Only a capability
+ *                       - #L4_IPC_CAPMAPMSG(taskno, order) Only a capability
  *                         flexpage or up to two 32-bit words (in \a rcv_dword0
  *                         and \a rcv_dword1) are accepted.
  * \retval  rcv_dword0   The first dword of the received message,
@@ -409,7 +409,7 @@ l4_ipc_call(l4_threadid_t dest,
  *                       - #L4_IPC_IOMAPMSG(port, iosize) Only an I/O flexpage
  *                         or up to two 32-bit words (in \a rcv_dword0 and
  *                         \a rcv_dword1) are accepted.
- *                       - #L4_IPC_CAPAPMSG(taskno, order) Only a capability
+ *                       - #L4_IPC_CAPMAPMSG(taskno, order) Only a capability
  *                         flexpage or up to two 32-bit words (in \a rcv_dword0
  *                         and \a rcv_dword1) are accepted.
  * \retval  rcv_dword0   The first dword of the received message,
@@ -584,7 +584,7 @@ l4_ipc_send(l4_threadid_t dest,
  *                       - #L4_IPC_IOMAPMSG(port, iosize) Only an I/O flexpage
  *                         or up to two 32-bit words (in \a rcv_dword0 and
  *                         \a rcv_dword1) are accepted.
- *                       - #L4_IPC_CAPAPMSG(taskno, order) Only a capability
+ *                       - #L4_IPC_CAPMAPMSG(taskno, order) Only a capability
  *                         flexpage or up to two 32-bit words (in \a rcv_dword0
  *                         and \a rcv_dword1) are accepted.
  * \retval  rcv_dword0   The first dword of the received message.
@@ -662,7 +662,7 @@ l4_ipc_wait(l4_threadid_t *src,
  *                       - #L4_IPC_IOMAPMSG(port, iosize) Only an I/O flexpage
  *                         or up to two 32-bit words (in \a rcv_dword0 and
  *                         \a rcv_dword1) are accepted.
- *                       - #L4_IPC_CAPAPMSG(taskno, order) Only a capability
+ *                       - #L4_IPC_CAPMAPMSG(taskno, order) Only a capability
  *                         flexpage or up to two 32-bit words (in \a rcv_dword0
  *                         and \a rcv_dword1) are accepted.
  * \retval  rcv_dword0   The first dword of the received message.

@@ -79,6 +79,7 @@ struct l4_utcb_exception
  * Implementations.
  */
 
+#ifdef __GNUC__
 L4_INLINE l4_utcb_t *l4_utcb_get(void)
 {
   register l4_utcb_t *utcb asm ("r0");
@@ -87,6 +88,7 @@ L4_INLINE l4_utcb_t *l4_utcb_get(void)
                 : "=r"(utcb) : : "lr");
   return utcb;
 }
+#endif
 
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)
 {

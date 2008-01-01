@@ -8,6 +8,8 @@
 
 #include <l4/sys/syscalls_gen.h>
 
+#ifdef __GNUC__
+
 #ifndef L4_SYSCALL_MAGIC_OFFSET
 #  define L4_SYSCALL_MAGIC_OFFSET	8                                        ///< syscall offset
 #endif
@@ -274,5 +276,7 @@ l4_privctrl(l4_umword_t cmd,
 }
 
 #include <l4/sys/syscalls-impl.h>
+
+#endif // __GNUC__
 
 #endif /* ! __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__SYSCALLS_H__ */
