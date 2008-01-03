@@ -19,7 +19,7 @@ _start:
 #endif
 
 	push	$_exit
-	jmp	startup
+	jmp	__main
 
 
         /* MultiBoot header - see multiboot.h.  */

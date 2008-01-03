@@ -65,9 +65,6 @@ l4_addr_t _mod_addr = RAM_BASE + MODADDR;
 l4_addr_t _mod_addr;
 #endif
 
-/* hardware config variables */
-int hercules = 0; /* hercules monitor attached */
-
 /* modules to load by bootstrap */
 static int sigma0 = 1;   /* we need sigma0 */
 static int roottask = 1; /* we need a roottask */
@@ -717,9 +714,6 @@ init_pc_serial(l4util_mb_info_t *mbi)
 
       if (check_arg(L4_CHAR_PTR(mbi->cmdline), "-serial"))
 	com_cons_init(comport);
-
-      if (check_arg(L4_CHAR_PTR(mbi->cmdline), "-hercules") && have_hercules())
-        hercules = 1;
     }
 #endif
 

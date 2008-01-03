@@ -27,18 +27,19 @@ TARGET		:= bootstrap
 TARGET_BIN	 = $(TARGET)
 MODE		 = tiny
 
-LIBC_SUPPORT_C_x86             := libc_support.c
-LIBC_SUPPORT_C_amd64           := libc_support.c
-LIBC_SUPPORT_C_arm-sa1000      := libc_support.c
-LIBC_SUPPORT_CC_arm-isg        := libc_support+.cc
-LIBC_SUPPORT_CC_arm-integrator := libc_support+.cc
-LIBC_SUPPORT_CC_arm-rv         := libc_support+.cc
+SUPPORT_CC_arm-sa1000     := support_sa1000.cc
+SUPPORT_CC_arm-integrator := support_integrator.cc
+SUPPORT_CC_arm-rv         := support_rv.cc
 
 SRC_C		+= exec.c module.c patch.c
-SRC_CC		:= region.cc startup.cc init_kip_v2.cc init_kip_v4.cc
+SRC_CC		+= region.cc startup.cc init_kip_v2.cc init_kip_v4.cc \
+                   libc_support+.cc
+
+SRC_CC_x86	+= support_x86.cc
+SRC_CC_amd64	+= support_x86.cc
 SRC_C_x86	+= serial.c base_critical.c
 SRC_C_amd64	+= serial.c base_critical.c
-SRC_CC_arm	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_PLATFORM_TYPE))
+SRC_CC_arm     	+= $(SUPPORT_CC_arm-$(ARM_PLATFORM_TYPE))
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 
@@ -48,12 +49,14 @@ ifeq ($(ARCH),arm)
 ifeq ($(ARM_PLATFORM_TYPE),)
 $(error For ARM architecture builds, ARM_PLATFORM_TYPE must be set to some valid platform name)
 endif
-DRV_LIBS	:= -larm_drv-$(ARM_PLATFORM_TYPE) -larm_uart -lcxx_base -lcxx_io
+DRV_LIBS	+= -larm_uart
 CPPFLAGS	+= -DARCH_arm_$(ARM_PLATFORM_TYPE)
 endif
 CRT0		 =
 LDSCRIPT	 = bootstrap.ld
 LDNMAGIC	 =
+
+-include $(SRC_DIR)/Makeconf.$(ARM_PLATFORM_TYPE)
 
 vpath serial.c        $(SRC_DIR)/ARCH-x86
 vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
@@ -156,7 +159,7 @@ endif
 
 CPPFLAGS	+= -DMODADDR=$(MOD_ADDR)
 
-L4LIBS		 = $(DRV_LIBS)
+L4LIBS		 = $(DRV_LIBS) -lcxx_base -lcxx_io
 
 LIBCLIBS	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -luc_c $(GCCLIB)
 

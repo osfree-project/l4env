@@ -1,9 +1,8 @@
-/* $Id$ */
 /**
  * \file	bootstrap/server/src/libc_support.c
  * \brief	Support for C library
  *
- * \date	2004
+ * \date	2004-2008
  * \author	Adam Lackorzynski <adam@os.inf.tu-dresden.de>,
  *		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
@@ -20,16 +19,9 @@
 #include <errno.h>
 #include <sys/types.h>
 
-#include <l4/arm_drivers/uart_base.h>
-#include <l4/arm_drivers/uart_pl011.h>
-#if defined ARCH_arm_isg
-# include <l4/arm_drivers/isg/usif.h>
-# include <l4/arm_drivers/isg/usart.h>
-#endif
-#include <l4/arm_drivers_c/hw.h>
-#include <l4/crtx/crt0.h>
-
 #include <l4/cxx/iostream.h>
+
+#include "support.h"
 
 // IO Stream backend
 namespace L4 {
@@ -39,76 +31,52 @@ namespace L4 {
   protected:
     void write(char const *str, unsigned len);
   };
-  
+
   void BootstrapIOBackend::write(char const *str, unsigned len)
   {
-    ::write(STDOUT_FILENO, str,len);
+    ::write(STDOUT_FILENO, str, len);
   }
 
   namespace {
     BootstrapIOBackend iob;
   };
-  
+
   BasicOStream cout(&iob);
   BasicOStream cerr(&iob);
 };
 
-
-extern "C" int have_hercules(void);
-int have_hercules(void)
-{
-  return 0;
-}
-
-static union
-{
-#if defined ARCH_arm_isg
-  char u1[sizeof(L4::ISG_usif)];
-  char u2[sizeof(L4::ISG_usart)];
-#endif
-  char u3[sizeof(L4::Uart_pl011)];
-} _uart;
-
-inline void *operator new(size_t, void *p) throw()
-{ return p; }
-
-
-inline L4::Uart *uart()
-{
-  return reinterpret_cast<L4::Uart*>(&_uart);
-}
-
 extern char _bss_start[], _bss_end[];
-extern "C" void startup(void);
 
+extern "C" void startup(unsigned long p1, unsigned long p2, unsigned long p3);
+
+#ifdef ARCH_arm
+#include <l4/crtx/crt0.h>
 extern "C" void __main(void);
-
 void __main(void)
 {
+  unsigned long r;
+  asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (r) : : "memory");
+  r |= 2; // alignment check on
+  asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (r) : "memory");
+
   memset(_bss_start, 0, (char *)&crt0_stack_low - _bss_start);
   memset((char *)&crt0_stack_high, 0, _bss_end - (char *)&crt0_stack_high);
-  hw_init();
 
-#if defined ARCH_arm
-# if defined ARCH_arm_integrator
-  new (&_uart) L4::Uart_pl011(1,1);
-  uart()->startup(0x16000000);
-# elif defined ARCH_arm_rv
-  new (&_uart) L4::Uart_pl011(36,36);
-  uart()->startup(0x10009000);
-# elif defined ARCH_ARM_isg_3
-  new (&_uart) L4::ISG_usif(133,134);
-  uart()->startup(0xf7500000);
-# elif defined (ARCH_ARM_isg_2) || defined (ARCH_ARM_isg_1)
-  new (&_uart) L4::ISG_usart(6,6);
-  uart()->startup(0xf1000000);
-# else
-#   error There exists no driver in libuart for the given driver type
-# endif
-#endif
-  startup();
+  platform_init();
+
+  startup(0, 0, 0);
   while(1);
 }
+#endif
+
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+extern "C" void __main(unsigned long p1, unsigned long p2, unsigned long p3);
+void __main(unsigned long p1, unsigned long p2, unsigned long p3)
+{
+  platform_init();
+  startup(p1, p2, p3);
+}
+#endif
 
 ssize_t
 write(int fd, const void *buf, size_t count)
@@ -136,40 +104,10 @@ getchar(void)
   return c;
 }
 
-#ifdef USE_DIETLIBC
-off_t lseek(int fd, off_t offset, int whence)
-#else
 off64_t lseek64(int fd, off64_t offset, int whence)
-#endif
 {
   return 0;
 }
-#if 0
-  // just accept lseek to stdin, stdout and stderr
-  if (fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
-    {
-      errno = EBADF;
-      return -1;
-    }
-
-  switch (whence)
-    {
-    case SEEK_SET:
-      if (offset < 0)
-	{
-	  errno = EINVAL;
-	  return -1;
-	}
-      return offset;
-    case SEEK_CUR:
-    case SEEK_END:
-      return 0;
-    default:
-      errno = EINVAL;
-      return -1;
-    }
-}
-#endif
 
 void *__dso_handle = &__dso_handle;
 
@@ -178,7 +116,11 @@ extern "C" void l4util_reboot_arch(void) __attribute__((noreturn));
 extern "C" void reboot(void) __attribute__((noreturn));
 void reboot(void)
 {
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   l4util_reboot_arch();
+#else
+  while (1);
+#endif
 }
 
 extern "C" void __attribute__((noreturn))
@@ -188,12 +130,6 @@ _exit(int rc)
   getchar();
   printf("Rebooting.\n\n");
   reboot();
-}
-
-/** for dietlibc, atexit */
-extern "C" void __thread_doexit(int rc);
-void __thread_doexit(int rc)
-{
 }
 
 /** for assert */
@@ -217,4 +153,3 @@ panic(const char *fmt, ...)
   putchar('\n');
   exit(1);
 }
-

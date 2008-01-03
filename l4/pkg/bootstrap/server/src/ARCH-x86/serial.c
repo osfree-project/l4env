@@ -65,7 +65,13 @@ com_cons_putchar(int ch)
   base_critical_leave();
 }
 
-int 
+int
+com_cons_char_avail(void)
+{
+  return !!(l4util_in8(ser_io_base + 5) & 0x01);
+}
+
+int
 com_cons_try_getchar(void)
 {
   int ch = -1;
@@ -79,7 +85,7 @@ com_cons_try_getchar(void)
     }
 
   /* character available?  */
-  if (l4util_in8(ser_io_base + 5) & 0x01) {
+  if (com_cons_char_avail()) {
       /* Grab it.  */
       ch = l4util_in8(ser_io_base + 0);
   }

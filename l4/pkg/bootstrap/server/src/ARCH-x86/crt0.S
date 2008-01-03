@@ -34,7 +34,7 @@ _start:
 #endif
 
 	pushl	$_exit
-	jmp	startup
+	jmp	__main
 
 	/* Show an error message and wait for keypress to reboot. */
 trap6_entry:

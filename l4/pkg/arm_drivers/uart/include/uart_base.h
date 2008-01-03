@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-namespace L4 
+namespace L4
 {
   class Uart
   {
