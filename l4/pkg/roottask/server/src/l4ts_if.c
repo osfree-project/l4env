@@ -7,11 +7,20 @@
 
 long
 l4_ts_allocate_component(CORBA_Object _dice_corba_obj,
+                         unsigned long taskno,
                          l4_taskid_t *taskid,
                          CORBA_Server_Environment *_dice_corba_env)
 {
-  int num = task_next(_dice_corba_obj->id.task);
+  int num;
   l4_threadid_t n;
+  
+  if (taskno == 0)
+      num = task_next(_dice_corba_obj->id.task);
+  else
+      num = task_next_explicit(_dice_corba_obj->id.task, taskno);
+
+  if (num < 0)
+      return num;
 
   reset_pagefault(num);
 

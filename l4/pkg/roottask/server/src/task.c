@@ -1,10 +1,10 @@
 /**
- * \file	roottask/server/src/task.c
- * \brief	task resource handling
+ * \file    roottask/server/src/task.c
+ * \brief   task resource handling
  *
- * \date	05/10/2004
- * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- * \author      Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
+ * \date    05/10/2004
+ * \author  Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ * \author  Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
  *
  **/
 #include <stdio.h>
@@ -85,6 +85,17 @@ task_next(owner_t owner)
   __task[i] = owner;
   return i;
 }
+
+
+int task_next_explicit(owner_t owner, unsigned long task)
+{
+    if (__task[task] != O_FREE)
+        return -1;
+    else
+        __task[task] = owner;
+    return task;
+}
+
 
 void
 task_free_owned(owner_t owner)

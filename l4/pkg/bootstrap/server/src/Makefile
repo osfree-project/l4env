@@ -28,6 +28,7 @@ TARGET_BIN	 = $(TARGET)
 MODE		 = tiny
 
 SUPPORT_CC_arm-sa1000     := support_sa1000.cc
+SUPPORT_CC_arm-pxa        := support_pxa.cc
 SUPPORT_CC_arm-integrator := support_integrator.cc
 SUPPORT_CC_arm-rv         := support_rv.cc
 

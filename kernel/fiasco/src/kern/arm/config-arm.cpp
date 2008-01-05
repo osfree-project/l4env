@@ -125,9 +125,6 @@ INTERFACE[arm && integrator]:
 INTERFACE[arm && realview]:
 #define TARGET_NAME "Realview"
 
-INTERFACE[arm && isg]:
-#define TARGET_NAME "ISG"
-
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 

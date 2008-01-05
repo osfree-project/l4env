@@ -55,18 +55,8 @@ extern __inline__ int client_equal(io_client_t *c0, io_client_t *c1)
 }
 
 
-/** Tokens for runtime configuration */
-enum
-{
-	CFG_STD,
-
-#if defined(ARCH_arm)
-	CFG_RV_EB_926, CFG_RV_EB_MC, CFG_INTEGRATOR,
-#endif
-};
-
 /** Init static resource configuration */
-extern int io_static_cfg_init(l4io_info_t *info, int cfg_token);
+extern int io_static_cfg_init(l4io_info_t *info, const char *requested_platform);
 
 
 /** Init Fiasco-UX H/W resources */
