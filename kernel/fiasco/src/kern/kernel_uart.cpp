@@ -62,9 +62,9 @@ Kernel_uart::Kernel_uart()
   if (  (s = strstr(cmdline, " -comspeed "))
       ||(s = strstr(cmdline, " -comspeed=")))
     {
-      if ((n = strtoul(s + 11, 0, 0)) > 115200)
+      if ((n = strtoul(s + 11, 0, 0)) > 115200 || n < 1)
 	{
-	  puts ("-comspeed > 115200 not supported (using 115200)!");
+	  puts ("-comspeed > 115200 not supported or invalid (using 115200)!");
 	  n = 115200;
 	}
     }

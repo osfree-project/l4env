@@ -98,7 +98,30 @@ private:
 };
 
 // ------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
+IMPLEMENT inline NEEDS["kip.h"]
+void
+Timer::init_system_clock()
+{
+  Kip::k()->clock = 0;
+}
+
+IMPLEMENT inline
+void
+Timer::update_system_clock()
+{
+}
+
+IMPLEMENT inline NEEDS["config.h", Timer::update_one_shot]
+void
+Timer::update_timer(Unsigned64 wakeup)
+{
+  if (Config::scheduler_one_shot)
+    update_one_shot(wakeup);
+}
+
+// ------------------------------------------------------------------------
 IMPLEMENTATION [arm-{sa1100,pxa}]:
 
 #include "config.h"
@@ -172,19 +195,6 @@ void Timer::disable()
   Pic::disable(26);
 }
 
-IMPLEMENT inline
-void
-Timer::init_system_clock()
-{
-  Kip::k()->clock = 0;
-}
-
-IMPLEMENT inline 
-void
-Timer::update_system_clock()
-{
-}
-
 static inline NEEDS["kip.h", "io.h", Timer::timer_to_us, Timer::us_to_timer]
 void
 Timer::update_one_shot(Unsigned64 wakeup)
@@ -213,14 +223,6 @@ Timer::update_one_shot(Unsigned64 wakeup)
   Io::write(1, OSSR); // clear all status bits
 }
 
-IMPLEMENT inline NEEDS["config.h", Timer::update_one_shot]
-void
-Timer::update_timer(Unsigned64 wakeup)
-{
-  if (Config::scheduler_one_shot)
-    update_one_shot(wakeup);
-}
-
 IMPLEMENT inline NEEDS["config.h", "kip.h", "io.h", Timer::timer_to_us]
 Unsigned64 
 Timer::system_clock()
@@ -231,6 +233,7 @@ Timer::system_clock()
     return Kip::k()->clock;
 }
 
+// ------------------------------------------------------------------------
 IMPLEMENTATION [arm-integrator]:
 
 #include "config.h"
@@ -304,19 +307,6 @@ void Timer::disable()
   Pic::disable(Config::Scheduling_irq);
 }
 
-IMPLEMENT inline
-void
-Timer::init_system_clock()
-{
-  Kip::k()->clock = 0;
-}
-
-IMPLEMENT inline
-void
-Timer::update_system_clock()
-{
-}
-
 static inline NEEDS["kip.h", "io.h", Timer::timer_to_us, Timer::us_to_timer]
 void
 Timer::update_one_shot(Unsigned64 wakeup)
@@ -339,14 +329,6 @@ Timer::update_one_shot(Unsigned64 wakeup)
     }
 }
 
-IMPLEMENT inline NEEDS["config.h", Timer::update_one_shot]
-void
-Timer::update_timer(Unsigned64 wakeup)
-{
-  if (Config::scheduler_one_shot)
-    update_one_shot(wakeup);
-}
-
 IMPLEMENT inline NEEDS["config.h", "kip.h", "io.h", Timer::timer_to_us]
 Unsigned64
 Timer::system_clock()
@@ -358,6 +340,7 @@ Timer::system_clock()
     return Kip::k()->clock;
 }
 
+// ------------------------------------------------------------------------
 IMPLEMENTATION [arm-realview]:
 
 #include "config.h"
@@ -429,19 +412,6 @@ void Timer::disable()
   Pic::disable(Config::Scheduling_irq);
 }
 
-IMPLEMENT inline
-void
-Timer::init_system_clock()
-{
-  Kip::k()->clock = 0;
-}
-
-IMPLEMENT inline
-void
-Timer::update_system_clock()
-{
-}
-
 static inline NEEDS["kip.h", "io.h", Timer::timer_to_us, Timer::us_to_timer]
 void
 Timer::update_one_shot(Unsigned64 wakeup)
@@ -462,14 +432,6 @@ Timer::update_one_shot(Unsigned64 wakeup)
 	// timeout too small
 	apic = 1;
     }
-}
-
-IMPLEMENT inline NEEDS["config.h", Timer::update_one_shot]
-void
-Timer::update_timer(Unsigned64 wakeup)
-{
-  if (Config::scheduler_one_shot)
-    update_one_shot(wakeup);
 }
 
 IMPLEMENT inline NEEDS["config.h", "kip.h", "io.h", Timer::timer_to_us]

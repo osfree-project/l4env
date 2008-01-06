@@ -11,9 +11,14 @@ enum
 {
   Section_cachable = 0x40e,
   Section_no_cache = 0x402,
+  Section_local    = 0,
+  Section_global   = 0,
   Cp15_c1 = 0x0120f,
 };
 
+void
+set_asid()
+{}
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm && armv6]:
@@ -22,17 +27,27 @@ enum
 {
   Section_cachable = 0x140e,
   Section_no_cache = 0x0402,
-  Cp15_c1 = 0x803007,
+  Section_local    = (1 << 17),
+  Section_global   = 0,
+  Cp15_c1          = 0x803007,
 };
+
+void
+set_asid()
+{
+  asm volatile ("MCR p15, 0, %0, c13, c0, 1" : : "r" (0)); // ASID 0
+}
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 
-void 
-map_1mb(void *pd, Address va, Address pa, bool cache)
+void
+map_1mb(void *pd, Address va, Address pa, bool cache, bool local)
 {
   Unsigned32 *const p = (Unsigned32*)pd;
-  p[va >> 20] = (pa & 0xfff00000) | (cache?Section_cachable:Section_no_cache);
+  p[va >> 20] = (pa & 0xfff00000)
+                | (cache ? Section_cachable : Section_no_cache)
+                | (local ? Section_local : Section_global);
 }
 
 //---------------------------------------------------------------------------
@@ -47,12 +62,12 @@ void
 map_hw(void *pd)
 {
   // map the cache flush area to 0xef000000
-  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true);
+  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true, false);
   // map UART
-  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false);
-  map_1mb(pd, Mem_layout::Uart_phys_base, Mem_layout::Uart_phys_base, false);
+  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false, false);
+  map_1mb(pd, Mem_layout::Uart_phys_base, Mem_layout::Uart_phys_base, false, false);
   // map Timer and Pic
-  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false);
+  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false, false);
 }
 
 static inline
@@ -62,7 +77,7 @@ void wrb(char c)
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [arm && pxa]: 
+IMPLEMENTATION [arm && pxa]:
 
 enum {
   Cache_flush_area = 0xa0100000, // XXX: hacky
@@ -73,14 +88,14 @@ void
 map_hw(void *pd)
 {
   // map the cache flush area to 0xef000000
-  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true);
+  map_1mb(pd, Mem_layout::Cache_flush_area, Mem_layout::Flush_area_phys_base, true, false);
   // map UART
-  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false);
-  map_1mb(pd, Mem_layout::Uart_phys_base, Mem_layout::Uart_phys_base, false);
+  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false, false);
+  map_1mb(pd, Mem_layout::Uart_phys_base, Mem_layout::Uart_phys_base, false, false);
   // map Timer
-  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false);
+  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false, false);
   // map Pic
-  map_1mb(pd, Mem_layout::Pic_map_base, Mem_layout::Pic_phys_base, false);
+  map_1mb(pd, Mem_layout::Pic_map_base, Mem_layout::Pic_phys_base, false, false);
 }
 
 static inline
@@ -101,13 +116,13 @@ void
 map_hw(void *pd)
 {
   // map UART
-  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false);
+  map_1mb(pd, Mem_layout::Uart_map_base, Mem_layout::Uart_phys_base, false, false);
   // map Timer
-  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false);
+  map_1mb(pd, Mem_layout::Timer_map_base, Mem_layout::Timer_phys_base, false, false);
   // map Pic
-  map_1mb(pd, Mem_layout::Pic_map_base, Mem_layout::Pic_phys_base, false);
+  map_1mb(pd, Mem_layout::Pic_map_base, Mem_layout::Pic_phys_base, false, false);
   // map Integrator hdr
-  map_1mb(pd, Mem_layout::Integrator_map_base, Mem_layout::Integrator_phys_base, false);
+  map_1mb(pd, Mem_layout::Integrator_map_base, Mem_layout::Integrator_phys_base, false, false);
 }
 
 static inline
@@ -119,7 +134,7 @@ void wrb(char c)
 //-----------------------------------------------------------------------------
 IMPLEMENTATION [arm && realview && mpcore]:
 static void map_hw2(void *pd)
-{ map_1mb(pd, Mem_layout::Mpcore_scu_map_base, Mem_layout::Mpcore_scu_phys_base, false); }
+{ map_1mb(pd, Mem_layout::Mpcore_scu_map_base, Mem_layout::Mpcore_scu_phys_base, false, false); }
 
 IMPLEMENTATION [arm && realview && !mpcore]:
 static void map_hw2(void *pd)
@@ -136,7 +151,7 @@ void
 map_hw(void *pd)
 {
   // map devices
-  map_1mb(pd, Mem_layout::Devices_map_base, Mem_layout::Devices_phys_base, false);
+  map_1mb(pd, Mem_layout::Devices_map_base, Mem_layout::Devices_phys_base, false, false);
   map_hw2(pd);
 }
 
@@ -201,13 +216,12 @@ extern "C" int bootstrap_main()
   // map sdram linear from 0xf0000000
   for (va = Mem_layout::Map_base, pa = Mem_layout::Sdram_phys_base;
        va < Mem_layout::Map_base + (4 << 20); va+=0x100000, pa+=0x100000) 
-    map_1mb(page_dir, va, pa, true);
+    map_1mb(page_dir, va, pa, true, false);
 
   // map sdram 1:1
   for (va = Mem_layout::Sdram_phys_base;
        va < Mem_layout::Sdram_phys_base + (4<<20); va+=0x100000) 
-    map_1mb(page_dir, va, va, true);
-
+    map_1mb(page_dir, va, va, true, true);
 
   map_hw(page_dir);
 
