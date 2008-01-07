@@ -13,7 +13,7 @@
 #ifndef __BOOTSTRAP__SUPPORT_H__
 #define __BOOTSTRAP__SUPPORT_H__
 
-#include <l4/arm_drivers/uart_base.h>
+#include <l4/drivers/uart_base.h>
 
 #define DEFINE_UART_STORAGE(c)            \
     static union __uart_storage_type {    \

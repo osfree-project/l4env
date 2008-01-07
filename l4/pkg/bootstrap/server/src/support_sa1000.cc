@@ -13,8 +13,7 @@
 
 #include "support.h"
 
-#include <l4/arm_drivers/uart_base.h>
-#include <l4/arm_drivers/uart_sa1000.h>
+#include <l4/drivers/uart_sa1000.h>
 
 DEFINE_UART_STORAGE(Uart_sa1000);
 

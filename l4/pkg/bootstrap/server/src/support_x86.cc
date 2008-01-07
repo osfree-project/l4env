@@ -13,8 +13,6 @@
 
 #include "support.h"
 
-#include <l4/arm_drivers/uart_base.h>
-
 namespace L4
 {
   class Uart_x86 : public Uart

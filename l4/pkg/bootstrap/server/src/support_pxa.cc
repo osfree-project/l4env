@@ -13,8 +13,7 @@
 
 #include "support.h"
 
-#include <l4/arm_drivers/uart_base.h>
-#include <l4/arm_drivers/uart_pxa.h>
+#include <l4/drivers/uart_pxa.h>
 
 DEFINE_UART_STORAGE(Uart_pxa);
 

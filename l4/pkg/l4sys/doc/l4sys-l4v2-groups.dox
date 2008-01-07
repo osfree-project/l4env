@@ -30,7 +30,7 @@
  */
 
 /**
- * \defgroup api_types_timeout Timeouts
+ * \defgroup api_timeout Timeouts
  * \ingroup api_types
  */
 

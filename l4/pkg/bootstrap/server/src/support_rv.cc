@@ -13,8 +13,7 @@
 
 #include "support.h"
 
-#include <l4/arm_drivers/uart_base.h>
-#include <l4/arm_drivers/uart_pl011.h>
+#include <l4/drivers/uart_pl011.h>
 
 DEFINE_UART_STORAGE(Uart_pl011);
 

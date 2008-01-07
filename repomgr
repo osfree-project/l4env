@@ -32,6 +32,7 @@ my %modules =
 		    l4/pkg/demangle
 		    l4/pkg/dm_mem
 		    l4/pkg/dm_phys
+		    l4/pkg/drivers
 		    l4/pkg/generic_blk
 		    l4/pkg/generic_fprov
 		    l4/pkg/generic_ts
@@ -101,6 +102,7 @@ my %modules =
 		    l4/pkg/crtx
 		    l4/pkg/cxx
                     l4/pkg/demangle
+                    l4/pkg/drivers
 		    l4/pkg/hello
 		    l4/pkg/l4util
                     l4/pkg/l4sys
