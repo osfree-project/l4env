@@ -22,12 +22,22 @@ SRC_C_flips-lxdrv = server.c main_lxdrv.c notify.c
 LIBS_flips-lxdrv  = -llxdrv.o $(LIBS_flips)
 
 # FLIPS with ORe backend
+FLIPS_DEPEND_PKG_ORE = $(strip $(if $(wildcard $(L4DIR)/pkg/ore),,ore))
+
+ifeq ($(FLIPS_DEPEND_PKG_ORE), ore)
+
+$(warning "Package ore is missing, skipping build of flips-ore.")
+
+else
+
 TARGET += flips-ore
 SRC_C_flips-ore = $(SRC_C_flips)
 ifeq ($(USE_DSI),y)
 LIBS_flips-ore  = -lore.o -lore -ldsi $(LIBS_flips)
 else
 LIBS_flips-ore  = -lore.o -lore $(LIBS_flips)
+endif
+
 endif
 
 ifeq ($(L4_TUN),y)
