@@ -36,6 +36,8 @@ task_set(unsigned begin, unsigned end, int state)
 int
 task_alloc(unsigned taskno, owner_t owner, int allow_realloc)
 {
+  if (taskno >= ELEMENTS(__task))
+    return 0;
   if (__task[taskno] == owner && allow_realloc)
     return 1;
   if (__task[taskno] != O_FREE)
@@ -49,6 +51,8 @@ task_alloc(unsigned taskno, owner_t owner, int allow_realloc)
 int
 task_free(unsigned taskno, owner_t owner)
 {
+  if (taskno >= ELEMENTS(__task))
+    return 0;
   if (__task[taskno] != owner && __task[taskno] != O_FREE)
     return 0;
 
@@ -64,9 +68,12 @@ task_free(unsigned taskno, owner_t owner)
 
 /** Allocate next free task to owner. */
 int
-task_next(owner_t owner)
+task_next(unsigned owner)
 {
   int i;
+
+  if (owner >= ELEMENTS(__task))
+    return 0;
 
   /* Find free task */
   for (i = 0; i < RMGR_TASK_MAX; i++)
@@ -89,16 +96,19 @@ task_next(owner_t owner)
 
 int task_next_explicit(owner_t owner, unsigned long task)
 {
-    if (__task[task] != O_FREE)
-        return -1;
-    else
-        __task[task] = owner;
-    return task;
+  if (owner >= ELEMENTS(__task) || task >= ELEMENTS(__task))
+    return 0;
+
+  if (__task[task] != O_FREE)
+    return -1;
+  else
+    __task[task] = owner;
+  return task;
 }
 
 
 void
-task_free_owned(owner_t owner)
+task_free_owned(unsigned owner)
 {
   int i;
 
@@ -110,6 +120,9 @@ task_free_owned(owner_t owner)
 owner_t
 task_owner(unsigned taskno)
 {
+  if (taskno >= ELEMENTS(__task))
+    return O_RESERVED;
+
   return __task[taskno];
 }
 

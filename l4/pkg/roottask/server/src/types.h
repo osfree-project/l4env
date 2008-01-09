@@ -23,4 +23,6 @@ typedef l4_uint8_t owner_t;		/* an owner is a task number < 256 */
 
 typedef char mb_mod_name_t[MOD_NAME_MAX];
 
+#define ELEMENTS(array)         (sizeof(array)/sizeof(array[0]))
+
 #endif

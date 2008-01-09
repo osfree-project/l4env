@@ -33,7 +33,7 @@ malloc(size_t size)
   size += sizeof(l4_size_t);
   if (EXPECT_FALSE(!(a = l4la_alloc(&__malloc_list, size, 2))))
     {
-      printf("roottask: malloc memory exhausted.\n");
+      printf("ROOT: malloc memory exhausted.\n");
       return 0;
     }
   s  = (l4_size_t*)a;

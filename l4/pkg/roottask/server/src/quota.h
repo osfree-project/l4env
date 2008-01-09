@@ -57,7 +57,7 @@ void     quota_init_prio(int prio);
 void     quota_set(unsigned i, const quota_t * const q);
 void     quota_reset(owner_t task);
 int      quota_check_mem(owner_t t, l4_addr_t where, unsigned long amount);
-int      quota_check_allow_cli(owner_t t);
+int      quota_check_allow_cli(unsigned taskno);
 int      quota_alloc_mem(owner_t t, l4_addr_t where, unsigned long amount);
 int      quota_alloc_task(owner_t t, l4_addr_t where);
 int      quota_alloc_small(owner_t t, l4_addr_t where);

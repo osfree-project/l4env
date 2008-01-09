@@ -49,7 +49,7 @@ cfg_bootquota_set(const char *cfg_name, const bootquota_t * const b)
       }
 
   /* add new quota */
-  if (max_cfg_bootquota < sizeof(cfg_bootquota)/sizeof(cfg_bootquota[0]))
+  if (max_cfg_bootquota < ELEMENTS(cfg_bootquota))
     {
       cfg_bootquota[max_cfg_bootquota].name      = cfg_name;
       cfg_bootquota[max_cfg_bootquota].bootquota = *b;
@@ -75,7 +75,7 @@ bootquota_init(void)
 {
   unsigned i;
 
-  for (i = 0; i < sizeof(bootquota)/sizeof(bootquota[0]); i++)
+  for (i = 0; i < ELEMENTS(bootquota); i++)
     {
       bootquota[i].mcp    = 255;	/* L4 default */
       bootquota[i].prio   = 0x10;	/* L4 default */

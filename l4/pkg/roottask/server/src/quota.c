@@ -202,9 +202,12 @@ quota_check_mem(owner_t t, l4_addr_t where, unsigned long amount)
 }
 
 int
-quota_check_allow_cli(owner_t t)
+quota_check_allow_cli(unsigned taskno)
 {
-  return quota[t].allow_cli;
+  if (taskno >= ELEMENTS(quota))
+    return 0;
+
+  return quota[taskno].allow_cli;
 }
 
 int
