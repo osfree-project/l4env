@@ -59,18 +59,17 @@ Thread::user_invoke()
 
   assert (current()->state() & Thread_ready);
 #if 0
-  printf("user_invoke of %p @ %08x sp=%08x\n",
+  printf("user_invoke of %p @ %08x sp=%08x kipphys=%lx kipv=%p\n",
 	 current(),current()->regs()->ip(),
-	 current()->regs()->sp() );
+	 current()->regs()->sp(),
+	 Kmem_space::kdir()->walk(Kip::k(),0,false,0).phys(Kip::k()),
+	 Kip::k());
   //current()->regs()->sp(0x30000);
 #endif
 
-  register unsigned long r0 asm ("r0")
-    = Kmem_space::kdir()->walk(Kip::k(),0,false,0).phys(Kip::k());
-
-#if 1
   asm volatile
     ("  mov sp, %[stack_p]    \n"    // set stack pointer to regs structure
+     "  mov r0, %[kip]        \n"
      "  mov r1, sp            \n"
      // TODO clean out user regs
      "  ldr lr, [r1], #4      \n"
@@ -82,9 +81,8 @@ Thread::user_invoke()
      :
      :
      [stack_p] "r" (nonull_static_cast<Return_frame*>(current()->regs())),
-               "r" (r0)
+     [kip]     "r" (Kmem_space::kdir()->walk(Kip::k(),0,false,0).phys(Kip::k()))
      );
-#endif
   puts("should never be reached");
   while(1) {
     current()->state_del(Thread_ready);
