@@ -24,7 +24,8 @@ HOST_CC		:= $(patsubst "%",%,$(CONFIG_HOST_CC))
 HOST_CXX	:= $(patsubst "%",%,$(CONFIG_HOST_CXX))
 RM		:= rm -f
 RM_R		:= rm -rf
-ECHO_E		:= /bin/echo -e
+ECHO		:= echo
+ECHO_E		:= bash --norc -c 'echo -e "$$0" "$$@"'
 CP		:= cp
 AWKP		?= gawk --posix
 CFLAGS		:=
@@ -146,7 +147,7 @@ CXXFLAGS	+= $(call CHECKCXX,-Wno-non-virtual-dtor,)
 
 ifeq ($(CONFIG_VERBOSE),n)
 VERBOSE		= @
-PREP_MESSAGE	?= @$(ECHO_E) "  ... Preprocessing $*"
+PREP_MESSAGE	?= @$(ECHO) "  ... Preprocessing $*"
 endif
 
 # Output formatting, set V=1 to see command line, V=0 to prevent printing them
@@ -157,18 +158,18 @@ endif
 ifeq ($(V),0)
   VERBOSE := @
 endif
-AR_MESSAGE	?= @$(ECHO_E) "  ==> Archiving into $@"
+AR_MESSAGE	?= @$(ECHO) "  ==> Archiving into $@"
 COMP_MESSAGE	?= @$(ECHO_E) "  ... Making $@"
-LINK_MESSAGE	?= @$(ECHO_E) "  ==> Linking $@"
-DEP_MESSAGE	?= @$(ECHO_E) "  ... Building dependencies for $<"
-PREP_MESSAGE    ?= @$(ECHO_E) "  ... Preprocessing $(filter %.cpp,$^)"
-CHKSUM_MESSAGE  ?= @$(ECHO_E) "  ... Generating checksum for "
-PATCH_MESSAGE   ?= @$(ECHO_E) "  ... Writing checksum into "
-STRIP_MESSAGE	?= @$(ECHO_E) "  ... Stripping $@"
-GENVER_MESSAGE	?= @$(ECHO_E) "  ... Generating version information" 
-CLEAN_MESSAGE	?= @$(ECHO_E) "Removing created files"
-CLEANALL_MESSAGE?= @$(ECHO_E) "Removing all created files"
-INST_MESSAGE	?= @$(ECHO_E) "Installing $(^F)"
+LINK_MESSAGE	?= @$(ECHO) "  ==> Linking $@"
+DEP_MESSAGE	?= @$(ECHO) "  ... Building dependencies for $<"
+PREP_MESSAGE    ?= @$(ECHO) "  ... Preprocessing $(filter %.cpp,$^)"
+CHKSUM_MESSAGE  ?= @$(ECHO) "  ... Generating checksum for "
+PATCH_MESSAGE   ?= @$(ECHO) "  ... Writing checksum into "
+STRIP_MESSAGE	?= @$(ECHO) "  ... Stripping $@"
+GENVER_MESSAGE	?= @$(ECHO) "  ... Generating version information" 
+CLEAN_MESSAGE	?= @$(ECHO) "Removing created files"
+CLEANALL_MESSAGE?= @$(ECHO) "Removing all created files"
+INST_MESSAGE	?= @$(ECHO) "Installing $(^F)"
 OK_MESSAGE      ?= 
 
 COMP_MESSAGE_NOOPT ?= $(COMP_MESSAGE)
