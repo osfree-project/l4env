@@ -197,6 +197,61 @@ static void memory_test(void)
 
 		ddekit_printf("\033[32;1mEND SLAB MEMORY TEST\033[0m\n");
 	}
+
+	{
+		ddekit_printf("\033[32;1mBEGIN PGTAB TEST\033[0m\n");
+		ddekit_addr_t phys = 0x12345000;
+		void *virt = (void *)0xABC00000;
+		void *virt2 = (void *)0;
+		void *virt3 = (void *)0;
+
+		ddekit_printf("4 invalid resolutions...\n");
+		ddekit_printf("virt_to_phys(0) = %p\n", ddekit_pgtab_get_physaddr(0));
+		ddekit_printf("phys_to_virt(0) = %p\n", ddekit_pgtab_get_virtaddr(0));
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt, ddekit_pgtab_get_physaddr(virt));
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+		virt = ddekit_large_malloc(16387);
+		virt2 = ddekit_large_malloc(32769);
+		virt3 = ddekit_large_malloc(8193);
+
+		ddekit_printf("6 correct lookups.\n");
+
+		phys = ddekit_pgtab_get_physaddr(virt);
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt, phys);
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+		phys = ddekit_pgtab_get_physaddr(virt2);
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt2, phys);
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+		phys = ddekit_pgtab_get_physaddr(virt3);
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt3, phys);
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+		ddekit_printf("freeing 2nd area.\n");
+		ddekit_large_free(virt2);
+
+
+		ddekit_printf("2 errors.\n");
+
+		phys = ddekit_pgtab_get_physaddr(virt2);
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt2, phys);
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+		ddekit_printf("4 correct lookups.\n");
+
+		phys = ddekit_pgtab_get_physaddr(virt);
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt, phys);
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+		phys = ddekit_pgtab_get_physaddr(virt3);
+		ddekit_printf("virt_to_phys(%p) = %p\n", virt3, phys);
+		ddekit_printf("phys_to_virt(%p) = %p\n", phys, ddekit_pgtab_get_virtaddr(phys));
+
+
+		ddekit_printf("\033[32;1mEND PGTAB TEST\033[0m\n");
+	}
 }
 
 
@@ -207,7 +262,7 @@ int main(int argc, char **argv)
 	ddekit_init();
 
 	if (1) memory_test();
-	if (1) timer_test();
+	if (0) timer_test();
 
 	l4_sleep_forever();
 

@@ -117,9 +117,7 @@ unsigned long __pa(volatile void *addr)
 
 void *__va(unsigned long addr)
 {
-	printk("__va not implemented!\n");
-	BUG();
-	return NULL;
+	return ddekit_pgtab_get_virtaddr((ddekit_addr_t) addr);
 }
 
 

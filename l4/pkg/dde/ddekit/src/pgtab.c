@@ -16,9 +16,11 @@
 #include <l4/dde/ddekit/panic.h>
 
 #include <l4/l4rm/l4rm.h>
+#include <l4/lock/lock.h>
 #include <l4/util/macros.h>
 
 #include "config.h"
+
 
 /**
  * "Page-table" object
@@ -31,8 +33,24 @@ struct pgtab_object
 	/* FIXME reconsider the following members */
 	l4_size_t size;
 	unsigned  type;  /* pgtab region type */
+	
+	struct pgtab_object * next;
+	struct pgtab_object * prev;
 };
 
+/**
+ * pa_list_head of page-table object list (for get_virtaddr())
+ */
+static struct pgtab_object pa_list_head = 
+	{
+		.va   = 0,
+		.pa   = 0,
+		.size = 0,
+		.next = &pa_list_head,
+		.prev = &pa_list_head
+	};
+
+static l4lock_t pa_list_lock = L4LOCK_UNLOCKED; 
 
 /*****************************
  ** Page-table facility API **
@@ -50,7 +68,7 @@ ddekit_addr_t ddekit_pgtab_get_physaddr(const void *virtual)
 	struct pgtab_object *p = l4rm_get_userptr(virtual);
 	if (!p) {
 		/* XXX this is verbose */
-		LOG_Error("no virt->phys mapping for %p", virtual);
+		LOG_Error("no virt->phys mapping for virtual address %p", virtual);
 		return 0;
 	}
 
@@ -59,6 +77,37 @@ ddekit_addr_t ddekit_pgtab_get_physaddr(const void *virtual)
 
 	return p->pa + offset;
 }
+
+/**
+ * Get virtual address for physical address
+ *
+ * \param physical  physical address
+ * \return virtual address or 0
+ */
+ddekit_addr_t ddekit_pgtab_get_virtaddr(const ddekit_addr_t physical)
+{
+	/* find pgtab object */
+	struct pgtab_object *p;
+	ddekit_addr_t retval = 0;
+	
+	/* find phys->virt mapping */
+	l4lock_lock(&pa_list_lock);
+	for (p = pa_list_head.next ; p != &pa_list_head ; p = p->next) {
+		if (p->pa <= (l4_addr_t)physical && 
+		    (l4_addr_t)physical < p->pa + p->size) {
+			l4_size_t offset = (l4_addr_t) physical - p->pa;
+			retval = p->va + offset;
+			break;
+		}
+	}
+	l4lock_unlock(&pa_list_lock);
+
+	if (!retval)
+		LOG_Error("no phys->virt mapping for physical address %p", (void*)physical);
+
+	return retval;
+}
+
 
 
 int ddekit_pgtab_get_type(const void *virtual)
@@ -111,6 +160,12 @@ void ddekit_pgtab_clear_region(void *virtual, int type)
 	/* XXX no error handling here */
 	l4rm_set_userptr(virtual, 0);
 
+	/* remove pgtab object from list */
+	l4lock_lock(&pa_list_lock);
+	p->next->prev= p->prev;
+	p->prev->next= p->next;
+	l4lock_unlock(&pa_list_lock);
+	
 	/* free pgtab object */
 	ddekit_simple_free(p);
 }
@@ -138,6 +193,13 @@ void ddekit_pgtab_set_region(void *virtual, ddekit_addr_t physical, int pages, i
 	p->pa   = l4_trunc_page(physical);
 	p->size = pages * L4_PAGESIZE;
 	p->type = type;
+
+	l4lock_lock(&pa_list_lock);
+	p->next=pa_list_head.next;
+	p->prev=&pa_list_head;
+	pa_list_head.next->prev=p;
+	pa_list_head.next=p;
+	l4lock_unlock(&pa_list_lock);
 
 	/* set userptr in region map to pgtab object */
 	int err = l4rm_set_userptr((void *)p->va, p);
