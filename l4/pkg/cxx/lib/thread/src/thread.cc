@@ -37,7 +37,7 @@ namespace L4 {
       l4_threadid_t pa = _pager;
       l4_threadid_t pr = _preempter;
       l4_msgdope_t res;
-      *(((l4_umword_t*&)_stack)--) = (l4_umword_t)this;
+      *(--((l4_umword_t*&)_stack)) = (l4_umword_t)this;
       l4_thread_ex_regs(self(), 
                         (l4_umword_t)start_cxx_thread, 
                         (l4_umword_t)_stack,

@@ -1,0 +1,144 @@
+ _____ ____  __  __           _____                 _       _
+|_   _|  _ \|  \/  |         | ____|_ __ ___  _   _| | __ _| |_ ___  _ __
+  | | | |_) | |\/| |  _____  |  _| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|
+  | | |  __/| |  | | |_____| | |___| | | | | | |_| | | (_| | || (_) | |
+  |_| |_|   |_|  |_|         |_____|_| |_| |_|\__,_|_|\__,_|\__\___/|_|
+
+ TPM-Emulator v0.5 -
+ A Software-based Trusted Platform Module (TPM) Emulator for Linux.
+--------------------------------------------------------------------------
+
+$Id: README 168 2006-12-28 09:45:03Z mast $
+
+Copyright
+--------------------------------------------------------------------------
+Copyright (C) 2004-2006 Mario Strasser <mast@gmx.net> and Swiss Federal
+Institute of Technology (ETH) Zurich.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+
+Package
+--------------------------------------------------------------------------
+Since version 0.5, the tpm emulator package comprises four main parts:
+
+a) tpmd - a user-space daemon that implements the actual TPM emulator
+   and can be accessed by means of unix domain sockets.
+
+b) tpmd_dev - a kernel module that provides the device /dev/tpm for
+   backward compatibility and forwards the received commands to tpmd.
+
+c) tddl - a TSS conform device driver library for the TPM emulator.
+
+d) tpm_dev - the (obsolete) kernel-space TPM emulator.
+
+
+Configuration
+--------------------------------------------------------------------------
+Firs of all, you have to make sure that the GNU MP library (http://
+www.gnu.org/software/gmp/gmp.html) is properly installed on your system;
+in particular that the required library and header files exist and are
+located within the search path of the compiler and linker.
+
+The compilation and installation process of the kernel modules uses the
+build environment for external kernel modules of the 2.5.X Linux kernels,
+which must therefore be set up properly. If you are using a pre-compiled
+standard kernel of some distribution, install the appropriate kernel-source
+packages and call the following commands:
+
+# cd /usr/src/linux
+# zcat /proc/config.gz > .config
+# make oldconfig
+# make modules_prepare
+
+Compilation and Installation
+--------------------------------------------------------------------------
+The actual compilation and installation of the TPM emulator package is
+done as follows:
+
+# tar -xvzf tpm_emulator-X.Y.tar.gz
+# cd tpm_emulator-X.Y
+# make
+# make install
+
+
+Startup
+--------------------------------------------------------------------------
+In order to use the TPM emulator, one has to start the TPM emulator daemon
+and, if required, load the TPM device forwarding module. The startup mode
+of the TPM (see TPM Spec. Part 1) is defined by the startup mode argument
+and can either be set to clear, save (default) or deactivated.
+
+# modprobe tpmd_dev
+# tpmd save
+
+Furthermore, the argument -d enables debug mode, -f forces the emulator
+to run in the foreground, and -h print the following help message:
+
+usage: tpmd/tpmd [-d] [-f] [-h] [startup mode]
+  d : enable debug mode
+  f : forces the application to run in the foreground
+  h : print this help message
+  startup mode : must be 'clear', 'save' (default) or 'deactivated
+
+If the emulator is started in mode save and fails to load a previously
+stored TPM state, it will go into fail-stop mode and has to be reloaded.
+Therefore, the first time the TPM emulator is started, the argument must
+be set to 'clear'. Recovering a TPM emulator that is in fail-stop mode
+is done by first deactivating it and then reloading it in mode 'clear':
+
+# tpmd deactivated
+# killall tpmd
+# tpmd clear
+
+
+Usage and Backward Compatibility
+--------------------------------------------------------------------------
+The most correct and convenient way to access the tpm emulator is to use
+the provided device driver library (tddl). For a comprehensive description
+of its functionality we refer to the official TCG specification (see
+https://www.trustedcomputinggroup.org/specs/TSS), an example of use is
+given by the test application tddl/test_tddl.
+
+For backward compatibility with existing applications, the kernel module
+tpmd_dev forwards any command sent to the device /dev/tpm to the tpm
+emulator daemon. In order to access the emulator directly (i.e., without
+using the device driver library or the device dev/tpm) all one has to do
+is to include the header files sys/socket.h and sys/un.h and to replace
+the open("/dev/tpm") call with something like:
+
+struct sockaddr_un addr;
+fh = socket(PF_UNIX, SOCK_STREAM, 0);
+if (fh < 0) { /* handle error */ }
+addr.sun_family = AF_UNIX;
+strncpy(addr.sun_path, "/var/tpm/tpmd_socket:0", sizeof(addr.sun_path));
+res = connect(fh, (struct sockaddr*)&addr, sizeof(struct sockaddr_un));
+if (res < 0) { /* handle error */ }
+
+All subsequent calls of read(), write(), and close() should work as
+expected.
+
+
+Notes
+--------------------------------------------------------------------------
+* Since release 0.5 the kernel-based emulator (tpm_dev) is obsolete.
+* The name and format of the persistent-storage file has changed between
+  release 0.2 and 0.3 as well as between release 0.4 and 0.4.1.
+* The DAA support was tested with the IBM DAA Test Suite and should work 
+  now as expected. Thanks go to Roger Zimmermann for his kindly help.
+
+
+Contact
+--------------------------------------------------------------------------
+Any comments, suggestions and bug reports are welcome. Please, mention
+the keyword 'TPM emulator' in the subject.
+Mario Strasser <mast@gmx.net>
+

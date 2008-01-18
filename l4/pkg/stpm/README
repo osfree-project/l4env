@@ -1,5 +1,22 @@
 TPM support.
 
-This package provides two servers for authenticated booting and sealed
-memory. STPM contains the drivers to access the hardware TPM directly.
-VTPM implements a virtual TPM used at the application layer.
+This package provides servers for authenticated booting and sealed
+memory.
+
+STPM
+====
+STPM (server/stpm) contains drivers to access hardware TPMs directly.
+Supported hardware and drivers are:
+
+- 1.1 TPM
+-- Infineon TPM (SLD9630TT) (TUDOS)
+-- Atmel TPM, contrib/tpm (IBM)
+- 1.2 TPM
+-- TIS driver taken from OSLO (TUDOS)
+
+TPMEMU
+======
+This server provides a virtual emulated TPM based on the project tpmemulator.
+
+- contrib/tpmemulator (TPM Emulator project)
+- server/tpmemu - adapted tpmemulator to run on L4Env and with STPM (TUDOS)

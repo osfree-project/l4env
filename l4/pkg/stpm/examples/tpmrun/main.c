@@ -3,12 +3,13 @@
  *          This tool can be used for creating, loading keys
  *          and much more ... simply press 'h' in the console for
  *          an overview.
- * \date    2007-01-11
+ * \date    2007-11-01
  * \author  Alexander Boettcher <boettcher@os.inf.tu-dresden.de>
  */
 
 /*
- * Copyright (C) 2007 Alexander Boettcher <boettcher@os.inf.tu-dresden.de>
+ * Copyright (C) 2007 - 2008
+ * Alexander Boettcher <boettcher@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the STPM package, which is distributed under
@@ -26,6 +27,7 @@
 #include <tcg/owner.h>      //TPM_TakeOwnership 
 
 #include "tpmrun.h"
+#include "encap.h"
 
 static unsigned char srk_auth   [20];   //password of SRK 
 static unsigned char owner_auth [20];   //password of owner
@@ -75,6 +77,7 @@ static void show_help_info()
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
   printf("w ... clear owner of TPM\n");    
+  printf("x ... connect to another vTPM\n");    
 }
 
 static void show_quote()
@@ -145,7 +148,7 @@ static void command_loop()
   int error;
   int c, i;
   int major, minor, version, rev;
-  int maxpcrs = 16;
+  unsigned long maxpcrs = 16;
   #ifdef _LOG_OUTPUT
   char * log2;
   #endif
@@ -177,11 +180,11 @@ static void command_loop()
   error = TPM_GetCapability_Pcrs(&foranything);
 
   if (error)
-    printf(" failed (error=%d). Assume %lu PCR registers.\n", error, foranything);
+    printf(" failed (error=%d). Assume %lu PCR registers.\n", error, maxpcrs);
   else
   {
-    printf(" success. %lu PCR registers reported by TPM.\n", foranything);
     maxpcrs = foranything;
+    printf(" success. %lu PCR registers reported by TPM.\n", maxpcrs);
   }
 
   printf("\nWelcome ... press 'h' for a list of supported commands\n");
@@ -507,6 +510,20 @@ static void command_loop()
           printf(" failed (error=%d)\n", error);
         else
           printf(" success.\n");
+
+        break;
+      case 'x':
+        memset(anything, 0, sizeof(anything));
+
+        printf("Name of vTPM to be used:");
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+
+        error = check_tpm_server((char *)anything, 1);
+
+        if (error)
+          printf(" failed (error=%d)\n", error);
+        else
+          printf(" success. Now TPM commands will be sent to %s\n", anything);
 
         break;
       default:

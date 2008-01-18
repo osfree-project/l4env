@@ -41,6 +41,8 @@ struct kmem_cache
 
 	struct ddekit_slab *ddekit_slab_cache;    /**< backing DDEKit cache */
 	ddekit_lock_t      cache_lock;            /**< lock */
+	void (*ctor)(void*, struct kmem_cache *, unsigned long); /**< object constructor */
+	void (*dtor)(void*, struct kmem_cache *, unsigned long); /**< object destructor */
 };
 
 
@@ -88,6 +90,9 @@ void kmem_cache_free(struct kmem_cache *cache, void *objp)
 {
 	ddekit_log(DEBUG_SLAB_ALLOC, "\"%s\" (%p)", cache->name, objp);
 
+	if (cache->dtor)
+		cache->dtor(objp, cache, 0);
+
 	ddekit_lock_lock(&cache->cache_lock);
 	ddekit_slab_free(cache->ddekit_slab_cache, objp);
 	ddekit_lock_unlock(&cache->cache_lock);
@@ -111,6 +116,9 @@ void *kmem_cache_alloc(struct kmem_cache *cache, gfp_t flags)
 	ddekit_lock_lock(&cache->cache_lock);
 	ret = ddekit_slab_alloc(cache->ddekit_slab_cache);
 	ddekit_lock_unlock(&cache->cache_lock);
+
+	if (cache->ctor)
+		cache->ctor(ret, cache, 0);
 
 	return ret;
 }
@@ -185,11 +193,6 @@ struct kmem_cache * kmem_cache_create(const char *name, size_t size, size_t alig
 		return 0;
 	}
 
-	if (dtor || ctor) {
-		printk("kmem_cache does not support constructors/destructors\n");
-		return 0;
-	}
-
 	cache = ddekit_simple_malloc(sizeof(*cache));
 	if (!cache) {
 		printk("No memory for slab cache\n");
@@ -205,6 +208,8 @@ struct kmem_cache * kmem_cache_create(const char *name, size_t size, size_t alig
 
 	cache->name = name;
 	cache->size = size;
+	cache->ctor = ctor;
+	cache->dtor = dtor;
 
 	ddekit_lock_init_unlocked(&cache->cache_lock);
 

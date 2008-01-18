@@ -20,7 +20,7 @@ namespace L4 {
   void Task::start( Thread *pager, unsigned prio )
   {
     l4_msgdope_t res;
-    *(((l4_umword_t*&)_stack)--) = (l4_umword_t)this;
+    *(--((l4_umword_t*&)_stack)) = (l4_umword_t)this;
     l4_task_new(self(), prio, 
                 (l4_umword_t)_stack, 
                 (l4_umword_t)start_cxx_thread, 
