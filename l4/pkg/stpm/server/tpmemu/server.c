@@ -21,6 +21,7 @@
 #include <l4/util/rdtsc.h>
 #include <l4/util/util.h> //l4_sleep
 #include <l4/env/errno.h>
+#include <l4/log/l4log.h>
 #include "stpm-server.h"
 #include "stpmif.h"
 
@@ -60,13 +61,13 @@ int main(void)
 
   if (names_register("vtpmemu") == 0)
   {
-    printf("Registration error at nameserver\n");
+    LOG_Error("Registration error at nameserver\n");
     return 1;
   }
 
   if (l4_calibrate_tsc() == 0)
   {
-     printf("Error in time stamp counter calibration ...\n");
+     LOG_Error("Error in time stamp counter calibration ...\n");
      return 1;
   }
 

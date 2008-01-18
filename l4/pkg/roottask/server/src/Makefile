@@ -59,7 +59,7 @@ $(TARGET): roottask.ld
 
 vpath roottask.ld.in $(PKGDIR)/server/src
 
-roottask.ld: $(SRC_DIR)/roottask.ld.in $(SRC_DIR)/Makefile
+roottask.ld: $(SRC_DIR)/roottask.ld.in $(SRC_DIR)/Makefile $(GENERAL_D_LOC)
 	@$(GEN_MESSAGE)
 	$(VERBOSE)sed 's,@linkaddr@,$(call default_reloc,$(TARGET)),g' $< > $@;
 
