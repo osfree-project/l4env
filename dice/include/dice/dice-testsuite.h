@@ -1,7 +1,7 @@
 #ifndef __DICE_DICE_TESTSUITE_H__
 #define __DICE_DICE_TESTSUITE_H__
 
-#if defined(L4API_l4v2) || defined(L4API_l4x0)
+#if defined(L4API_l4v2)
 
 // needed for random functions
 #include <l4/util/rand.h>
@@ -76,8 +76,8 @@ dice_rand(void)
 #define random_char                     (char)dice_rand()
 #define random_unsigned_char            (unsigned char)dice_rand()
 
-#if defined(L4API_l4v2) || defined(L4API_l4x0)
-#include "dice/dice-l4-v2x0-testsuite.h"
+#if defined(L4API_l4v2)
+#include "dice/dice-l4-v2-testsuite.h"
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 #include "dice/dice-l4-v4-testsuite.h"
 #endif /* L4API */

@@ -7,7 +7,7 @@
 #ifndef __DICE_DICE_H__
 #define __DICE_DICE_H__
 
-#if !defined(L4API_l4v2) && !defined(L4API_l4x0) && !defined(L4API_l4x2) && !defined(L4API_l4v4) && !defined(L4API_linux)
+#if !defined(L4API_l4v2) && !defined(L4API_l4x2) && !defined(L4API_l4v4) && !defined(L4API_linux)
 #warning no L4 API set
 #define L4API_l4v2
 #endif
@@ -112,19 +112,11 @@ void CORBA_free(void *ptr);
 
 #if defined(L4API_linux)
 #include "dice/dice-sockets.h"
-#else
-#if defined(L4API_l4v2)
+#elif defined(L4API_l4v2)
 #include "dice/dice-l4-v2.h"
-#else
-#if defined(L4API_l4x0)
-#include "dice/dice-l4-x0.h"
-#else
-#if defined(L4API_l4x2) || defined(L4API_l4v4)
+#elif defined(L4API_l4x2) || defined(L4API_l4v4)
 #include "dice/dice-l4-v4.h"
-#endif // L4X2
-#endif // L4X0
-#endif // L4V2
-#endif // SOCKET
+#endif
 
 /* Convenience macros.
  *
@@ -159,13 +151,13 @@ static const CORBA_char* __CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_COUNT
 DICE_INLINE
 void CORBA_exception_free(CORBA_Environment *ev)
 {
-    if (DICE_HAS_EXCEPTION(ev))
-    {
-       	//ev->free(DICE_EXCEPTION_PARAM(ev));
-	DICE_EXCEPTION_PARAM(ev) = 0;
-    }
-    DICE_EXCEPTION_MAJOR(ev) = CORBA_NO_EXCEPTION;
-    DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
+	if (DICE_HAS_EXCEPTION(ev))
+	{
+		//ev->free(DICE_EXCEPTION_PARAM(ev));
+		DICE_EXCEPTION_PARAM(ev) = 0;
+	}
+	DICE_EXCEPTION_MAJOR(ev) = CORBA_NO_EXCEPTION;
+	DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
 }
 
 DICE_INLINE
@@ -176,37 +168,37 @@ void CORBA_exception_set(
     CORBA_exception_type repos_id,
     void *param)
 {
-    CORBA_exception_free(ev);
-    DICE_EXCEPTION_MAJOR(ev) = major;
-    if (major != CORBA_NO_EXCEPTION)
-    {
-	DICE_EXCEPTION_MINOR(ev) = repos_id;
-	DICE_EXCEPTION_PARAM(ev) = param;
-    }
+	CORBA_exception_free(ev);
+	DICE_EXCEPTION_MAJOR(ev) = major;
+	if (major != CORBA_NO_EXCEPTION)
+	{
+		DICE_EXCEPTION_MINOR(ev) = repos_id;
+		DICE_EXCEPTION_PARAM(ev) = param;
+	}
 }
 
 DICE_INLINE
 const CORBA_char* CORBA_exception_id(CORBA_Environment *ev)
 {
-    // string can be found using repository id (repos_id)
-    if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
-	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
-	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
-    else
-	return 0;
+	// string can be found using repository id (repos_id)
+	if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
+		(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
+		return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
+	else
+		return 0;
 }
 
 DICE_INLINE
 void* CORBA_exception_value(CORBA_Environment *ev)
 {
-    return DICE_EXCEPTION_PARAM(ev);
+	return DICE_EXCEPTION_PARAM(ev);
 }
 
 DICE_INLINE
 CORBA_any* CORBA_exception_as_any(CORBA_Environment *ev)
 {
-  // not supported
-  return 0;
+	// not supported
+	return 0;
 }
 
 /*************************************************************
@@ -215,13 +207,13 @@ CORBA_any* CORBA_exception_as_any(CORBA_Environment *ev)
 DICE_INLINE
 void CORBA_server_exception_free(CORBA_Server_Environment *ev)
 {
-    if (DICE_HAS_EXCEPTION(ev))
-    {
-	//ev->free(DICE_EXCEPTION_PARAM(ev));
-	DICE_EXCEPTION_PARAM(ev) = 0;
-    }
-    DICE_EXCEPTION_MAJOR(ev) = CORBA_NO_EXCEPTION;
-    DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
+	if (DICE_HAS_EXCEPTION(ev))
+	{
+		//ev->free(DICE_EXCEPTION_PARAM(ev));
+		DICE_EXCEPTION_PARAM(ev) = 0;
+	}
+	DICE_EXCEPTION_MAJOR(ev) = CORBA_NO_EXCEPTION;
+	DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
 }
 
 DICE_INLINE
@@ -232,107 +224,107 @@ void CORBA_server_exception_set(
     CORBA_exception_type repos_id,
     void *param)
 {
-    CORBA_server_exception_free(ev);
-    DICE_EXCEPTION_MAJOR(ev) = major;
-    if (major != CORBA_NO_EXCEPTION)
-    {
-	DICE_EXCEPTION_MINOR(ev) = repos_id;
-	DICE_EXCEPTION_PARAM(ev) = param;
-    }
+	CORBA_server_exception_free(ev);
+	DICE_EXCEPTION_MAJOR(ev) = major;
+	if (major != CORBA_NO_EXCEPTION)
+	{
+		DICE_EXCEPTION_MINOR(ev) = repos_id;
+		DICE_EXCEPTION_PARAM(ev) = param;
+	}
 }
 
 DICE_INLINE
 const CORBA_char* CORBA_server_exception_id(CORBA_Server_Environment *ev)
 {
-    // string can be found using repository id (repos_id)
-    if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
-	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
-	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
-    else
-	return 0;
+	// string can be found using repository id (repos_id)
+	if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
+		(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
+		return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
+	else
+		return 0;
 }
 
 DICE_INLINE
 void* CORBA_server_exception_value(CORBA_Server_Environment *ev)
 {
-    return DICE_EXCEPTION_PARAM(ev);
+	return DICE_EXCEPTION_PARAM(ev);
 }
 
 DICE_INLINE
 CORBA_any* CORBA_server_exception_as_any(CORBA_Server_Environment *ev)
 {
-  // not supported
-  return 0;
+	// not supported
+	return 0;
 }
 
 /***********************************************************************
- * DICE specific environment functions 
+ * DICE specific environment functions
  ***********************************************************************/
 DICE_INLINE
 int dice_set_ptr(CORBA_Server_Environment *ev, void* ptr)
 {
-  if (!ev || !ptr)
-    return 1;
-  if (ev->ptrs_cur >= DICE_PTRS_MAX)
-    return 1;
-  ev->ptrs[ev->ptrs_cur++] = ptr;
-  return 0;
+	if (!ev || !ptr)
+		return 1;
+	if (ev->ptrs_cur >= DICE_PTRS_MAX)
+		return 1;
+	ev->ptrs[ev->ptrs_cur++] = ptr;
+	return 0;
 }
 
 DICE_INLINE
 void* dice_get_last_ptr(CORBA_Server_Environment *ev)
 {
-  void *ptr = 0;
-  if (!ev)
-    return ptr;
-  if (ev->ptrs_cur == 0 ||
-      ev->ptrs_cur > DICE_PTRS_MAX)
-    return ptr;
-  ptr = ev->ptrs[--ev->ptrs_cur];
-  ev->ptrs[ev->ptrs_cur] = 0;
-  return ptr;
+	void *ptr = 0;
+	if (!ev)
+		return ptr;
+	if (ev->ptrs_cur == 0 ||
+		ev->ptrs_cur > DICE_PTRS_MAX)
+		return ptr;
+	ptr = ev->ptrs[--ev->ptrs_cur];
+	ev->ptrs[ev->ptrs_cur] = 0;
+	return ptr;
 }
 
 DICE_INLINE
 void* dice_get_nth_ptr(CORBA_Server_Environment *ev, int i)
 {
-  void *ptr = 0;
-  if (!ev)
-    return 0;
-  if (i < 0 || i >= ev->ptrs_cur)
-    return 0;
-  ptr = ev->ptrs[i];
-  /* move ptrs after i to collate array */
-  while (i < ev->ptrs_cur)
-    {
-      ev->ptrs[i] = ev->ptrs[i+1];
-      i++;
-    }
-  ev->ptrs_cur--;
-  return ptr;
+	void *ptr = 0;
+	if (!ev)
+		return 0;
+	if (i < 0 || i >= ev->ptrs_cur)
+		return 0;
+	ptr = ev->ptrs[i];
+	/* move ptrs after i to collate array */
+	while (i < ev->ptrs_cur)
+	{
+		ev->ptrs[i] = ev->ptrs[i+1];
+		i++;
+	}
+	ev->ptrs_cur--;
+	return ptr;
 }
 
 DICE_INLINE
 const void* dice_get_ptr(CORBA_Server_Environment *ev, const void* p)
 {
-  int i;
-  if (!ev)
-    return 0;
-  for (i = 0; i < ev->ptrs_cur; i++)
-    {
-      if (p == ev->ptrs[i])
-        break;
-    }
-  if (i == ev->ptrs_cur)
-    return 0;
-  /* move ptrs after i to collate array */
-  while (i < ev->ptrs_cur)
-    {
-      ev->ptrs[i] = ev->ptrs[i+1];
-      i++;
-    }
-  ev->ptrs_cur--;
-  return p;
+	int i;
+	if (!ev)
+		return 0;
+	for (i = 0; i < ev->ptrs_cur; i++)
+	{
+		if (p == ev->ptrs[i])
+			break;
+	}
+	if (i == ev->ptrs_cur)
+		return 0;
+	/* move ptrs after i to collate array */
+	while (i < ev->ptrs_cur)
+	{
+		ev->ptrs[i] = ev->ptrs[i+1];
+		i++;
+	}
+	ev->ptrs_cur--;
+	return p;
 }
 
 #ifdef __cplusplus

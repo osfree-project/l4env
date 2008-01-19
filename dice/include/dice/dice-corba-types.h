@@ -3,8 +3,7 @@
 
 /* sanity check: test for L4API_* defines. */
 #if !defined(L4API_linux) && !defined(L4API_l4v2) && \
-    !defined(L4API_l4x0) && !defined(L4API_l4x2) && \
-    !defined(L4API_l4v4)
+    !defined(L4API_l4x2) && !defined(L4API_l4v4)
 #error Please specify an L4API using -D.
 #endif
 
@@ -94,7 +93,7 @@ typedef struct sockaddr_in CORBA_Object_base;
 
 NAMESPACE_DICE_END
 
-#elif defined(L4API_l4v2) || defined(L4API_l4x0)
+#elif defined(L4API_l4v2)
 
 #include <l4/sys/types.h>
 
@@ -137,7 +136,7 @@ NAMESPACE_DICE_END
 #define INVALID_CORBA_OBJECT_BASE_INITIALIZER { AF_UNSPEC, 0, { INADDR_NONE } }
 #define INVALID_CORBA_OBJECT_BASE  \
                       ((CORBA_Object_base)INVALID_CORBA_OBJECT_BASE_INITIALIZER)
-#elif defined(L4API_l4v2) || defined(L4API_l4x0)
+#elif defined(L4API_l4v2)
 #define INVALID_CORBA_OBJECT_BASE L4_INVALID_ID
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 #define INVALID_CORBA_OBJECT_BASE L4_nilthread
@@ -190,7 +189,7 @@ private:
 NAMESPACE_DICE_END
 
 #define CORBA_Server_Environment CORBA_Environment
-#elif defined(L4API_l4v2) || defined(L4API_l4x0)
+#elif defined(L4API_l4v2)
 
 #include <l4/sys/utcb.h>
 
@@ -328,7 +327,7 @@ NAMESPACE_DICE_END
 /** \def access exception minor (repos_id) member */
 #define DICE_EXCEPTION_MINOR(env) (env)->_exception._corba.repos_id
 
-#if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)
+#if defined(L4API_l4v2) || defined(L4API_l4x2) || defined(L4API_l4v4)
 
 /** \def access exception param member */
 #define DICE_EXCEPTION_PARAM(env) (env)->_p.param
@@ -344,7 +343,7 @@ NAMESPACE_DICE_END
 /** \def access exception ipc error member */
 #define DICE_IPC_ERROR(env) DICE_EXCEPTION_MINOR(env)
 
-#endif // l4v2 || l4x0 || l4x2 || l4v4
+#endif // l4v2 || l4x2 || l4v4
 
 /** \def check if environment contains exception */
 #define DICE_IS_EXCEPTION(env, exc) \
@@ -398,7 +397,7 @@ NAMESPACE_DICE_BEG
 DICE_INLINE int
 dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2);
 
-#if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)
+#if defined(L4API_l4v2) || defined(L4API_l4x2) || defined(L4API_l4v4)
 
 /**
  * \brief set scheduling parameters in the environment
@@ -470,7 +469,7 @@ dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2)
 	  (o1->sin_addr.s_addr == o2->sin_addr.s_addr));
 }
 
-#elif defined(L4API_l4v2) || defined(L4API_l4x0)
+#elif defined(L4API_l4v2)
 
 DICE_INLINE int
 dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2)
