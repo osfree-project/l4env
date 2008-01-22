@@ -1,0 +1,14 @@
+# vim:set ft=make:
+
+SUBSYSTEMS              += LIBUART
+PREPROCESS_PARTS        += realview libuart pic_gic
+CONFIG_KERNEL_LOAD_ADDR := 0x00000000
+
+uart_IMPL             += uart-pl011
+
+config_IMPL           += config-arm-realview
+mem_layout_IMPL       += mem_layout-arm-realview
+pic_IMPL              += pic-arm-realview
+bootstrap_IMPL        += bootstrap-arm-realview
+timer_IMPL            += timer-arm-realview
+kernel_uart_IMPL      += kernel_uart-arm-realview

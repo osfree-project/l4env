@@ -1,36 +1,36 @@
-# This makefile is a template for a build in a directory other 
-# than src. 
-# The only thing you have to do is to copy this template to
-# your build dir (cp Makefile.builddir.templ <builddir>/Makefile)
-# and change srcdir to the relative path to your fiasco/src.
-#
+# sample configurations
 
 SAMPLE_CONFIGS := $(subst globalconfig.out.,,$(wildcard globalconfig.out.*))
 
-srcdir = ../
+srcdir = $(shell pwd)/../
 
 all:
 
+runconfig = cp globalconfig.out.$(2) globalconfig.out ;    \
+            make $(1) && sed -e '3,4d'                     \
+		globalconfig.out > globalconfig.out.$(2)
+
+cleanup = make mrproper && $(RM) globalconfig.out.old
+
+testconfigs:
+	$(foreach cfg,$(SAMPLE_CONFIGS), $(call runconfig,menuconfig,$(cfg)))
+	$(call cleanup)
+
 testconfig:
-	$(foreach cfg,$(SAMPLE_CONFIGS), \
-	  cp globalconfig.out.$(cfg) globalconfig.out ; \
-          CONFIG_BANNER_STRING="\"Fiasco - $(cfg)\"" make menuconfig && \
-	  mv globalconfig.out globalconfig.out.$(cfg); )
+	if [ "$$T" != "" ]; then $(call runconfig,menuconfig,$$T); \
+	else echo "use: make T=configname testconfig"; fi
+	$(call cleanup)
 
 refresh:
-	for cfg in $(SAMPLE_CONFIGS); do                                 \
-	  cp globalconfig.out.$$cfg globalconfig.out;                    \
-          CONFIG_BANNER_STRING="\"Fiasco - $(cfg)\"" make regenconfig && \
-	  sed -e '/^# Generated on: /d' -e '/^# Linux version /d '       \
-	      -e '/^# At: /d' globalconfig.out > globalconfig.out.$$cfg; \
-	  $(RM) globalconfig.out;                                        \
+	for cfg in $(SAMPLE_CONFIGS); do          \
+	  $(call runconfig,oldconfig,$$cfg);    \
 	done
-	$(RM) rules.out
-
+	$(call cleanup)
 
 %:
-	$(MAKE) -I$(srcdir)  -f $(srcdir)/Makefile \
-	  srcdir=$(srcdir) objbase=. "$@"
+	$(MAKE) -f $(srcdir)/Makefile \
+	  srcdir=$(srcdir) objbase=$(shell pwd) "$@"
+
 
 .PHONY: refresh testconfig
 

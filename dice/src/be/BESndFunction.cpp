@@ -109,16 +109,19 @@ CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 	// need a message buffer, don't we?
 	AddMessageBuffer(pFEOperation);
 	AddLocalVariable(GetMessageBuffer());
-	// add exception variable
-	AddExceptionVariable();
-	CBETypedDeclarator *pException = GetExceptionVariable();
-	if (pException)
+	// add exception variable if on server side
+	if (IsComponentSide())
 	{
-		// this is a stupid trick: in order to make the marshalling logic
-		// unmarshal the exception into the environment, we need a parameter
-		// or local variable with that name. Even though we never use it.
-		pException->AddLanguageProperty(string("attribute"),
-			string("__attribute__ ((unused))"));
+		AddExceptionVariable();
+		CBETypedDeclarator *pException = GetExceptionVariable();
+		if (pException)
+		{
+			// this is a stupid trick: in order to make the marshalling logic
+			// unmarshal the exception into the environment, we need a parameter
+			// or local variable with that name. Even though we never use it.
+			pException->AddLanguageProperty(string("attribute"),
+				string("__attribute__ ((unused))"));
+		}
 	}
 	// add marshaller and communication class
 	CreateMarshaller();

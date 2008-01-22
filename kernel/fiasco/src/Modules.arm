@@ -11,55 +11,16 @@ PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH) serial   \
                            h3800 jdb_thread_names noncont_mem \
 			   abs_syscalls
 
-ifeq ("$(CONFIG_MP)","y")
-  PREPROCESS_PARTS	+= mp
-endif
-
-ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
-  PREPROCESS_PARTS	+= list_alloc_debug
-endif
-
-ifeq ("$(CONFIG_KDB)","y")
-  PREPROCESS_PARTS	+= debug gdb 
-endif
-ifeq ("$(CONFIG_JDB)","y")
-  PREPROCESS_PARTS	+= debug jdb log
-endif
-
-ifeq ("$(CONFIG_TASK_CAPS)","y")
-  PREPROCESS_PARTS      += caps
-endif
-
-ifeq ("$(CONFIG_PF_XSCALE)","y")
-  PREPROCESS_PARTS	  += pxa 16550 vcache armv5
-  CONFIG_KERNEL_LOAD_ADDR := 0xa0000000
-endif
-
-ifeq ("$(CONFIG_PF_SA1100)","y")
-  PREPROCESS_PARTS        += sa1100 vcache armv5
-  CONFIG_KERNEL_LOAD_ADDR := 0xc0000000
-endif
+PREPROCESS_PARTS-$(CONFIG_MP)                 += mp
+PREPROCESS_PARTS-$(CONFIG_LIST_ALLOC_SANITY)  += list_alloc_debug
+PREPROCESS_PARTS-$(CONFIG_JDB)                += debug jdb log
+PREPROCESS_PARTS-$(CONFIG_KDB)                += debug gdb
+PREPROCESS_PARTS-$(CONFIG_TASK_CAPS)          += caps
 
 
-ifeq ("$(CONFIG_PF_ISG)","y")
-  include $(srcdir)/Modules.arm.isg
-endif
-
-PREPROCESS_PARTS-$(CONFIG_ARM_926)    += 926 vcache armv5
-PREPROCESS_PARTS-$(CONFIG_ARM_1176)   += arm1176 arm11xx armv6
-PREPROCESS_PARTS-$(CONFIG_ARM_MPCORE) += mpcore armv6
-
-ifeq ("$(CONFIG_PF_INTEGRATOR)","y")
-  SUBSYSTEMS              += LIBUART
-  PREPROCESS_PARTS        += integrator libuart
-  CONFIG_KERNEL_LOAD_ADDR := 0x00000000
-endif
-
-ifeq ("$(CONFIG_PF_REALVIEW)","y")
-  SUBSYSTEMS              += LIBUART
-  PREPROCESS_PARTS        += realview libuart pic_gic
-  CONFIG_KERNEL_LOAD_ADDR := 0x00000000
-endif
+PREPROCESS_PARTS-$(CONFIG_ARM_926)    += armv5 926 vcache
+PREPROCESS_PARTS-$(CONFIG_ARM_1176)   += armv6 arm1176 arm11xx
+PREPROCESS_PARTS-$(CONFIG_ARM_MPCORE) += armv6 mpcore
 
 PREPROCESS_PARTS	+= $(PREPROCESS_PARTS-y)
 
@@ -69,9 +30,6 @@ PREPROCESS_PARTS	+= $(PREPROCESS_PARTS-y)
 
 PRIVATE_INCDIR += types/$(CONFIG_XARCH) types
 
-ifeq ("$(filter LIBUART, $(SUBSYSTEMS))","LIBUART")
-  LIBUART			:= uart/libuart.a
-endif
 OBJECTS_LIBUART		+= uart_pl011.o
 VPATH_LIBUART		:= $(srcdir)/lib/uart \
 			   $(srcdir)/lib/uart/arm
@@ -87,7 +45,7 @@ INTERFACES_DRIVERS 	:= sa1100 mux_console console uart filter_console \
 			   gdb_server h3xxx io mmu reset processor delayloop
 io_IMPL			:= io io-arm
 mmu_IMPL		:= mmu mmu-arm
-uart_IMPL		:= uart uart-sa1100 uart-16550 uart-pl011
+uart_IMPL		:= uart
 reset_IMPL		:= reset-arm
 processor_IMPL		:= processor processor-arm
 CXXSRC_DRIVERS		:= glue_libc.cc 
@@ -181,7 +139,8 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			watchdog perf_cnt jdb_extensions kernel_task \
 			cap_space cap_space_alloc ram_quota ram_quota_alloc \
 			obj_space obj_space_alloc \
-			utcb_init utcb_support prio_list sys_call_page
+			utcb_init utcb_support prio_list sys_call_page \
+			platform
 
 ifeq ("$(CONFIG_USER_LOCKS)","y")
   PREPROCESS_PARTS	+= ulock
@@ -190,6 +149,7 @@ endif
 
 
 boot_info_IMPL	  	:= boot_info boot_info-arch
+bootstrap_IMPL		:= bootstrap
 config_IMPL	  	:= config config-arm
 context_IMPL	  	:= context context-arm
 cpu_IMPL	  	:= cpu-arm
@@ -200,7 +160,7 @@ globals_IMPL	  	:= globals globals-arch
 irq_IMPL		:= irq irq-ipc
 kernel_task_IMPL	:= kernel_task kernel_task-arm
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
-kernel_uart_IMPL  	:= kernel_uart kernel_uart-arm
+kernel_uart_IMPL  	:= kernel_uart
 map_util_IMPL		:= map_util map_util-mem map_util-caps
 mapping_IMPL		:= mapping-arm mapping
 mem_layout_IMPL		:= mem_layout mem_layout-arm mem_layout-noncont
@@ -219,22 +179,6 @@ thread_IMPL	  	:= thread thread-list thread-arm \
 timer_IMPL		:= timer timer-arm
 vmem_alloc_IMPL	  	:= vmem_alloc vmem_alloc-arch
 tb_entry_IMPL		:= tb_entry tb_entry-arm
-
-ifeq ("$(CONFIG_PF_ISG)","y")
-  VPATH_LIBUART	+= $(srcdir)/lib/uart/isg
-  VPATH	+= kern/arm/isg drivers/arm/isg
-  # DRIVERS
-  uart_IMPL		+= uart-isg
-
-  # KERNEL
-  config_IMPL		+= config-arm-isg
-  main_IMPL		:= main main-isg
-  mem_layout_IMPL	+= mem_layout-isg
-  pic_IMPL		+= pic-isg
-  bootstrap_IMPL	:= bootstrap bootstrap-isg
-  timer_IMPL		+= timer-arm-isg
-endif
-
 
 JDB_INTERFACES		:= jdb_handler_queue jdb_module jdb_pic            \
 			   jdb jdb_core jdb_prompt_ext                     \
@@ -326,3 +270,18 @@ VERSION		:= version.h
 
 TCBOFFSET	:= tcboffset.h
 CXXSRC_TCBOFFSET	:= tcboffset.cc dump_tcboffsets.cc
+
+BSP_NAME         := $(patsubst "%",%,$(CONFIG_BSP_NAME))
+MODULES_FILE_BSP := $(srcdir)/kern/arm/bsp/$(BSP_NAME)/Modules
+ifeq ($(wildcard $(MODULES_FILE_BSP)),)
+  $(error No BSP name defined or no BSP Modules file available)
+endif
+
+include $(MODULES_FILE_BSP)
+VPATH += kern/arm/bsp/$(BSP_NAME) kern/arm/bsp
+
+ifeq ("$(filter LIBUART, $(SUBSYSTEMS))","LIBUART")
+  LIBUART			:= uart/libuart.a
+endif
+
+MODULES_FILES = $(MODULES_FILE) $(MODULES_FILE_BSP)

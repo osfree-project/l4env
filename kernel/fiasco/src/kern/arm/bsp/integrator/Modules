@@ -1,0 +1,14 @@
+# vim:set ft=make:
+
+SUBSYSTEMS              += LIBUART
+PREPROCESS_PARTS        += integrator libuart
+CONFIG_KERNEL_LOAD_ADDR := 0x00000000
+
+
+uart_IMPL             += uart-pl011
+config_IMPL           += config-arm-integrator
+mem_layout_IMPL       += mem_layout-arm-integrator
+pic_IMPL              += pic-arm-integrator
+bootstrap_IMPL        += bootstrap-arm-integrator
+timer_IMPL            += timer-arm-integrator
+kernel_uart_IMPL      += kernel_uart-arm-integrator

@@ -33,7 +33,7 @@ do-all: $(ALL_STAMPS)
 # Auto-created source files
 #
 
-.Clean-auto: $(MODULES_FILE) .Modules.deps globalconfig.out
+.Clean-auto: $(MODULES_FILES) .Modules.deps globalconfig.out
 	rm -f							      	      \
 	$(filter-out 							      \
 	  $(addprefix auto/,				      		      \
@@ -66,7 +66,7 @@ do-all: $(ALL_STAMPS)
 
 force-the-rule: ;
 
-$(ALL_STAMPS): $(MODULES_FILE) .Modules.deps globalconfig.out \
+$(ALL_STAMPS): $(MODULES_FILES) .Modules.deps globalconfig.out \
 	       .Clean-auto .Compiler-config
 
 # Basename of implementation files = Basename of first .cpp file

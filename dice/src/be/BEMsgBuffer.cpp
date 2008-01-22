@@ -559,7 +559,11 @@ void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pSt
 		dynamic_cast<CBEReplyFunction*>(pFunction) ||
 		dynamic_cast<CBEWaitFunction*>(pFunction))
 		nExType = pFunction->GetSendDirection();
-	// because the exception can be in two structs: out and exc
+	// do not add the exception to a oneway function sending to the server
+	if (pFunction->m_Attributes.Find(ATTR_IN))
+		return;
+	// because the exception can be in two structs: OUT and EXC but not in the
+	// other two structs IN or GENERIC
 	if (pFunction->m_Attributes.Find(ATTR_NOEXCEPTIONS) ||
 		(CMsgStructType::Out != GetStructType(pStruct) &&
 		 CMsgStructType::Exc != GetStructType(pStruct)))

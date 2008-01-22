@@ -118,7 +118,7 @@ void *kmem_cache_alloc(struct kmem_cache *cache, gfp_t flags)
 	ddekit_lock_unlock(&cache->cache_lock);
 
 	if (cache->ctor)
-		cache->ctor(ret, cache, 0);
+		cache->ctor(ret, cache, SLAB_CTOR_CONSTRUCTOR);
 
 	return ret;
 }

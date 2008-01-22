@@ -17,6 +17,7 @@ $(OBJ_DIR)/Makefile.build: $(SRC_DIR)/Makefile
 	$(VERBOSE)echo 'L4DIR=$(L4DIR_ABS)'          >> $@
 	$(VERBOSE)echo 'SRC_DIR=$(SRC_DIR)'          >> $@
 	$(VERBOSE)echo 'OBJ_BASE=$(OBJ_BASE)'        >> $@
+	$(VERBOSE)echo 'PKGDIR=$(PKGDIR_ABS)'        >> $@
 	$(VERBOSE)echo 'vpath %.txt $(SRC_DIR)'      >> $@
 	$(VERBOSE)echo 'include $(SRC_DIR)/Makefile' >> $@
 

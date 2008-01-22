@@ -249,7 +249,7 @@ dice_LDADD = \
 
 # Darwin's _toupper and _tolower are macros, so using these as function
 # pointers creates a linker error, which we avoid with some symbol mapping.
-@HOST_DARWIN_TRUE@dice_LDFLAGS = -Wl,-i__toupper:_toupper -Wl,-i__tolower:_tolower
+@HOST_DARWIN_TRUE@dice_LDFLAGS = 
 AM_CPPFLAGS = -D__USER__="\"$(USER)@`hostname`\"" \
 		$(LTDLINCL)
 

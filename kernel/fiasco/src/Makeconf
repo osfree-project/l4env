@@ -51,7 +51,7 @@ endif
 
 # The name of this file can be overridden from the command line or in
 # objdir/Makeconf.local.
-MODULES_FILE	= Modules.$(CONFIG_XARCH)
+MODULES_FILE	= $(srcdir)/Modules.$(CONFIG_XARCH)
 
 PREPROCESS = \
   $(word 1, $(wildcard $(shell cd $(srcdir)/../../../tools/preprocess/src 2>/dev/null; \
@@ -145,7 +145,7 @@ CPPFLAGS	+= $(L4STD_INCDIR) $(L4ALL_INCDIR) $(L4STD_INCDIR_LAST)
 CXXFLAGS	+= $(call CHECKCXX,-fno-threadsafe-statics,)
 CXXFLAGS	+= $(call CHECKCXX,-Wno-non-virtual-dtor,)
 
-ifeq ($(CONFIG_VERBOSE),n)
+ifneq ($(CONFIG_VERBOSE),y)
 VERBOSE		= @
 PREP_MESSAGE	?= @$(ECHO) "  ... Preprocessing $*"
 endif
@@ -159,7 +159,7 @@ ifeq ($(V),0)
   VERBOSE := @
 endif
 AR_MESSAGE	?= @$(ECHO) "  ==> Archiving into $@"
-COMP_MESSAGE	?= @$(ECHO_E) "  ... Making $@"
+COMP_MESSAGE	?= @$(ECHO) "  ... Making $@"
 LINK_MESSAGE	?= @$(ECHO) "  ==> Linking $@"
 DEP_MESSAGE	?= @$(ECHO) "  ... Building dependencies for $<"
 PREP_MESSAGE    ?= @$(ECHO) "  ... Preprocessing $(filter %.cpp,$^)"

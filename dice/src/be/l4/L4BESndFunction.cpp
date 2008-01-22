@@ -146,7 +146,7 @@ CL4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	WriteReturn(pFile);
 	// close }
 	--pFile << "\t}\n";
-	}
+}
 
 /** \brief init message buffer size dope
  *  \param pFile the file to write to

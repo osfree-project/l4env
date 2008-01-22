@@ -34,7 +34,7 @@ endif
 ifneq ($(MAKECMDGOALS),help)
 
 ifeq ($(srcdir),NOT_SET)
-all config menuconfig xconfig oldconfig:
+all $(filter config %config,$(MAKECMDGOALS)):
 	@echo "======================================================================"
 	@echo " Building Fiasco in the src directory is not possible!"
 	@echo ""
@@ -45,9 +45,9 @@ all config menuconfig xconfig oldconfig:
 
 else # srcdir != NOT_SET
 
-all: globalconfig.out
+all: globalconfig.h
 
-ifeq ($(filter config xconfig menuconfig oldconfig,$(MAKECMDGOALS)),)
+ifeq ($(filter config %config,$(MAKECMDGOALS)),)
 
 -include globalconfig.out
 
@@ -80,34 +80,8 @@ else # ! no ABI
 # Read Make configuration
 include $(srcdir)/Makeconf
 
-$(MODULES_FILE): $(srcdir)/$(MODULES_FILE) 
-	@ updating=false; \
-	  if [ -f $@ -a -f $< -a $< -nt $@ ]; \
-	  then \
-	    if [ -f $@.md5 ] && $(MD5SUM) $@ | cmp -s - $@.md5; \
-	    then \
-	      echo "\"$@\" is unchanged -- updating from \"$<\""; \
-	      rm -f $@ $@.md5; \
-	      updating=true; \
-	    else \
-	      echo "\"$<\" is newer, but \"$@\" is changed -- please update or remove \"$@\""; \
-	      exit 1; \
-	    fi; \
-	  fi; \
-	  if [ ! -f $@ ]; \
-	  then \
-	    $$updating || \
-	      echo "No user-specific modules file found -- trying \"$<\""; \
-	    cp $< $@; \
-	    $(MD5SUM) $@ > $@.md5.new && mv $@.md5.new $@.md5; \
-	  fi
-# Modules.md5 must not be an extra make target.  We must create the
-# checksum file at the instant we copy Modules from Modules.<arch>,
-# and this invariant cannot be ensured with an extra make target.
+include $(MODULES_FILE)
 
-$(srcdir)/$(MODULES_FILE):
-
--include $(MODULES_FILE)
 ifdef SUBSYSTEMS
  _modules_read_ = true
 endif
@@ -117,10 +91,10 @@ GENERATED_MODULES = $(foreach subsys, $(SUBSYSTEMS), \
 		      $(INTERFACES_$(subsys)))
 ALL = $(foreach subsys, $(SUBSYSTEMS), $($(subsys)) $($(subsys)_EXTRA))
 
-$(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready): $(MODULES_FILE)
+$(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready): $(MODULES_FILES)
 
 .PRECIOUS: .Modules.deps
-.Modules.deps: $(MODULES_FILE) globalconfig.out
+.Modules.deps: $(MODULES_FILES) globalconfig.h
 	@mkdir -p auto
 	@echo "Creating $@"
 	@($(foreach mod, $(GENERATED_MODULES),				\
@@ -153,9 +127,9 @@ endif # _modules_read_
 # 
 
 .PHONY: create-sources
-create-sources: $(MODULES_FILE) globalconfig.out .Modules.deps 
+create-sources: $(MODULES_FILES) globalconfig.h .Modules.deps 
 	$(MAKE) srcdir=$(srcdir) objbase=$(objbase) -f $(srcdir)/Makefile.sub1 
-auto/stamp-%.ready: $(MODULES_FILE) globalconfig.out .Modules.deps 
+auto/stamp-%.ready: $(MODULES_FILES) globalconfig.h .Modules.deps 
 	$(MAKE) srcdir=$(srcdir) objbase=$(objbase) -f $(srcdir)/Makefile.sub1 $@
 
 #
@@ -187,41 +161,36 @@ endif # ! config xconfig menuconfig oldconfig
 auto:
 	test -e auto || mkdir auto
 
-$(srcdir)/rules.isg:
-	@echo "symbols"                                      >> $@
-	@echo "arm_isg_options  'ISG Specific options' text" >> $@
-	@echo "."                                            >> $@
+BSP_DIR            := $(srcdir)/kern/arm/bsp
+KCONFIG_FILE       := Kconfig
+KCONFIG_SRC_FILE   := $(srcdir)/Kconfig
+KCONFIG_BSP_FILES  := $(shell find $(BSP_DIR) -name Kconfig -follow -print)
 
-rules.out: $(srcdir)/rules.cml $(srcdir)/rules.isg
-	@echo =============================================
-	@echo rules.out was outdated, do \'make menuconfig\'
-	@echo to see if there are new config options!
-	@echo =============================================
-	$(tooldir)/cml2/cmlcompile.py -o $@ $<
+kconfig_call = $(MAKE) -C $(tooldir)/kconfig O=$(objbase) \
+	       config_file=$(KCONFIG_FILE) \
+	       KCONFIG_AUTOHEADER=globalconfig.h \
+	       KCONFIG_CONFIG=globalconfig.out \
+	       KCONFIG_AUTOCONFIG=config/auto.conf \
+	       KERNELVERSION=SVN MENUCONFIG_COLOR=blackbg \
+	       fiasco_srcdir=$(srcdir)
 
-globalconfig.out: rules.out
-	$(tooldir)/cml2/cmlconfigure.py -b -B $(CONFIG_BANNER_STRING) \
-		-c -i globalconfig.out -o globalconfig.out $<
+$(KCONFIG_FILE): $(KCONFIG_SRC_FILE) $(KCONFIG_BSP_FILES) $(srcdir)/Makefile
+	@$(tooldir)/gen_kconfig $(KCONFIG_SRC_FILE) $(KCONFIG_FILE) $(KCONFIG_BSP_FILES)
+
+globalconfig.out: $(KCONFIG_FILE)
+	$(kconfig_call) oldconfig
 
 globalconfig.h: globalconfig.out
-	$(tooldir)/cml2/configtrans.py -h $@ $<
+	$(kconfig_call) silentoldconfig
 
-config menuconfig: rules.out
-	$(tooldir)/cml2/cmlconfigure.py -B $(CONFIG_BANNER_STRING) \
-		-c -i globalconfig.out -o globalconfig.out $<
+config: $(KCONFIG_FILE)
+	$(kconfig_call) menuconfig silentoldconfig
 
-oldconfig: rules.out
-	$(tooldir)/cml2/cmlconfigure.py -B $(CONFIG_BANNER_STRING) \
-		-t -I globalconfig.out -o globalconfig.out $<
+txtconfig: $(KCONFIG_FILE)
+	$(kconfig_call) config silentoldconfig
 
-regenconfig: rules.out
-	$(tooldir)/cml2/cmlconfigure.py -B $(CONFIG_BANNER_STRING) \
-		-b -I globalconfig.out -o globalconfig.out $<
-
-xconfig: rules.out
-	$(tooldir)/cml2/cmlconfigure.py -x -i globalconfig.out \
-		-o globalconfig.out $<
-
+menuconfig oldconfig xconfig qconfig gconfig randconfig allyesconfig allnoconfig: $(KCONFIG_FILE)
+	$(kconfig_call) $@ silentoldconfig
 
 ifneq ($(filter clean cleanall mrproper,$(MAKECMDGOALS)),)
 
@@ -244,13 +213,12 @@ clean: $(foreach subsys, $(SUBSYSTEMS), clean-$(subsys))
 
 cleanall: clean $(foreach subsys, $(SUBSYSTEMS), cleanall-$(subsys))
 	$(foreach subdir, $(SUBDIRS), $(RM) $(subdir)/{.,}*.d)
-	$(RM) rules.out
 	$(RM) {.,}*.d {.,}*.d.new *~ globalconfig.{h,h.old} Circular
 	$(RM) .Modules.deps
 
 mrproper: cleanall
 	$(RM_R) globalconfig.out Modules.* DEPS*
-	$(RM_R) auto docs
+	$(RM_R) auto docs config scripts
 
 endif # clean, cleanall, mrproper
 

@@ -320,3 +320,5 @@ INTERFACES_UNITTEST	+= mapdb_t map_util_t
 
 # Compile all unit tests without -DNDEBUG.
 NONDEBUG += $(patsubst %.o, %, $(OBJ_UNITTEST))
+
+MODULES_FILES = $(MODULES_FILE) $(MODULES_FILE_BSP)

@@ -493,3 +493,5 @@ ifneq ($(wildcard $(srcdir)/lib/regex),)
 endif
 
 endif
+
+MODULES_FILES = $(MODULES_FILE) $(MODULES_FILE_BSP)

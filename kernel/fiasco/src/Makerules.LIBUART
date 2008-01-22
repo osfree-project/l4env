@@ -1,3 +1,4 @@
+# vim:set ft=make:
 
 LIBUART_DIR := $(objbase)/uart
 

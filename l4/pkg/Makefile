@@ -29,7 +29,8 @@ lock.headers:		semaphore.headers
 loader.lib:		semaphore.lib thread.lib dm_generic.lib dm_mem.lib \
 			slab.lib l4env.lib l4rm.lib log.lib names.lib \
 			roottask.lib generic_ts.lib l4util.lib libsigma0.lib \
-			l4sys.lib libc_backends_l4env.lib crtx.lib
+			l4sys.lib libc_backends_l4env.lib crtx.lib \
+			generic_fprov.lib
 l4util.lib:		roottask.lib
 l4io.lib:		omega0.lib
 cebit04.bin:		nethub.bin
