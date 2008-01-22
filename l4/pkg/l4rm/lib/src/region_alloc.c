@@ -19,6 +19,7 @@
 #include <l4/sys/consts.h>
 #include <l4/slab/slab.h>
 #include <l4/util/macros.h>
+#include <l4/lock/lock.h>
 
 /* private includes */
 #include "__region_alloc.h"
@@ -34,6 +35,11 @@
  * Region descriptor slab cache
  */
 l4slab_cache_t l4rm_region_cache;
+
+/**
+ * Lock for l4rm_region_cache
+ */
+l4lock_t region_cache_lock = L4LOCK_UNLOCKED_INITIALIZER;
 
 /*****************************************************************************
  *** helpers

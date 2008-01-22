@@ -18,6 +18,7 @@
 #include <l4/sys/types.h>
 #include <l4/slab/slab.h>
 #include <l4/util/macros.h>
+#include <l4/lock/lock.h>
 
 /* private includes */
 #include "__avl_tree_alloc.h"
@@ -32,6 +33,11 @@
  * AVL tree node slab cache
  */
 l4slab_cache_t l4rm_avl_node_cache;
+
+/**
+ * Lock for AVL tree node slab cache
+ */
+l4lock_t avl_node_cache_lock = L4LOCK_UNLOCKED_INITIALIZER;
 
 /*****************************************************************************
  *** helpers

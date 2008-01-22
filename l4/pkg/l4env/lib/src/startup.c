@@ -47,6 +47,9 @@ static l4rm_vm_range_t  fixed[MAX_FIXED];
 static int              fixed_type[MAX_FIXED];
 static int              num_fixed;
 
+/* one if l4env startup done */
+static unsigned __startup_done;
+
 extern int main(int argc, char *argv[]);
 
 /**
@@ -326,6 +329,9 @@ __main(void)
       enter_kdebug("PANIC");
     }
 
+  __startup_done = 1;
+  asm volatile("" : : : "memory");
+
   /* start main thread */
   if ((ret = l4thread_create_long(L4THREAD_INVALID_ID,
                                   (l4thread_fn_t)__startup_main,
@@ -356,4 +362,14 @@ l4env_infopage_t *
 l4env_get_infopage(void)
 {
   return l4env_infopage;
+}
+
+/**
+ * \brief Return if L4Env startup has been completed
+ * \return true for yes, false for no
+ */
+unsigned
+l4env_startup_done(void)
+{
+  return __startup_done;
 }

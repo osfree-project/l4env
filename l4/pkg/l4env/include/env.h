@@ -333,6 +333,16 @@ l4env_get_default_dsm(void);
 l4_threadid_t
 l4env_get_parent(void);
 
+/*****************************************************************************/
+/**
+ * \brief  Return if L4Env startup done
+ *
+ * \return true if L4Env startup done, false if not (yet)
+ */
+/*****************************************************************************/
+unsigned
+l4env_startup_done(void);
+
 __END_DECLS;
 
 #endif /* _L4_ENV_ENV_H */

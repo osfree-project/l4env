@@ -163,12 +163,12 @@ endchoice
 
 choice
 	prompt "Timer tick source"
-	depends on PF_PC
+	depends on PF_PC || PF_UX
 	default SCHED_PIT
 
 config SCHED_PIT
 	bool "Use PIT for scheduling"
-	depends on PF_PC
+	depends on PF_PC || PF_UX
 	help
 	  Normally, Fiasco uses the RTC at IRQ8 for scheduling. This can be
 	  disadvantageous in certain circumstances, e.g. VMWare doesn't seem
@@ -210,10 +210,6 @@ config SCHED_APIC
 	  Use the Local APIC for scheduling
 
 endchoice
-
-config SCHED_PIT
-	bool
-	default y if PF_UX
 
 config WORKAROUND_AMD_FPU_LEAK
 	bool "Enables workaroud for AMD FPU security leak"
