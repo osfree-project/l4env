@@ -210,7 +210,7 @@ endif
 ifeq ($(filter $(IGNORE_OBJDIR_TARGETS),$(MAKECMDGOALS)),)
 ifeq ($(wildcard $(BID_ROOT_CONF)),)
 ifeq ($(BID_IGN_ROOT_CONF),)
-$(error Please run "make O=/path/to/objdir config" in "$(L4DIR)")
+$(error No configuration file found in build directory "$(OBJ_BASE)". Please run "make O=/path/to/objdir config" in "$(L4DIR_ABS)" or specify a valid build directory)
 endif
 else
 include $(BID_ROOT_CONF)
