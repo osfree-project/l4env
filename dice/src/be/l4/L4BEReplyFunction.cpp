@@ -65,7 +65,7 @@ void CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bCompone
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
 	string sCurr = sResult;
-	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+	AddLocalVariable(sDope, sResult, 0, string("{ raw: 0 }"));
 	// we might need the offset variables if we transmit [ref]
 	// attributes, because strings are found in message buffer by
 	// offset calculation if message buffer is at server side.
@@ -117,7 +117,7 @@ void CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 		string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
 		pFile << "\t/* test for IPC errors */\n";
-		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
+		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_ERROR(" << sResult <<
 			")))\n";
 		++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
 		WriteCallParameter(pFile, GetEnvironment(), true);

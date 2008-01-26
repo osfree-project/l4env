@@ -28,6 +28,7 @@
 
 #include "L4V2BESizes.h"
 #include "TypeSpec-Type.h"
+#include "Compiler.h"
 
 CL4V2BESizes::CL4V2BESizes()
 { }
@@ -44,7 +45,10 @@ CL4V2BESizes::~CL4V2BESizes()
  */
 int CL4V2BESizes::GetMaxShortIPCSize()
 {
-    return 2 * GetSizeOfType(TYPE_MWORD);
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V2))
+		return 2 * GetSizeOfType(TYPE_MWORD);
+	else // X0
+		return 3 * GetSizeOfType(TYPE_MWORD);
 }
 
 /** \brief returns a value for the maximum  size of a specific type
@@ -67,7 +71,7 @@ int CL4V2BESizes::GetMaxSizeOfType(int nFEType)
 		nSize = (1 << 19) * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
 		break;
 	case TYPE_UTCB:
-		nSize = 0; /* V2 does not support UTCB IPC */
+		nSize = 0; /* V2 and X0 do not support UTCB IPC */
 		break;
 	default:
 		break;

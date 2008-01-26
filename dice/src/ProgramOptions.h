@@ -134,6 +134,7 @@ enum BackEnd_Interface_Type
 {
     PROGRAM_BE_NONE_I,		/**< nothing set */
     PROGRAM_BE_V2,		/**< defines the back-end for L4 version 2 */
+    PROGRAM_BE_X0,		/**< defines the back-end for L4 version X.0 */
     PROGRAM_BE_V4,		/**< defines the back-end for L4 version X.2 */
     PROGRAM_BE_SOCKETS,		/**< defines the back-end for the Linux Sockets */
     PROGRAM_BE_FIASCO,		/**< defines the back-end for the Fiasco */

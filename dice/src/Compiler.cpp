@@ -736,6 +736,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 						SetBackEndInterface(PROGRAM_BE_V2);
 						Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end L4 version 2\n");
 					}
+					else if (sArg == "X0")
+					{
+						SetBackEndInterface(PROGRAM_BE_X0);
+						Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end L4 version X.0 (Hazelnut)\n");
+					}
 					else if (sArg == "FIASCO")
 					{
 						SetBackEndInterface(PROGRAM_BE_FIASCO);

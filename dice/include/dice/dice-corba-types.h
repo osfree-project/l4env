@@ -3,7 +3,8 @@
 
 /* sanity check: test for L4API_* defines. */
 #if !defined(L4API_linux) && !defined(L4API_l4v2) && \
-    !defined(L4API_l4x2) && !defined(L4API_l4v4)
+    !defined(L4API_l4x2) && !defined(L4API_l4v4) && \
+	!defined(L4API_l4x0)
 #error Please specify an L4API using -D.
 #endif
 
@@ -103,6 +104,16 @@ typedef l4_threadid_t CORBA_Object_base;
 
 NAMESPACE_DICE_END
 
+#elif defined(L4API_l4x0)
+
+#include <l4/l4.h>
+
+NAMESPACE_DICE_BEG
+
+typedef l4_threadid_t CORBA_Object_base;
+
+NAMESPACE_DICE_END
+
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 // KA:
 //#include <l4/ipc.h>
@@ -136,7 +147,7 @@ NAMESPACE_DICE_END
 #define INVALID_CORBA_OBJECT_BASE_INITIALIZER { AF_UNSPEC, 0, { INADDR_NONE } }
 #define INVALID_CORBA_OBJECT_BASE  \
                       ((CORBA_Object_base)INVALID_CORBA_OBJECT_BASE_INITIALIZER)
-#elif defined(L4API_l4v2)
+#elif defined(L4API_l4v2) || defined(L4API_l4x0)
 #define INVALID_CORBA_OBJECT_BASE L4_INVALID_ID
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 #define INVALID_CORBA_OBJECT_BASE L4_nilthread
@@ -256,6 +267,67 @@ private:
 
 NAMESPACE_DICE_END
 
+#elif defined(L4API_l4x0)
+
+NAMESPACE_DICE_BEG
+
+typedef void* (*dice_malloc_func)(unsigned long);
+typedef void (*dice_free_func)(void*);
+
+typedef struct CORBA_Environment
+{
+	dice_CORBA_exception_type _exception;
+	union
+	{
+		void *param;
+		l4_uint32_t ipc_error;
+		l4_uint32_t sched_bits;
+	} _p;
+
+	l4_timeout_t timeout;
+	l4_fpage_t rcv_fpage;
+	dice_malloc_func malloc;
+	dice_free_func free;
+
+#ifdef __cplusplus
+	CORBA_Environment();
+	// effective C++ warnings
+private:
+	CORBA_Environment(const CORBA_Environment &);
+	CORBA_Environment& operator=(const CORBA_Environment &);
+#endif
+} CORBA_Environment;
+
+typedef struct CORBA_Server_Environment
+{
+	dice_CORBA_exception_type _exception;
+	union
+	{
+		void *param;
+		l4_uint32_t ipc_error;
+		l4_uint32_t sched_bits;
+	} _p;
+
+	l4_timeout_t timeout;
+	l4_fpage_t rcv_fpage;
+	dice_malloc_func malloc;
+	dice_free_func free;
+
+	// server specific
+	CORBA_Object_base partner;
+	void* user_data;
+	void* ptrs[DICE_PTRS_MAX];
+	unsigned short ptrs_cur;
+
+#ifdef __cplusplus
+	CORBA_Server_Environment();
+	CORBA_Server_Environment(const CORBA_Server_Environment &);
+	CORBA_Server_Environment& operator=(const CORBA_Server_Environment &);
+#endif
+} CORBA_Server_Environment;
+
+NAMESPACE_DICE_END
+
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 
 NAMESPACE_DICE_BEG
@@ -327,7 +399,7 @@ NAMESPACE_DICE_END
 /** \def access exception minor (repos_id) member */
 #define DICE_EXCEPTION_MINOR(env) (env)->_exception._corba.repos_id
 
-#if defined(L4API_l4v2) || defined(L4API_l4x2) || defined(L4API_l4v4)
+#if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)
 
 /** \def access exception param member */
 #define DICE_EXCEPTION_PARAM(env) (env)->_p.param
@@ -343,7 +415,7 @@ NAMESPACE_DICE_END
 /** \def access exception ipc error member */
 #define DICE_IPC_ERROR(env) DICE_EXCEPTION_MINOR(env)
 
-#endif // l4v2 || l4x2 || l4v4
+#endif // l4v2 || l4x0 || l4x2 || l4v4
 
 /** \def check if environment contains exception */
 #define DICE_IS_EXCEPTION(env, exc) \
@@ -397,7 +469,7 @@ NAMESPACE_DICE_BEG
 DICE_INLINE int
 dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2);
 
-#if defined(L4API_l4v2) || defined(L4API_l4x2) || defined(L4API_l4v4)
+#if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)
 
 /**
  * \brief set scheduling parameters in the environment
@@ -469,14 +541,14 @@ dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2)
 	  (o1->sin_addr.s_addr == o2->sin_addr.s_addr));
 }
 
-#elif defined(L4API_l4v2)
+#elif defined(L4API_l4v2) || defined(L4API_l4x0)
 
 DICE_INLINE int
 dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2)
 {
     if (!o1 || !o2)
 	return 0;
-    return l4_thread_equal(*o1, *o2);
+    return o1->raw == o2->raw;
 }
 
 NAMESPACE_DICE_END /* exclude included files */
@@ -485,28 +557,30 @@ NAMESPACE_DICE_END /* exclude included files */
 
 NAMESPACE_DICE_BEG
 
+#define DICE_IPC_DECEIT 1
+
 DICE_INLINE void
 dice_l4_sched_donate(CORBA_Environment *env)
 {
-    env->_p.sched_bits &= ~L4_IPC_DECEIT_MASK;
+    env->_p.sched_bits &= ~DICE_IPC_DECEIT;
 }
 
 DICE_INLINE void
 dice_l4_sched_nodonate(CORBA_Environment *env)
 {
-    env->_p.sched_bits |= L4_IPC_DECEIT_MASK;
+    env->_p.sched_bits |= DICE_IPC_DECEIT;
 }
 
 DICE_INLINE void
 dice_l4_sched_donate_srv(CORBA_Server_Environment *env)
 {
-    env->_p.sched_bits &= ~L4_IPC_DECEIT_MASK;
+    env->_p.sched_bits &= ~DICE_IPC_DECEIT;
 }
 
 DICE_INLINE void
 dice_l4_sched_nodonate_srv(CORBA_Server_Environment *env)
 {
-    env->_p.sched_bits |= L4_IPC_DECEIT_MASK;
+    env->_p.sched_bits |= DICE_IPC_DECEIT;
 }
 
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)

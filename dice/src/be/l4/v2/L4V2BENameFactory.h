@@ -47,6 +47,7 @@ public:
 
     virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);
     virtual std::string GetTimeoutClientVariable(CBEFunction *pFunction);
+	virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
 };
 
 #endif

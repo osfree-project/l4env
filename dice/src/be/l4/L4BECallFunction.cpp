@@ -67,7 +67,7 @@ void CL4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponen
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
-	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+	AddLocalVariable(sDope, sResult, 0, string("{ raw: 0 }"));
 }
 
 /** \brief writes the invocation of the message transfer
@@ -126,7 +126,7 @@ void CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n";
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_ERROR(" << sResult << ")))\n";
 	pFile << "\t{\n";
 	// env.major = CORBA_SYSTEM_EXCEPTION;
 	// env.repos_id = DICE_IPC_ERROR;
@@ -190,7 +190,7 @@ void CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 	{
 		// we have to always check if this was a flexpage IPC
 		string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-		pFile << "\tif (!l4_ipc_fpage_received(" << sResult << "))\n";
+		pFile << "\tif (" << sResult << ".md.fpage_received == 0)\n";
 		pFile << "\t{\n";
 		++pFile;
 		// unmarshal exception and test if we really received an exception. If

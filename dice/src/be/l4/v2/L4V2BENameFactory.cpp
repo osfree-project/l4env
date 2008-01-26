@@ -30,6 +30,7 @@
 #include "be/BEFunction.h"
 #include "be/BEClass.h"
 #include "Compiler.h"
+#include "TypeSpec-Type.h"
 #include <cassert>
 #include <iostream>
 
@@ -72,8 +73,34 @@ string CL4V2BENameFactory::GetTimeoutServerVariable(CBEFunction* pFunction)
 	assert(pClass);
 
 	if (pClass->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
-		return string("L4_IPC_SEND_TIMEOUT_0");
+	{
+		if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V2))
+			return string("L4_IPC_SEND_TIMEOUT_0");
+		else // X0
+			return string("L4_IPC_TIMEOUT(0,1,0,0,0,0)");
+	}
 
 	return CL4BENameFactory::GetTimeoutServerVariable(pFunction);
 }
 
+/** \brief create L4 specific type names
+ *  \param nType the type number
+ *  \param bUnsigned true if the type is unsigned
+ *  \param nSize the size of the type
+ */
+string CL4V2BENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize)
+{
+	string sReturn;
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0) &&
+		TYPE_MWORD == nType &&
+		true == bUnsigned)
+	{
+		sReturn = "dword_t";
+	}
+	else
+		sReturn = CL4BENameFactory::GetTypeName(nType, bUnsigned, nSize);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4V2BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+		__func__, sReturn.c_str(), nType);
+	return sReturn;
+}

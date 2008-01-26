@@ -125,6 +125,14 @@ CL4V2BEIPC::WriteCall(CBEFile& pFile,
 			false, false))
 		pFile << "0";
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				false, false))
+			pFile << "0";
+		pFile << ",\n";
+	}
 
 	nDirection = pFunction->GetReceiveDirection();
 	if (IsShortIPC(pFunction, nDirection))
@@ -149,6 +157,14 @@ CL4V2BEIPC::WriteCall(CBEFile& pFile,
 			true, false))
 		pFile << "&" << sDummy;
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				true, false))
+			pFile << "&" << sDummy;
+		pFile << ",\n";
+	}
 
 	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
@@ -203,6 +219,14 @@ CL4V2BEIPC::WriteReceive(CBEFile& pFile,
 			true, false))
 		pFile << "&" << sDummy;
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				true, false))
+			pFile << "&" << sDummy;
+		pFile << ",\n";
+	}
 
 	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
@@ -256,6 +280,14 @@ CL4V2BEIPC::WriteWait(CBEFile& pFile,
 			true, false))
 		pFile << "&" << sDummy;
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				true, false))
+			pFile << "&" << sDummy;
+		pFile << ",\n";
+	}
 
 	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 	--pFile;
@@ -331,6 +363,14 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile& pFile,
 			false, false))
 		pFile << "0";
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				false, false))
+			pFile << "0";
+		pFile << ",\n";
+	}
 
 	pFile << "\t" << sServerID << ",\n";
 	pFile << "\t" << sMsgBuffer << ",\n";
@@ -347,6 +387,14 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile& pFile,
 			true, false))
 		pFile << "&" << sDummy;
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				true, false))
+			pFile << "&" << sDummy;
+		pFile << ",\n";
+	}
 
 	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
@@ -423,6 +471,14 @@ CL4V2BEIPC::WriteSend(CBEFile& pFile,
 			false, false))
 		pFile << "0";
 	pFile << ",\n";
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pFile << "\t";
+		if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 2,
+				false, false))
+			pFile << "0";
+		pFile << ",\n";
+	}
 
 	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 

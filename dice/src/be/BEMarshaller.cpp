@@ -618,8 +618,8 @@ bool CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember
 		{
 			pFile << "\t";
 			WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, 0);
-			pFile << " = ((" << sType << "){ _corba: { .major = " <<
-				"DICE_EXCEPTION_MAJOR(" << sEnvPtr << "), .repos_id = " <<
+			pFile << " = ((" << sType << "){ _corba: { major: " <<
+				"DICE_EXCEPTION_MAJOR(" << sEnvPtr << "), repos_id: " <<
 				"DICE_EXCEPTION_MINOR(" << sEnvPtr << ") }})._raw;\n";
 		}
 		else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
@@ -650,12 +650,12 @@ bool CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember
 			// env->major = ((dice_CORBA_exception_type)exception).major
 			// env->repos_id = ((dice_CORBA_exception_type)exception).repos_id
 			pFile << "\tDICE_EXCEPTION_MAJOR(" << sEnvPtr << ") = ((" <<
-				sType << "){ ._raw = ";
+				sType << "){ _raw: ";
 			// access message buffer
 			WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
 			pFile << "})._corba.major;\n";
 			pFile << "\tDICE_EXCEPTION_MINOR(" << sEnvPtr << ") = ((" <<
-				sType << "){ ._raw = ";
+				sType << "){ _raw: ";
 			// access message buffer
 			WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
 			pFile << "})._corba.repos_id;\n";
@@ -1173,6 +1173,7 @@ bool CBEMarshaller::MarshalString(CBEFile& pFile, CBETypedDeclarator *pParameter
 				pFile << "\t";
 				WriteParameter(pFile, pParameter, pStack, true);
 				pFile << " = ";
+				pParameter->GetType()->WriteCast(pFile, true);
 				CBEContext::WriteMalloc(pFile, m_pFunction);
 				pFile << "(";
 				pMember->WriteGetSize(pFile, pStack, m_pFunction);

@@ -62,8 +62,7 @@ public:
 	};
 
 public:
-	virtual std::string GetTypeName(int nType, bool bUnsigned,
-		int nSize = 0);
+	virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
 	virtual std::string GetThreadIdVariable();
 	virtual std::string GetComponentIDVariable();
 	virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);

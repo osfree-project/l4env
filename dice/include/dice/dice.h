@@ -7,7 +7,7 @@
 #ifndef __DICE_DICE_H__
 #define __DICE_DICE_H__
 
-#if !defined(L4API_l4v2) && !defined(L4API_l4x2) && !defined(L4API_l4v4) && !defined(L4API_linux)
+#if !defined(L4API_l4v2) && !defined(L4API_l4x0) && !defined(L4API_l4x2) && !defined(L4API_l4v4) && !defined(L4API_linux)
 #warning no L4 API set
 #define L4API_l4v2
 #endif
@@ -114,6 +114,8 @@ void CORBA_free(void *ptr);
 #include "dice/dice-sockets.h"
 #elif defined(L4API_l4v2)
 #include "dice/dice-l4-v2.h"
+#elif defined(L4API_l4x0)
+#include "dice/dice-l4-x0.h"
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 #include "dice/dice-l4-v4.h"
 #endif

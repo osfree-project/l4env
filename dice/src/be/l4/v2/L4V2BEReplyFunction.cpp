@@ -81,7 +81,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
 	// test if we need dummies
 	pFile << "#if defined(__PIC__)\n";
 	// write result variable
-	pFile << "\tl4_msgdope_t " << sResult << " = { msgdope: 0 };\n";
+	pFile << "\tl4_msgdope_t " << sResult << " = { raw: 0 };\n";
 	pFile << "\t" << sMWord << " " << sDummy <<
 	    " __attribute__((unused));\n",
 	if (!FindAttribute(ATTR_NOEXCEPTIONS))
@@ -90,7 +90,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
 
 	pFile << "#else // !PIC\n";
 	// write result variable
-	pFile << "\tl4_msgdope_t " << sResult << " = { msgdope: 0 };\n";
+	pFile << "\tl4_msgdope_t " << sResult << " = { raw: 0 };\n";
 	pFile << "\t" << sMWord << " " << sDummy << " = 0;\n";
 	if (!FindAttribute(ATTR_NOEXCEPTIONS))
 	    // declare local exception variable

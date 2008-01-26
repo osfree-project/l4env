@@ -68,7 +68,7 @@ CL4BESndFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
-	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+	AddLocalVariable(sDope, sResult, 0, string("{ raw: 0 }"));
 }
 
 /** \brief writes the invocation code
@@ -117,7 +117,7 @@ CL4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	CBETypedDeclarator *pEnv = GetEnvironment();
 	CBEDeclarator *pDecl = pEnv->m_Declarators.First();
 
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n"
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_ERROR(" << sResult << ")))\n"
 		<< "\t{\n";
 	// env.major = CORBA_SYSTEM_EXCEPTION;
 	// env.repos_id = DICE_IPC_ERROR;

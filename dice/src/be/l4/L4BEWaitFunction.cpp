@@ -68,7 +68,7 @@ void CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponen
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
-	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+	AddLocalVariable(sDope, sResult, 0, string("{ raw: 0 }"));
 }
 
 /** \brief creates the CORBA_Environment variable (and parameter)
@@ -119,7 +119,7 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	if (!m_sErrorFunction.empty())
 	{
 		pFile << "\t/* test for IPC errors */\n";
-		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult
+		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_ERROR(" << sResult
 			<< ")))\n";
 		++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
 		WriteCallParameter(pFile, GetEnvironment(), true);
@@ -142,7 +142,7 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 		else
 			sSetFunc = "CORBA_exception_set";
 
-		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
+		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_ERROR(" << sResult <<
 			")))\n" <<
 			"\t{\n";
 		// env.major = CORBA_SYSTEM_EXCEPTION;

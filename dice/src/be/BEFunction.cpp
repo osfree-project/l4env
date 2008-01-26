@@ -2163,18 +2163,18 @@ string CBEFunction::GetExceptionWordInitString()
 	string sInitString;
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
-		// ((dice_CORBA_exception_type){ _corba: { .major = env.major, .repos_id = env.repos_id }})._raw
+		// ((dice_CORBA_exception_type){ _corba: { major: env.major, repos_id: env.repos_id }})._raw
 		string sType = CBENameFactory::Instance()->GetTypeName(TYPE_EXCEPTION, true);
 		sInitString =
 			string("((");
-		sInitString += sType + "){ _corba: { .major = ";
+		sInitString += sType + "){ _corba: { major: ";
 		// add variable name of envrionment
 		CBEDeclarator *pDecl = m_pCorbaEnv->m_Declarators.First();
 		sInitString += "DICE_EXCEPTION_MAJOR(";
 		if (pDecl->GetStars() == 0)
 			sInitString += "&";
 		sInitString += pDecl->GetName();
-		sInitString += "), .repos_id = DICE_EXCEPTION_MINOR(";
+		sInitString += "), repos_id: DICE_EXCEPTION_MINOR(";
 		if (pDecl->GetStars() == 0)
 			sInitString += "&";
 		sInitString += pDecl->GetName();

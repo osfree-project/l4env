@@ -71,6 +71,10 @@ CBEClassFactory* CFactoryFactory::GetNewClassFactory()
 		else
 			pCF = new CL4V2BEClassFactory();
 	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pCF = new CL4V2BEClassFactory();
+	}
 	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
 	{
 		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
@@ -103,6 +107,10 @@ CBENameFactory* CFactoryFactory::GetNewNameFactory()
 			pNF = new CL4V2AMD64BENameFactory();
 		else
 			pNF = new CL4V2BENameFactory();
+	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	{
+		pNF = new CL4V2BENameFactory();
 	}
 	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
 	{
