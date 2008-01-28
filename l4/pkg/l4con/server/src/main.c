@@ -175,7 +175,7 @@ redraw_vc(void)
        ev_struct.value = 0;
 
        env.timeout = EVENT_TIMEOUT;
-       stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
+       stream_io_push_send(&ev_partner_l4id, &ev_struct, &env);
 
 	if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
 	    DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
@@ -214,8 +214,10 @@ background_vc(void)
        ev_struct.value = 0;
 
        env.timeout = EVENT_TIMEOUT;
-       stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
-       if (DICE_HAS_EXCEPTION(&env))
+       stream_io_push_send(&ev_partner_l4id, &ev_struct, &env);
+       if (DICE_HAS_EXCEPTION(&env) &&
+           DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
+           DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
          LOG("exception %d.%d sending background event to "l4util_idfmt,
              DICE_EXCEPTION_MAJOR(&env), DICE_EXCEPTION_MINOR(&env),
              l4util_idstr(ev_partner_l4id));

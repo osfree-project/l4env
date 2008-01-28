@@ -12,7 +12,6 @@
  * the terms of the GNU General Public License 2. Please see the
  * COPYING file for details. */
 
-/* L4 includes */
 #include <l4/l4con/l4con.h>
 #include <l4/log/l4log.h>
 #include <l4/thread/thread.h>
@@ -20,14 +19,11 @@
 #include <l4/util/l4_macros.h>
 #include <l4/input/libinput.h>
 
-/* DROPS includes */
 #include "stream-client.h"
 
-/* OSKit includes */
 #include <stdlib.h>
 #include <stdio.h>
 
-/* local includes */
 #include "config.h"
 #include "ev.h"
 #include "main.h"
@@ -52,8 +48,10 @@ send_event_client(struct l4input *ev)
       if ((vc_mode & CON_IN) && !l4_is_nil_id(ev_partner_l4id))
 	{
 	  env.timeout = EVENT_TIMEOUT;
-	  stream_io_push_call(&ev_partner_l4id, &stream_event, &env);
-	  if (DICE_HAS_EXCEPTION(&env))
+          stream_io_push_send(&ev_partner_l4id, &stream_event, &env);
+          if (DICE_HAS_EXCEPTION(&env) &&
+              DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
+              DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
 	    {
 	      switch (DICE_IPC_ERROR(&env))
 		{
@@ -73,10 +71,14 @@ send_event_client(struct l4input *ev)
 		  resend = 0;
 		  break;
 		default:
-		  /* no idea what to do */
-		  LOG("Error %d sending event to "l4util_idfmt,
-		      DICE_IPC_ERROR(&env), l4util_idstr(ev_partner_l4id));
-		  want_vc = -2;
+                  if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
+                      DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
+                    {
+                      /* no idea what to do */
+                      LOG("Error %d sending event to "l4util_idfmt,
+                          DICE_IPC_ERROR(&env), l4util_idstr(ev_partner_l4id));
+                      want_vc = -2;
+                    }
 		  break;
 		}
 	    }

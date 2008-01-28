@@ -156,7 +156,8 @@ static void keyevent_callback(dope_event *e, void *arg) {
 	ev.value = (e->type == EVENT_TYPE_PRESS);
 
 	/* send event to listener thread */
-	stream_io_push_call(&vc->listener, &ev, &env);
+	stream_io_push_send(&vc->listener, &ev, &env);
+	/* Error checking? */
 }
 
 
@@ -170,13 +171,15 @@ static void absmotion_callback(dope_event *e, void *arg) {
 	ev.type  = EV_ABS;
 	ev.code  = 0;
 	ev.value = e->motion.abs_x;
-	stream_io_push_call(&vc->listener, &ev, &env);
+	stream_io_push_send(&vc->listener, &ev, &env);
+	/* Error checking? */
 
 	/* send vertical motion event to listener thread */
 	ev.type  = EV_ABS;
 	ev.code  = 1;
 	ev.value = e->motion.abs_y;
-	stream_io_push_call(&vc->listener, &ev, &env);
+	stream_io_push_send(&vc->listener, &ev, &env);
+	/* Error checking */
 }
 
 

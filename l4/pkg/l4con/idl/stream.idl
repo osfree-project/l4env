@@ -38,7 +38,7 @@ library stream
        * \ingroup idl_stream_if
        *
        * \param event		event to push */
-      void push([in] stream_io_input_event_t event);
+      [in] void push([in] stream_io_input_event_t event);
     };
 };
 
