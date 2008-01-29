@@ -119,6 +119,9 @@ L4_INLINE l4th_tcb_t *
 l4th_tcb_get(l4thread_t thread);
 
 L4_INLINE l4th_tcb_t *
+l4th_tcb_get_nocheck(l4thread_t thread);
+
+L4_INLINE l4th_tcb_t *
 l4th_tcb_get_locked(l4thread_t thread);
 
 L4_INLINE l4th_tcb_t *
@@ -177,6 +180,24 @@ l4th_tcb_get(l4thread_t thread)
     return NULL;
   else
     return &l4th_tcbs[thread];
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Return TCB of thread
+ *
+ * \param  thread        Thread id
+ *
+ * \return TCB, NULL if invalid thread id
+ */
+/*****************************************************************************/ 
+L4_INLINE l4th_tcb_t *
+l4th_tcb_get_nocheck(l4thread_t thread)
+{
+  if ((thread < 0) || (thread >= l4thread_max_threads))
+    return NULL;
+
+  return &l4th_tcbs[thread];
 }
 
 /*****************************************************************************/

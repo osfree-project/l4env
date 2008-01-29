@@ -71,14 +71,10 @@ send_event_client(struct l4input *ev)
 		  resend = 0;
 		  break;
 		default:
-                  if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
-                      DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
-                    {
-                      /* no idea what to do */
-                      LOG("Error %d sending event to "l4util_idfmt,
-                          DICE_IPC_ERROR(&env), l4util_idstr(ev_partner_l4id));
-                      want_vc = -2;
-                    }
+		  /* no idea what to do */
+                  LOG("Error %d sending event to "l4util_idfmt,
+                      DICE_IPC_ERROR(&env), l4util_idstr(ev_partner_l4id));
+                  want_vc = -2;
 		  break;
 		}
 	    }

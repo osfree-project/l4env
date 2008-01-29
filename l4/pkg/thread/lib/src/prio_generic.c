@@ -43,7 +43,7 @@ l4thread_get_prio(l4thread_t thread)
   l4th_tcb_t * tcb;
 
   /* get tcb */
-  tcb = l4th_tcb_get(thread);
+  tcb = l4th_tcb_get_nocheck(thread);
   if (tcb == NULL)
     /* invalid thread */
     return -L4_EINVAL;
