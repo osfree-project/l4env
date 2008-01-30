@@ -98,6 +98,7 @@ L4STD_INCDIR_LAST	?= -I$(wildcard $(dir $(LIBGCC))/include \
 			                $(dir $(LIBGCC))/../include)
 KERNEL_LDFLAGS		+= -gc-sections
 SHARED_FLAGS		+= -fno-defer-pop -freg-struct-return -g -Wall -W
+SHARED_FLAGS		+= -Wno-parentheses
 SHARED_FLAGS		+= $(call CHECKCC,-Wformat=2,)
 SHARED_FLAGS		+= $(call CHECKCC,-fno-stack-protector,)
 OPT_CXXFLAGS		+= $(call CHECKCXX,-fweb,)

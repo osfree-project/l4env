@@ -652,7 +652,8 @@ Thread::kill()
   // Deallocate all reservation scheduling contexts
   Sched_context *s, *tmp;
   for (s = sched_context()->next(); s != sched_context(); tmp = s,
-       s = s->next(), tmp->dequeue(), delete tmp);
+       s = s->next(), tmp->dequeue(), delete tmp)
+    ;
 
   // dequeue from system queues
   assert (in_present_list());

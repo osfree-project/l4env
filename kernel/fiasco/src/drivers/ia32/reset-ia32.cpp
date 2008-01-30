@@ -8,7 +8,8 @@ void __attribute__ ((noreturn))
 pc_reset()
 {
   // i8042: store the next byte at port 0x60 as command byte
-  while (Io::in8 (0x64) & 0x2);
+  while (Io::in8 (0x64) & 0x2)
+    ;
   Io::out8_p (0x60, 0x64);
 
   // i8042 command byte (PS/2-compatible mode):
@@ -22,7 +23,8 @@ pc_reset()
   //   b6=0 ... translation disabled -- data appears at input buffer exactly
   //            as read from keyboard
   //   b7=0 ... reserved
-  while (Io::in8 (0x64) & 0x2);
+  while (Io::in8 (0x64) & 0x2)
+    ;
   Io::out8_p (0x4, 0x60);
 
   // i8042: pulse output port with 1110b
@@ -30,7 +32,8 @@ pc_reset()
   //   b1=1 ... set gate A20
   //   b2=1 ... pull mouse data low
   //   b3=1 ... pull mouse clock low
-  while (Io::in8 (0x64) & 0x2);
+  while (Io::in8 (0x64) & 0x2)
+    ;
   Io::out8_p (0xfe,0x64);
 
   for (;;)

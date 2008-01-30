@@ -312,7 +312,8 @@ int Uart::getchar( bool blocking )
   Unsigned8 old_ier, ch;
   old_ier = ier();
   ier(old_ier & ~0x0f);
-  while(!(lsr() & 1 /* DATA READY */));
+  while(!(lsr() & 1 /* DATA READY */))
+    ;
   ch = trb();
   ier(old_ier);
   return ch;

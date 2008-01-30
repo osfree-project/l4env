@@ -229,7 +229,8 @@ Syscalls::remove_realtime_param()
 
   for (s  = sched_context()->next();
        s != sched_context();
-       tmp = s, s = s->next(), tmp->dequeue(), delete tmp);
+       tmp = s, s = s->next(), tmp->dequeue(), delete tmp)
+    ;
 
   return 0;
 }

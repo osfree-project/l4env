@@ -25,7 +25,7 @@ IMPLEMENTATION [arm && armv6]:
 
 enum
 {
-  Section_cachable = 0x140e,
+  Section_cachable = 0x5406,
   Section_no_cache = 0x0402,
   Section_local    = (1 << 17),
   Section_global   = 0,

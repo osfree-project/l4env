@@ -52,7 +52,7 @@ namespace Page
 
     Cache_mask    = 0x1cc,
     NONCACHEABLE  = 0x000, ///< Caching is off
-    CACHEABLE     = 0x04c, ///< Cache is enabled
+    CACHEABLE     = 0x144, ///< Cache is enabled
 
     // The next are ARM specific
     WRITETHROUGH = 0x08, ///< Write through cached
