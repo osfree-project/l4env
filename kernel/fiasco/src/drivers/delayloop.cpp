@@ -15,6 +15,7 @@ public:
 IMPLEMENTATION:
 
 #include "kip.h"
+#include "processor.h"
 
 unsigned Delay::count;
 
@@ -27,9 +28,12 @@ Delay::init()
 
   Kip *k = Kip::k();
   while (t == (t1 = k->clock))
-    ;
+    Proc::pause();
   while (t1 == k->clock)
-    ++count;
+    {
+      ++count;
+      Proc::pause();
+    }
 }
 
 /**
@@ -44,6 +48,9 @@ Delay::delay(unsigned ms)
     {
       unsigned c = count;
       while (c--)
-	(void)k->clock;
+        {
+	  (void)k->clock;
+	  Proc::pause();
+	}
     }
 }
