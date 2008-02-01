@@ -32,7 +32,7 @@ vpath %.S    $(CONTRIB)
 
 PRIVATE_INCDIR += $(CONTRIB)/drivers/pci $(PKGDIR)/linux26/lib/src/arch/l4 \
                   $(CONTRIB)/$(ARCH_DIR)/pci $(CONTRIB)/drivers/base/ \
-                  $(CONTRIB)/lib $(PKGDIR_OBJ) $(CONTRIB)/net/core
+                  $(CONTRIB)/lib $(PKGDIR_OBJ) $(CONTRIB)/net/core $(CONTRIB)/fs
 
 ##################################################################
 # Sources for libdde_linux.a                                     #
@@ -144,12 +144,12 @@ SRC_C_libdde_linux26_block.a += \
 								block/noop-iosched.c  \
 								block/ioctl.c         \
 								block/scsi_ioctl.c    \
+								mm/backing-dev.c      \
+								mm/bounce.c           \
 								fs/bio.c              \
 								fs/block_dev.c        \
 								fs/buffer.c           \
-								fs/partitions/check.c \
-								mm/backing-dev.c      \
-								mm/bounce.c
+								fs/filesystems.c
 
 all::
 lib/crc32.o : crc32table.h

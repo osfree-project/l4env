@@ -147,8 +147,6 @@ static struct elevator_type *elevator_get(const char *name)
 
 static void *elevator_init_queue(request_queue_t *q, struct elevator_queue *eq)
 {
-	printk("%s: q=%p eq=%p\n", __FUNCTION__, q, eq);
-	printk("eq->ops=%p\n", eq->ops);
 	return eq->ops->elevator_init_fn(q);
 }
 
@@ -230,8 +228,6 @@ int elevator_init(request_queue_t *q, char *name)
 	q->last_merge = NULL;
 	q->end_sector = 0;
 	q->boundary_rq = NULL;
-
-	printk("%s: q=%p %s\n", __FUNCTION__, q, name);
 
 	if (name && !(e = elevator_get(name)))
 		return -EINVAL;
@@ -565,7 +561,6 @@ void elv_insert(request_queue_t *q, struct request *rq, int where)
 		 *   processing.
 		 */
 		blk_remove_plug(q);
-		printk("\033[32mrequest_fn @ %p\033[0m\n", q->request_fn);
 		q->request_fn(q);
 		break;
 

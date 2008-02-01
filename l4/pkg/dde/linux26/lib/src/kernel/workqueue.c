@@ -337,11 +337,9 @@ static void run_workqueue(struct cpu_workqueue_struct *cwq)
 #ifndef DDE_LINUX
 			printk(KERN_ERR "    last function: ");
 			print_symbol("%s\n", (unsigned long)f);
-#else
-			printk(KERN_ERR "    DDE does not have symbol info.\n");
-#endif
 			debug_show_held_locks(current);
 			dump_stack();
+#endif /* DDE_LINUX */
 		}
 
 		spin_lock_irqsave(&cwq->lock, flags);
@@ -819,7 +817,6 @@ static int __devinit workqueue_cpu_callback(struct notifier_block *nfb,
 
 	return NOTIFY_OK;
 }
-//#endif
 
 void init_workqueues(void)
 {

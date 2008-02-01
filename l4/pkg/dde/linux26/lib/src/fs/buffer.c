@@ -173,6 +173,7 @@ EXPORT_SYMBOL(sync_blockdev);
  */
 int fsync_bdev(struct block_device *bdev)
 {
+#ifndef DDE_LINUX
 	struct super_block *sb = get_super(bdev);
 	if (sb) {
 		int res = fsync_super(sb);
@@ -180,6 +181,10 @@ int fsync_bdev(struct block_device *bdev)
 		return res;
 	}
 	return sync_blockdev(bdev);
+#else
+	WARN_UNIMPL;
+	return -1;
+#endif
 }
 
 /**
@@ -999,6 +1004,11 @@ grow_dev_page(struct block_device *bdev, sector_t block,
 	struct page *page;
 	struct buffer_head *bh;
 
+#ifdef DDE_LINUX
+	WARN_UNIMPL;
+	return NULL;
+#endif
+
 	page = find_or_create_page(inode->i_mapping, index, GFP_NOFS);
 	if (!page)
 		return NULL;
@@ -1336,7 +1346,6 @@ lookup_bh_lru(struct block_device *bdev, sector_t block, int size)
 struct buffer_head *
 __find_get_block(struct block_device *bdev, sector_t block, int size)
 {
-#ifndef DDE_LINUX
 	struct buffer_head *bh = lookup_bh_lru(bdev, block, size);
 
 	if (bh == NULL) {
@@ -1347,10 +1356,6 @@ __find_get_block(struct block_device *bdev, sector_t block, int size)
 	if (bh)
 		touch_buffer(bh);
 	return bh;
-#else
-	WARN_UNIMPL;
-	return NULL;
-#endif /* DDE_LINUX */
 }
 EXPORT_SYMBOL(__find_get_block);
 
@@ -1427,16 +1432,16 @@ static void invalidate_bh_lru(void *arg)
 	}
 	put_cpu_var(bh_lrus);
 }
-	
+
 static void invalidate_bh_lrus(void)
 {
 #ifndef DDE_LINUX
-	on_each_cpu(invalidate_bh_lru, NULL, 1, 1);
+on_each_cpu(invalidate_bh_lru, NULL, 1, 1);
 #endif
 }
 
 void set_bh_page(struct buffer_head *bh,
-		struct page *page, unsigned long offset)
+	struct page *page, unsigned long offset)
 {
 	bh->b_page = page;
 	BUG_ON(offset >= PAGE_SIZE);
@@ -1451,8 +1456,8 @@ void set_bh_page(struct buffer_head *bh,
 EXPORT_SYMBOL(set_bh_page);
 
 /*
- * Called when truncating a buffer on a page completely.
- */
+* Called when truncating a buffer on a page completely.
+*/
 static void discard_buffer(struct buffer_head * bh)
 {
 	lock_buffer(bh);
@@ -1522,7 +1527,7 @@ EXPORT_SYMBOL(block_invalidatepage);
  * is already excluded via the page lock.
  */
 void create_empty_buffers(struct page *page,
-			unsigned long blocksize, unsigned long b_state)
+			  unsigned long blocksize, unsigned long b_state)
 {
 	struct buffer_head *bh, *head, *tail;
 
@@ -2882,8 +2887,10 @@ int try_to_free_buffers(struct page *page)
 	 * to synchronise against __set_page_dirty_buffers and prevent the
 	 * dirty bit from being lost.
 	 */
+#ifndef DDE_LINUX
 	if (ret)
 		cancel_dirty_page(page, PAGE_CACHE_SIZE);
+#endif
 	spin_unlock(&mapping->private_lock);
 out:
 	if (buffers_to_free) {

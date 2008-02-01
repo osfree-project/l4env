@@ -217,9 +217,13 @@ EXPORT_SYMBOL(out_of_line_wait_on_bit_lock);
 
 void fastcall __wake_up_bit(wait_queue_head_t *wq, void *word, int bit)
 {
+#ifndef DDE_LINUX
 	struct wait_bit_key key = __WAIT_BIT_KEY_INITIALIZER(word, bit);
 	if (waitqueue_active(wq))
 		__wake_up(wq, TASK_INTERRUPTIBLE|TASK_UNINTERRUPTIBLE, 1, &key);
+#else
+	WARN_UNIMPL;
+#endif
 }
 EXPORT_SYMBOL(__wake_up_bit);
 

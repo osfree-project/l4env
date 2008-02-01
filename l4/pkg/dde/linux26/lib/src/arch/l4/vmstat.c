@@ -3,7 +3,6 @@
 #include <linux/fs.h>
 
 atomic_long_t vm_stat[NR_VM_ZONE_STAT_ITEMS];
-struct inodes_stat_t inodes_stat;
 
 
 void dec_zone_page_state(struct page *page, enum zone_stat_item item)

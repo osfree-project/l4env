@@ -21,6 +21,7 @@
 #include <linux/gfp.h>
 #include <linux/string.h>
 #include <linux/pagevec.h>
+#include <linux/mm.h>
 #include <asm/page.h>
 
 /* DDEKit */
@@ -44,9 +45,11 @@ unsigned long max_pfn;
 struct page * fastcall __alloc_pages(gfp_t gfp_mask, unsigned int order,
                                      struct zonelist *zonelist)
 {
-	WARN_UNIMPL;
+	struct page *ret = kmalloc(sizeof(*ret), GFP_KERNEL);
+	
+	ret->virtual = (void *)__get_free_pages(gfp_mask, order);
 
-	return 0;
+	return ret;
 }
 
 
@@ -80,7 +83,7 @@ void fastcall free_hot_page(struct page *page)
 
 fastcall void __free_pages(struct page *page, unsigned int order)
 {
-	WARN_UNIMPL;
+	free_pages((unsigned long)page->virtual, order);
 }
 
 void __pagevec_free(struct pagevec *pvec)
@@ -112,12 +115,12 @@ fastcall void free_pages(unsigned long addr, unsigned int order)
 
 unsigned long __pa(volatile void *addr)
 {
-	return ddekit_pgtab_get_physaddr((void *)addr);
+	return ddekit_pgtab_get_physaddr(addr);
 }
 
 void *__va(unsigned long addr)
 {
-	return ddekit_pgtab_get_virtaddr((ddekit_addr_t) addr);
+	return (void*)ddekit_pgtab_get_virtaddr((ddekit_addr_t) addr);
 }
 
 

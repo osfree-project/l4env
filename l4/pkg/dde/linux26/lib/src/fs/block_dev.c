@@ -161,10 +161,10 @@ static ssize_t
 blkdev_direct_IO(int rw, struct kiocb *iocb, const struct iovec *iov,
 			loff_t offset, unsigned long nr_segs)
 {
-#ifndef DDE_LINUX
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file->f_mapping->host;
 
+#ifndef DDE_LINUX
 	return blockdev_direct_IO_no_locking(rw, iocb, inode, I_BDEV(inode),
 				iov, offset, nr_segs, blkdev_get_blocks, NULL);
 #else
@@ -523,7 +523,7 @@ void __init bdev_cache_init(void)
 	bdev_cachep = kmem_cache_create("bdev_cache", sizeof(struct bdev_inode),
 			0, (SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT|
 				SLAB_MEM_SPREAD|SLAB_PANIC),
-			init_once, NULL);
+				init_once, NULL);
 	err = register_filesystem(&bd_type);
 	if (err)
 		panic("Cannot register bdev pseudo-fs");
@@ -587,6 +587,7 @@ struct block_device *bdget(dev_t dev)
 		spin_unlock(&bdev_lock);
 		unlock_new_inode(inode);
 	}
+
 	return bdev;
 }
 
@@ -1116,6 +1117,7 @@ static int do_open(struct block_device *bdev, struct file *file, int for_part)
 	file->f_mapping = bdev->bd_inode->i_mapping;
 	lock_kernel();
 	disk = get_gendisk(bdev->bd_dev, &part);
+
 	if (!disk) {
 		unlock_kernel();
 		bdput(bdev);
@@ -1274,10 +1276,12 @@ static int __blkdev_put(struct block_device *bdev, int for_part)
 		sync_blockdev(bdev);
 		kill_bdev(bdev);
 	}
+
 	if (bdev->bd_contains == bdev) {
 		if (disk->fops->release)
 			ret = disk->fops->release(bd_inode, NULL);
 	}
+
 	if (!bdev->bd_openers) {
 		struct module *owner = disk->fops->owner;
 
@@ -1331,10 +1335,10 @@ const struct address_space_operations def_blk_aops = {
 	.direct_IO	= blkdev_direct_IO,
 };
 
-#ifndef DDE_LINUX
 const struct file_operations def_blk_fops = {
 	.open		= blkdev_open,
 	.release	= blkdev_close,
+#ifndef DDE_LINUX
 	.llseek		= block_llseek,
 	.read		= do_sync_read,
 	.write		= do_sync_write,
@@ -1349,8 +1353,8 @@ const struct file_operations def_blk_fops = {
 	.sendfile	= generic_file_sendfile,
 	.splice_read	= generic_file_splice_read,
 	.splice_write	= generic_file_splice_write,
-};
 #endif /* DDE_LINUX */
+};
 
 int ioctl_by_bdev(struct block_device *bdev, unsigned cmd, unsigned long arg)
 {

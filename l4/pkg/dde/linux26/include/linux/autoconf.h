@@ -46,5 +46,4 @@
 /* We don't need event counters, because we don't have /proc/vmstat */
 #undef CONFIG_VM_EVENT_COUNTERS
 
-/* No MS-DOS partitions here */
-#undef CONFIG_MSDOS_PARTITION
+#define WANT_PAGE_VIRTUAL

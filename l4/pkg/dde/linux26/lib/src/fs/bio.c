@@ -832,8 +832,7 @@ static struct bio *__bio_map_kern(request_queue_t *q, void *data,
 		if (bytes > len)
 			bytes = len;
 
-		if (bio_add_pc_page(q, bio, virt_to_page(data), bytes,
-				    offset) < bytes)
+		if (bio_add_pc_page(q, bio, virt_to_page(data), bytes, offset) < bytes)
 			break;
 
 		data += bytes;

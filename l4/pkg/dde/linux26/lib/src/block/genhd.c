@@ -16,6 +16,10 @@
 #include <linux/buffer_head.h>
 #include <linux/mutex.h>
 
+#ifdef DDE_LINUX
+#include "local.h"
+#endif
+
 struct subsystem block_subsys;
 static DEFINE_MUTEX(block_subsys_lock);
 
@@ -171,6 +175,7 @@ static int exact_lock(dev_t dev, void *data)
 	return 0;
 }
 
+#ifndef DDE_LINUX
 /**
  * add_disk - add partitioning information to kernel list
  * @disk: per-device partitioning information
@@ -189,6 +194,7 @@ void add_disk(struct gendisk *disk)
 
 EXPORT_SYMBOL(add_disk);
 EXPORT_SYMBOL(del_gendisk);	/* in partitions/check.c */
+#endif
 
 void unlink_gendisk(struct gendisk *disk)
 {
@@ -199,6 +205,7 @@ void unlink_gendisk(struct gendisk *disk)
 
 #define to_disk(obj) container_of(obj,struct gendisk,kobj)
 
+#ifndef DDE_LINUX
 /**
  * get_gendisk - get partitioning information for a given device
  * @dev: device to get partitioning information for
@@ -211,6 +218,7 @@ struct gendisk *get_gendisk(dev_t dev, int *part)
 	struct kobject *kobj = kobj_lookup(bdev_map, dev, part);
 	return  kobj ? to_disk(kobj) : NULL;
 }
+#endif
 
 #ifdef CONFIG_PROC_FS
 /* iterator */
@@ -293,7 +301,7 @@ static struct kobject *base_probe(dev_t dev, int *part, void *data)
 	return NULL;
 }
 
-static int __init genhd_device_init(void)
+static int __init __attribute__((used)) genhd_device_init(void)
 {
 	int err;
 
@@ -734,14 +742,12 @@ EXPORT_SYMBOL(bdev_read_only);
 int invalidate_partition(struct gendisk *disk, int index)
 {
 	int res = 0;
-#ifndef DDE_LINUX
 	struct block_device *bdev = bdget_disk(disk, index);
 	if (bdev) {
 		fsync_bdev(bdev);
 		res = __invalidate_device(bdev);
 		bdput(bdev);
 	}
-#endif
 	return res;
 }
 

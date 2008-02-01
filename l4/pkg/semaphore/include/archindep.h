@@ -22,7 +22,7 @@
 
 /*****************************************************************************
  * decrement semaphore counter, return error if semaphore locked
- * no assambler version
+ * no assembler version
  *****************************************************************************/
 L4_INLINE int
 l4semaphore_try_down(l4semaphore_t * sem)

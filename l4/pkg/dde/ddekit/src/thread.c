@@ -13,9 +13,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#define DDEKIT_THREAD_STACK_SIZE 0x2000 /* 8 KB */
+
+static struct ddekit_slab *ddekit_stack_slab = NULL;
+
 struct ddekit_thread {
 	l4thread_t l4thread;
 	void *data;
+	void *stack;
 	ddekit_condvar_t *sleep_cv;
 	const char *name;
 };
@@ -35,7 +40,7 @@ ddekit_thread_t *ddekit_thread_setup_myself(const char *name) {
 	ddekit_thread_t *td;
 	int namelen = strlen(name);
 	char *pname;
-
+	
 	td = ddekit_simple_malloc(sizeof(*td) + (namelen+1));
 	pname = (char *) td + sizeof(*td);
 
@@ -72,19 +77,29 @@ ddekit_thread_t *ddekit_thread_create(void (*fun)(void *), void *arg, const char
 	ddekit_thread_t *td;
 	l4thread_t l4td;
 	char l4name[20];
-
+	void *stack;
+	
 	su.fun  = fun;
 	su.arg  = arg;
 	su.name = name;
-
+	
 	snprintf(l4name, 20, ".%s", name);
-
-	l4td = l4thread_create_named(ddekit_thread_startup, l4name, &su, L4THREAD_CREATE_SYNC);
+	
+	stack  = ddekit_slab_alloc(ddekit_stack_slab);
+	
+	
+	l4td = l4thread_create_long(L4THREAD_INVALID_ID, ddekit_thread_startup, l4name,
+                                    (l4_addr_t) stack + (DDEKIT_THREAD_STACK_SIZE-1 )* sizeof (void *),
+                                    DDEKIT_THREAD_STACK_SIZE,
+                                    L4THREAD_DEFAULT_PRIO, &su, L4THREAD_CREATE_SYNC);
+			
 	if (l4td < 0)
 		ddekit_panic("error creating thread");
 
 	td = (ddekit_thread_t*) l4thread_startup_return(l4td);
-
+	
+	td->stack = stack;
+	
 	return td;
 }
 
@@ -134,7 +149,14 @@ void  ddekit_thread_wakeup(ddekit_thread_t *td) {
 }
 
 void  ddekit_thread_exit() {
+	ddekit_thread_t *td;
+
+	td = ddekit_thread_myself();
+	
 	l4thread_exit();
+
+	ddekit_slab_free(ddekit_stack_slab ,td->stack);
+	
 }
 
 void ddekit_thread_terminate(ddekit_thread_t *t)
@@ -164,7 +186,10 @@ void ddekit_yield(void)
 void ddekit_init_threads() {
 	/* register TLS key for pointer to dde thread structure */
 	tlskey_thread = l4thread_data_allocate_key();
-
+	
 	/* setup dde part of thread data */
 	ddekit_thread_setup_myself("main");
+	
+ 	/* create slab for stacks */
+	ddekit_stack_slab = ddekit_slab_init(DDEKIT_THREAD_STACK_SIZE, 1);
 }

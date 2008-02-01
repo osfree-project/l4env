@@ -107,9 +107,10 @@ void raw_local_irq_enable(void)
 	DEBUG_MSG("owner %x, count: %d",
 	          ddekit_lock_owner(&_irq_lock), atomic_read(&_refcnt));
 #endif
-	for (i; i > 0; --i)
+	for (i; i > 0; --i) {
+		atomic_dec(&_refcnt);
 		ddekit_lock_unlock(&_irq_lock);
-	atomic_set(&_refcnt, 0);
+	}
 }
 
 

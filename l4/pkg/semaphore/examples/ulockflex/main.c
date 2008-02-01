@@ -432,8 +432,11 @@ static double calibrate(int secs)
     unsigned long n_initial = 100000;
     unsigned long clock1, clock2, clockterm;
 
-    l4_tsc_init(L4_TSC_INIT_AUTO);
-
+    if (l4_tsc_init(L4_TSC_INIT_AUTO) == 0)
+    {
+      LOG_Error("calibration failed");
+      exit(-1);
+    }
     clock1 = l4_rdtsc_32();
     clockterm = clock1 + l4_ns_to_tsc((unsigned long long)secs * 1000000);
     do {
@@ -504,6 +507,7 @@ int main(int argc, char* argv[])
 
 	LOGd(DEBUG_CLEANUP, "wait for Client %d to finish", i);
 	l4_ipc_wait(&t, L4_IPC_SHORT_MSG, &d1, &d2, L4_IPC_NEVER, &status);
+	LOGd(DEBUG_CLEANUP, "Client %d finished", i);
     }
     
     // cleanup
