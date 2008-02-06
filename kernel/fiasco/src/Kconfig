@@ -213,7 +213,7 @@ endchoice
 
 config WORKAROUND_AMD_FPU_LEAK
 	bool "Enables workaroud for AMD FPU security leak"
-	depends PF_PC
+	depends on PF_PC
 	help
 	  If you use Fiasco for high assurance, high security and use AMD
 	  CPUs you should enable this option. In any other case it is no
@@ -297,7 +297,7 @@ config IO_PROT_IOPL_3
 
 config SLOW_RTC
 	bool "Use RTC with 100 ticks per second"
-	depends SCHED_RTC
+	depends on SCHED_RTC
 	help
 	  This option should be enabled if you use VMWare and no PIT
 	  scheduling. The timer resolution is lowered to 100 ticks per

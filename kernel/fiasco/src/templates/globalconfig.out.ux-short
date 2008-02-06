@@ -33,6 +33,8 @@ CONFIG_IA32_586=y
 # CONFIG_IA32_K8 is not set
 # CONFIG_AMD64_K8 is not set
 CONFIG_SCHED_PIT=y
+# CONFIG_SCHED_RTC is not set
+# CONFIG_SCHED_APIC is not set
 
 #
 # Kernel options

@@ -30,9 +30,7 @@ PREPROCESS_PARTS	+= $(PREPROCESS_PARTS-y)
 
 PRIVATE_INCDIR += types/$(CONFIG_XARCH) types
 
-OBJECTS_LIBUART		+= uart_pl011.o
-VPATH_LIBUART		:= $(srcdir)/lib/uart \
-			   $(srcdir)/lib/uart/arm
+VPATH_LIBUART  := $(srcdir)/lib/uart $(srcdir)/lib/uart/arm
 PRIVATE_INCDIR += lib/uart
 
 #
@@ -46,7 +44,7 @@ INTERFACES_DRIVERS 	:= sa1100 mux_console console uart filter_console \
 io_IMPL			:= io io-arm
 mmu_IMPL		:= mmu mmu-arm
 uart_IMPL		:= uart
-reset_IMPL		:= reset-arm
+reset_IMPL		:=
 processor_IMPL		:= processor processor-arm
 CXXSRC_DRIVERS		:= glue_libc.cc 
 NOOPT			+= $(patsubst %.o, %, $(OBJ_DRIVERS))
@@ -134,7 +132,7 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			timeout ipc_timeout deadline_timeout \
 			timeslice_timeout \
 			dirq fpu_alloc long_msg kernel_thread pic cmdline \
-			preemption k_sa1100 buddy_alloc trap_state warn \
+			preemption buddy_alloc trap_state warn \
 			bootstrap virq uart_console vkey kern_lib_page \
 			watchdog perf_cnt jdb_extensions kernel_task \
 			cap_space cap_space_alloc ram_quota ram_quota_alloc \

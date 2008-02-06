@@ -15,7 +15,6 @@ IMPLEMENTATION [arm]:
 #include <feature.h>
 
 #include "globals.h"
-#include "k_sa1100.h"
 #include "kmem_space.h"
 #include "thread_state.h"
 #include "types.h"

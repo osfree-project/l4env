@@ -12,12 +12,12 @@
  */
 
 #include "support.h"
-
 #include <l4/drivers/uart_pl011.h>
 
-DEFINE_UART_STORAGE(Uart_pl011);
 
 void platform_init(void)
 {
-  UART_STARTUP(Uart_pl011, 1, 1, 0x16000000);
+  static L4::Uart_pl011 _uart(1, 1);
+  _uart.startup(0x16000000);
+  set_stdio_uart(&_uart);
 }

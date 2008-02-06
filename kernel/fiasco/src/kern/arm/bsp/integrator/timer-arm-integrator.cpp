@@ -35,12 +35,6 @@ IMPLEMENTATION [arm && integrator]:
 
 #include <cstdio>
 
-PUBLIC static
-void
-Timer::watchdog_reboot()
-{
-}
-
 IMPLEMENT
 void Timer::init()
 {

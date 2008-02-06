@@ -10,7 +10,7 @@ runconfig = cp globalconfig.out.$(2) globalconfig.out ;    \
             make $(1) && sed -e '3,4d'                     \
 		globalconfig.out > globalconfig.out.$(2)
 
-cleanup = make mrproper && $(RM) globalconfig.out.old
+cleanup = make mrproper && $(RM) globalconfig.out.old Kconfig
 
 testconfigs:
 	$(foreach cfg,$(SAMPLE_CONFIGS), $(call runconfig,menuconfig,$(cfg)))
@@ -22,8 +22,11 @@ testconfig:
 	$(call cleanup)
 
 refresh:
-	for cfg in $(SAMPLE_CONFIGS); do          \
-	  $(call runconfig,oldconfig,$$cfg);    \
+	for cfg in $(SAMPLE_CONFIGS); do                       \
+	  echo "********************************************"; \
+	  echo "** $$cfg **";                                  \
+	  echo "********************************************"; \
+	  $(call runconfig,oldconfig,$$cfg);                   \
 	done
 	$(call cleanup)
 

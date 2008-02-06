@@ -206,11 +206,11 @@ namespace L4
 };
 
 
-DEFINE_UART_STORAGE(Uart_x86);
-
 void platform_init(void)
 {
   // this is just a wrapper around serial.c
   // if you think this could be done better you're right...
-  UART_STARTUP(Uart_x86, 1, 1, 0);
+  static L4::Uart_x86 _uart(1,1);
+  _uart.startup(0);
+  set_stdio_uart(&_uart);
 }

@@ -12,12 +12,11 @@
  */
 
 #include "support.h"
-
 #include <l4/drivers/uart_pxa.h>
-
-DEFINE_UART_STORAGE(Uart_pxa);
 
 void platform_init(void)
 {
-  UART_STARTUP(Uart_pxa, 1, 1, 0x40100000);
+  static L4::Uart_pxa _uart(1,1);
+  _uart.startup(0x40100000);
+  set_stdio_uart(&_uart);
 }

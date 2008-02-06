@@ -49,7 +49,8 @@ vpath messenger.c $(DOPEDIR)/server/common
 ### gfx sources ###
 
 SRC_C += bigmouse.c   default_fnt.c lat0_12.c \
-         smallmouse.c mono_fnt.c    title_fnt.c
+         smallmouse.c mono_fnt.c    title_fnt.c \
+         big_fnt.c
 
 vpath % $(DOPEDIR)/server/gfx
 

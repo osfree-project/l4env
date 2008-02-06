@@ -11,3 +11,4 @@ pic_IMPL              += pic-arm-pxa_sa1100
 bootstrap_IMPL        += bootstrap-arm-sa1100
 timer_IMPL            += timer-arm-pxa_sa1100
 kernel_uart_IMPL      += kernel_uart-arm-sa1100
+reset_IMPL            += reset-arm-sa1100

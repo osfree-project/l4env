@@ -34,14 +34,6 @@ IMPLEMENTATION [arm && (sa1100 || pxa)]:
 
 static unsigned const timer_diff = (36864 * Config::scheduler_granularity)/10000; // 36864MHz*1ms
 
-PUBLIC static
-void
-Timer::watchdog_reboot()
-{
-  Io::write(1, OWER);
-  Io::write(0xffffff00, OSCR);
-}
-
 IMPLEMENT
 void Timer::init()
 {

@@ -167,7 +167,7 @@ KCONFIG_SRC_FILE   := $(srcdir)/Kconfig
 KCONFIG_BSP_FILES  := $(shell find $(BSP_DIR) -name Kconfig -follow -print)
 
 kconfig_call = $(MAKE) -C $(tooldir)/kconfig O=$(objbase) \
-	       config_file=$(KCONFIG_FILE) \
+	       Kconfig=$(KCONFIG_FILE) \
 	       KCONFIG_AUTOHEADER=globalconfig.h \
 	       KCONFIG_CONFIG=globalconfig.out \
 	       KCONFIG_AUTOCONFIG=config/auto.conf \

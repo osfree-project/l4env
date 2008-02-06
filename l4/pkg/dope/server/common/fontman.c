@@ -26,6 +26,9 @@ static struct fontconv_services *conv_fnt;
 extern unsigned char default_fnt[];
 extern unsigned char mono_fnt[];
 extern unsigned char title_fnt[];
+extern unsigned char big_fnt[];
+
+enum { NUM_FONTS = 4 };
 
 int init_fontman(struct dope_services *d);
 
@@ -36,7 +39,7 @@ int init_fontman(struct dope_services *d);
 
 /*** DETERMINE WHETHER A FONT ID IS VALID OR NOT ***/
 static inline int valid_font_id(int font_id) {
-	return (font_id >= 0 && font_id <= 2);
+	return (font_id >= 0 && font_id < NUM_FONTS);
 }
 
 
@@ -44,7 +47,7 @@ static inline int valid_font_id(int font_id) {
  *** SERVICE FUNCTIONS ***
  *************************/
 
-static struct font fonts[3];
+static struct font fonts[4];
 
 static struct font *fontman_get_by_id(s32 font_id) {
 	if (!valid_font_id(font_id)) return NULL;
@@ -134,6 +137,7 @@ int init_fontman(struct dope_services *d) {
 	if (conv_fnt->probe(&default_fnt)) add_font(conv_fnt,&default_fnt[0],0,&fonts[0]);
 	if (conv_fnt->probe(&mono_fnt))    add_font(conv_fnt,&mono_fnt[0],   1,&fonts[1]);
 	if (conv_fnt->probe(&title_fnt))   add_font(conv_fnt,&title_fnt[0],  2,&fonts[2]);
+	if (conv_fnt->probe(&big_fnt))     add_font(conv_fnt,&big_fnt[0],    3,&fonts[3]);
 
 	d->register_module("FontManager 1.0",&services);
 	return 1;

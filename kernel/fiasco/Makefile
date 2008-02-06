@@ -1,11 +1,11 @@
 #
-# $Id$
 #
 # GLOBAL Makefile for FIASCO
 
 # enviroment
 DFLBUILDDIR	:= build
 ALLBUILDDIR	:= build-all
+RANDBUILDDIR	:= build-rand
 TEMPLDIR	:= src/templates
 MAKEFILETEMPL	:= $(TEMPLDIR)/Makefile.builddir.templ
 MANSUBDIRS	:= man
@@ -81,7 +81,7 @@ fiasco.builddir.create:
 				$(DFLBUILDDIR)/globalconfig.out;	 \
 		}
 
-config xconfig menuconfig oldconfig: fiasco.builddir.create
+config $(filter config %config,$(MAKECMDGOALS)): fiasco.builddir.create
 		$(MAKE) -C $(DFLBUILDDIR) $@
 
 fiasco: fiasco.builddir.create
@@ -107,6 +107,33 @@ checkall l4check:
 		[ "$$failed" ] && echo -e "\nFailed configurations:$$failed"; \
 		exit $$error;
 
+randcheck:
+		$(RM) -r $(RANDBUILDDIR);                                     \
+		$(call buildmakefile,$(RANDBUILDDIR)/b);                      \
+		while true; do                                                \
+			$(MAKE) -C $(RANDBUILDDIR)/b randconfig;              \
+			grep -q CONFIG_PF_ISG=y                               \
+			   $(RANDBUILDDIR)/b/globalconfig.out                 \
+			 && continue;                                         \
+			fn=$$(cat $(RANDBUILDDIR)/b/globalconfig.out          \
+			      | grep -e "^CONFIG_" | sort | sha1sum           \
+			      | cut -f1 -d\   );                              \
+			if [ -e "ok-$$fn" -o -e "failed-$$fn" ]; then         \
+			  echo "Configuration $$fn already checked."          \
+			  continue;                                           \
+			fi;                                                   \
+			if $(MAKE) -C $(RANDBUILDDIR)/b; then                 \
+				cp $(RANDBUILDDIR)/b/globalconfig.out         \
+				  $(RANDBUILDDIR)/ok-$$fn;                    \
+			else                                                  \
+				[ -n $$STOP_ON_ERROR ] && exit 1;             \
+				cp -a $(RANDBUILDDIR)/b                       \
+				      $(RANDBUILDDIR)/failed-$$fn;            \
+			fi;                                                   \
+		done
+
+randcheckstop:
+		$(MAKE) STOP_ON_ERROR=1 randcheck
 
 help:
 		@echo
@@ -135,4 +162,5 @@ help:
 		@echo
 
 .PHONY:		man install clean cleanall fiasco.builddir.create fiasco \
-		l4check checkall help config oldconfig menuconfig xconfig
+		l4check checkall help config oldconfig menuconfig xconfig \
+		randcheck randcheckstop

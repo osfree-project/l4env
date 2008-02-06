@@ -12,13 +12,12 @@
  */
 
 #include "support.h"
-
 #include <l4/drivers/uart_sa1000.h>
-
-DEFINE_UART_STORAGE(Uart_sa1000);
 
 void platform_init(void)
 {
-  UART_STARTUP(Uart_sa1000, 1, 1, 0x80010000);
-  //UART_STARTUP(Uart_sa1000, 1, 1, 0x80050000);
+  static L4::Uart_sa1000 _uart(1,1);
+  _uart.startup(0x80010000);
+  //_uart.startup(0x80050000);
+  set_stdio_uart(&_uart);
 }

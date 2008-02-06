@@ -61,16 +61,9 @@ IMPLEMENTATION [arm && realview]:
 
 #include <cstdio>
 
-PUBLIC static
-void
-Timer::watchdog_reboot()
-{
-}
-
 IMPLEMENT
 void Timer::init()
 {
-
   Mword v;
 
   v = Io::read<Mword>(SYSTEM_CONTROL);

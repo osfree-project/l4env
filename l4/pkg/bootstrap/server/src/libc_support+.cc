@@ -23,10 +23,20 @@
 
 #include "support.h"
 
-// IO Stream backend
-namespace L4 {
 
-  class BootstrapIOBackend : public IOBackend
+static L4::Uart *stdio_uart;
+
+L4::Uart *uart() 
+{ return stdio_uart; }
+
+void set_stdio_uart(L4::Uart *uart)
+{ stdio_uart = uart; }
+
+
+// IO Stream backend
+namespace {
+
+  class BootstrapIOBackend : public L4::IOBackend
   {
   protected:
     void write(char const *str, unsigned len);
@@ -40,7 +50,9 @@ namespace L4 {
   namespace {
     BootstrapIOBackend iob;
   };
+};
 
+namespace L4 {
   BasicOStream cout(&iob);
   BasicOStream cerr(&iob);
 };
@@ -81,6 +93,8 @@ void __main(unsigned long p1, unsigned long p2, unsigned long p3)
 ssize_t
 write(int fd, const void *buf, size_t count)
 {
+  if (!uart())
+    return 0;
   // just accept write to stdout and stderr
   if (fd == STDOUT_FILENO || fd == STDERR_FILENO)
     {
@@ -98,6 +112,9 @@ int
 getchar(void)
 {
   int c;
+  if (!uart())
+    return -1;
+
   do
     c = uart()->get_char(0);
   while (c == -1);

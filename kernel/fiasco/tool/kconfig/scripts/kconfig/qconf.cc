@@ -1274,8 +1274,12 @@ ConfigMainWindow::ConfigMainWindow(void)
 	QMenuBar* menu;
 	bool ok;
 	int x, y, width, height;
+	char title[256];
 
 	QWidget *d = configApp->desktop();
+	snprintf(title, sizeof(title), _("Fiasco Kernel v%s Configuration"),
+		getenv("KERNELVERSION"));
+	setCaption(title);
 
 	width = configSettings->readNumEntry("/window width", d->width() - 64);
 	height = configSettings->readNumEntry("/window height", d->height() - 64);
@@ -1627,7 +1631,7 @@ void ConfigMainWindow::closeEvent(QCloseEvent* e)
 
 void ConfigMainWindow::showIntro(void)
 {
-	static char str[] = "Welcome to the qconf graphical kernel configuration tool for Fiasco.\n\n"
+	static char str[] = "Welcome to the qconf graphical kernel configuration tool for Linux.\n\n"
 		"For each option, a blank box indicates the feature is disabled, a check\n"
 		"indicates it is enabled, and a dot indicates that it is to be compiled\n"
 		"as a module.  Clicking on the box will cycle through the three states.\n\n"

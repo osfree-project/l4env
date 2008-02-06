@@ -136,6 +136,8 @@ static void lab_set_font(LABEL *l, char *fontname) {
 		l->ld->font_id = 0;
 	} else if (dope_streq(fontname, "monospaced", 255)) {
 		l->ld->font_id = 1;
+	} else if (dope_streq(fontname, "big", 255)) {
+		l->ld->font_id = 3;
 	}
 	l->wd->update |= WID_UPDATE_MINMAX;
 }
@@ -145,6 +147,7 @@ static void lab_set_font(LABEL *l, char *fontname) {
 static char *lab_get_font(LABEL *l) {
 	switch (l->ld->font_id) {
 		case 1:  return "monospaced";
+		case 3:  return "big";
 		default: return "default";
 	}
 }

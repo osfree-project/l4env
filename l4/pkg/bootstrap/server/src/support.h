@@ -15,21 +15,8 @@
 
 #include <l4/drivers/uart_base.h>
 
-#define DEFINE_UART_STORAGE(c)            \
-    static union __uart_storage_type {    \
-      char u[sizeof(L4::c)];              \
-    } __uart_storage_container;           \
-                                          \
-    L4::Uart *uart()                      \
-    { return reinterpret_cast<L4::Uart*>(__uart_storage_container.u); }
-
-#define UART_STARTUP(c, rx_irq, tx_irq, baseaddr)              \
-    do {                                                       \
-      new (__uart_storage_container.u) L4::c(rx_irq, tx_irq);  \
-      uart()->startup(baseaddr);                               \
-    } while (0)
-
 L4::Uart *uart();
+void set_stdio_uart(L4::Uart *uart);
 
 void platform_init(void);
 
