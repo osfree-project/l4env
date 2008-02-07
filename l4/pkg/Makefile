@@ -30,7 +30,7 @@ loader.lib:		semaphore.lib thread.lib dm_generic.lib dm_mem.lib \
 			slab.lib l4env.lib l4rm.lib log.lib names.lib \
 			roottask.lib generic_ts.lib l4util.lib libsigma0.lib \
 			l4sys.lib libc_backends_l4env.lib crtx.lib \
-			generic_fprov.lib
+			generic_fprov.lib uclibc.lib
 l4util.lib:		roottask.lib
 l4io.lib:		omega0.lib
 cebit04.bin:		nethub.bin
@@ -38,6 +38,8 @@ oshkosh.headers:	dsi.headers
 flips.headers:		l4vfs.headers
 ferret.headers:		l4vfs.lib
 uclibc++.headers:	uclibc.headers
+uclibc.lib:		libc_support.lib libc_backends.lib
+uclibc_r.lib:		lock.headers l4env.headers crtx.headers log.headers
 l4con.bin:		lxfuxlibc.lib
 input.bin:		omega0.lib
 cunit.lib:		dde.bin
@@ -46,29 +48,21 @@ examples.bin:		dope.bin l4con.bin
 lyon.headers:		stpm.headers
 stpm.headers:		libcrypto.headers
 tftp.bin:		ore.lib
-ifeq ($(USE_UCLIBC),y)
 qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers
-else
-qt3.bin:		dietlibc_r.lib
-endif
-ifeq ($(USE_DIETLIBC),y)
-log.headers:		dietlibc.headers
-endif
-ifeq ($(BUILD_ARCH_arm),y)
-bootstrap.bin:		arm_drivers.bin
-input.lib:		arm_drivers.headers
-endif
+bootstrap.bin:		sigma0.bin
+$(addsuffix .lib,$(filter-out uclibc,$(BUILD_SUBDIRS))): uclibc.lib
 
 # The directories/packages of l4env
 L4ENV_SUBDIRS = \
-	l4con \
+	bootstrap \
 	crtx \
 	cxx \
 	demangle \
 	dm_generic \
 	dm_mem \
 	dm_phys \
+	drivers \
 	events \
 	generic_fprov \
 	generic_io \
@@ -78,6 +72,7 @@ L4ENV_SUBDIRS = \
 	l4env \
 	libsigma0 \
 	linux-24-headers \
+	l4con \
 	l4io \
 	l4rm \
 	l4sys \
@@ -101,25 +96,9 @@ L4ENV_SUBDIRS = \
 	libc_backends \
 	libc_backends_l4env \
 	lxfuxlibc \
-	zlib
+	zlib \
+	uclibc uclibc_r uclibc++
 
-
-ifeq ($(USE_UCLIBC),y)
-$(addsuffix .lib,$(filter-out uclibc,$(BUILD_SUBDIRS))): uclibc.lib
-uclibc.lib:	libc_support.lib libc_backends.lib
-uclibc_r.lib:	lock.headers l4env.headers crtx.headers log.headers
-loader.lib:	uclibc.lib
-
-L4ENV_SUBDIRS += uclibc uclibc_r uclibc++
-endif
-
-ifeq ($(USE_DIETLIBC),y)
-$(addsuffix .lib,$(filter-out dietlibc libc_support libc_backends,$(BUILD_SUBDIRS))): dietlibc.lib
-dietlibc.lib:	libc_support.lib libc_backends.lib
-loader.lib:	dietlibc.lib
-
-L4ENV_SUBDIRS += dietlibc dietlibc_r
-endif
 
 ifeq ($(USE_TASKLIB),y)
 roottask.headers:	task.headers

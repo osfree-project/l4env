@@ -94,7 +94,7 @@ task_next(unsigned owner)
 }
 
 
-int task_next_explicit(owner_t owner, unsigned long task)
+int task_next_explicit(unsigned owner, unsigned long task)
 {
   if (owner >= ELEMENTS(__task) || task >= ELEMENTS(__task))
     return 0;

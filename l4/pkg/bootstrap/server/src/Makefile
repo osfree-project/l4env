@@ -193,11 +193,11 @@ setup.o.img: ARCH-x86/setup.S Makefile
 	$(VERBOSE)chmod -x $@
 
 # raw version without ELF, primarily useful for ARM
-bootstrap.raw: $(TARGET_BIN)
+$(BOOTSTRAP_RAW): $(TARGET_BIN)
 	@$(GEN_MESSAGE)
-	$(VERBOSE)$(OBJCOPY) -S $< $@.stripped
-	$(VERBOSE)$(OBJCOPY) -O binary $@.stripped $@
-	$(VERBOSE)$(RM) -f $@.stripped
+	$(VERBOSE)cp $< $@.tmp
+	$(VERBOSE)$(OBJCOPY) -O binary $@.tmp $@
+	$(VERBOSE)$(RM) $@.tmp
 
 # stripped version of bootstrap
 bootstrap.stripped: $(TARGET_BIN)
