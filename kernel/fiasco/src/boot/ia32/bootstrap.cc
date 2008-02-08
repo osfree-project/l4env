@@ -92,8 +92,9 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
   base_paging_init();
 
   asm volatile ("" ::: "memory");
-
-  tweak_mem_desc(&my_kernel_info_page, (mbi->mem_upper + 1024) << 10);
+  
+  if (mbi->flags & Multiboot_info::Memory)
+    tweak_mem_desc(&my_kernel_info_page, (mbi->mem_upper + 1024) << 10);
 
   // this calculation must fit Kmem::init()!
   mem_max = (my_kernel_info_page.last_free().end + 1) & Config::PAGE_MASK;

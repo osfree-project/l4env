@@ -34,21 +34,16 @@ loader.lib:		semaphore.lib thread.lib dm_generic.lib dm_mem.lib \
 l4util.lib:		roottask.lib
 l4io.lib:		omega0.lib
 cebit04.bin:		nethub.bin
-oshkosh.headers:	dsi.headers
 flips.headers:		l4vfs.headers
 ferret.headers:		l4vfs.lib
 uclibc++.headers:	uclibc.headers
 uclibc.lib:		libc_support.lib libc_backends.lib
-uclibc_r.lib:		lock.headers l4env.headers crtx.headers log.headers
-l4con.bin:		lxfuxlibc.lib
-input.bin:		omega0.lib
 cunit.lib:		dde.bin
 nitpicker.bin:		dope.bin
 examples.bin:		dope.bin l4con.bin
 lyon.headers:		stpm.headers
 stpm.headers:		libcrypto.headers
 tftp.bin:		ore.lib
-qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers
 bootstrap.bin:		sigma0.bin
 $(addsuffix .lib,$(filter-out uclibc,$(BUILD_SUBDIRS))): uclibc.lib
