@@ -1,4 +1,4 @@
-INTERFACE [arm && !sa1100]:
+INTERFACE [arm && !kern_start_0xd]:
 
 EXTENSION class Mem_layout
 {
@@ -11,7 +11,7 @@ public:
 
 
 //---------------------------------------------------------------------------
-INTERFACE [arm && sa1100]:
+INTERFACE [arm && kern_start_0xd]:
 
 EXTENSION class Mem_layout
 {

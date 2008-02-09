@@ -6,8 +6,19 @@ ENTRY(_start)
 
 PHDRS {
   data PT_LOAD;
-  mods PT_LOAD;
+  /* mods PT_LOAD; */
 }
+
+/* Some explanation for I_UNDERSTAND_BINUTILS: For bootstrap we want to have
+ * a single program header only because some boot-loaders require that.
+ * Unfortunately it does not seem to be possible to have the following
+ * order:
+ *         text - data - bss - modules
+ * because bss is smaller in the binary than unpacked and things get screwed
+ * up. So what we do it the following:
+ *         text - data_including_bss - modules
+ * This way things seem to work and we only have one program header.
+ */
 
 SECTIONS
 {
@@ -48,21 +59,27 @@ SECTIONS
     _modules_end   = .;
 
     CONSTRUCTORS
+#ifdef I_UNDERSTAND_BINUTILS
   }
   /* exception frames for C++ */
   .eh_frame : 
   { 
+#endif
     KEEP (*(.eh_frame)) 
     LONG(0) /* terminate .eh_frame */
+#ifdef I_UNDERSTAND_BINUTILS
   }
+#endif
 
   . = ALIGN(4);
   _edata  =  .;
   PROVIDE (edata = .);
 
   _bss_start = .;
+#ifdef I_UNDERSTAND_BINUTILS
   .bss :
   {
+#endif
    *(.dynbss)
    *(.bss .gnu.linkonce.b.*)
    *(COMMON)
@@ -88,7 +105,7 @@ SECTIONS
   . = ALIGN(4K);
 #endif
   _module_data_start = .;
-  .module_data : { *(.module_data) } : mods
+  .module_data : { *(.module_data) } : data
   _module_data_end = .;
 
   /* drop the following sections since we do not need them for DROPS */

@@ -103,6 +103,32 @@ int l4io_desc_lookup_resource(l4io_desc_device_t *d, unsigned long type, int i);
 /*****************************************************************************/
 l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags);
 
+/*****************************************************************************/
+/**
+ * \brief Request I/O memory region.
+ * \ingroup grp_res
+ *
+ * \param name  name of the I/O memory region
+ * \param index index of memory region in the descriptor, starting with 0
+ *
+ * \return virtual address of mapped region; 0 on error
+ */
+/*****************************************************************************/
+l4_addr_t l4io_request_mem_region_name(const char *name, const int index);
+
+/*****************************************************************************/
+/**
+ * \brief Get IRQ number by name
+ * \ingroup grp_res
+ *
+ * \param name  name of the IRQ.
+ * \param index index of the IRQ in the descriptor, starting with 0
+ *
+ * \return IRQ number; -1 on error
+ */
+/*****************************************************************************/
+int l4io_get_irq_name(const char *name, const int index);
+
 /******************************************************************************/
 /**
  * \brief  Search I/O memory region for an address.

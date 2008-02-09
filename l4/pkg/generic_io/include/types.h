@@ -169,8 +169,18 @@ typedef struct l4io_info l4io_info_t;   /**< io info page type */
 
 #define L4IO_INFO_MAGIC  0x496f6f49     /**< io magic is "IooI" */
 
-#define L4IO_MEM_CACHED			0x0001
-#define L4IO_MEM_WRITE_COMBINED		0x0003
+enum l4io_mem_flags
+{
+  // bit 0
+  L4IO_MEM_NONCACHED = 0,
+  L4IO_MEM_CACHED    = 1,
+
+  // bit 1
+  L4IO_MEM_USE_MTRR  = 2,
+
+  // combinations
+  L4IO_MEM_WRITE_COMBINED = L4IO_MEM_USE_MTRR | L4IO_MEM_CACHED,
+};
 
 
 /** Returns first device descriptor in infopage or 0 */

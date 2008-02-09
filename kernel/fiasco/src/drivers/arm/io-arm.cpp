@@ -1,20 +1,5 @@
 IMPLEMENTATION [arm]:
 
-IMPLEMENT inline
-template< typename T >
-T Io::read( Address address )
-{
-  return *(volatile T *)address;
-}
-
-IMPLEMENT inline
-template< typename T>
-void Io::write( T value, Address address )
-{
-  *(volatile T *)address = value;
-}
-
-
 /* This is a more reliable delay than a few short jmps. */
 IMPLEMENT inline
 void Io::iodelay() 

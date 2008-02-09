@@ -628,7 +628,7 @@ pagein_4KB_memory(void)
 	  return;
 	}
 
-      if (MEM_MAX && base >= MEM_MAX + (unsigned long)ram_base)
+      if (MEM_MAX && base - (unsigned long)ram_base >= MEM_MAX)
 	/* cannot handle this page */
 	continue;
 

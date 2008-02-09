@@ -8,16 +8,40 @@ INTERFACE:
 class Io
 {
 public:
-  
+
   /// Delay for slow I/O operations.
   static void iodelay();
 
+  /**
+   * Read the value of type T at address.
+   */
   template< typename T >
-  static T read( Address address );
+  static T read(Address address);
 
+  /**
+   * Write the value of type T at address.
+   */
   template< typename T >
-  static void write( T value, Address address );
-  
+  static void write(T value, Address address);
+
+  /**
+   * Write (read<T>(address) & maskbits) of type T at address.
+   */
+  template< typename T >
+  static void mask(T mask, Address address);
+
+  /**
+   * Write (read<T>(address) & ~clearbits) of type T at address.
+   */
+  template< typename T >
+  static void clear(T clearbits, Address address);
+
+  /**
+   * Write (read<T>(address) | setbits) of type T at address.
+   */
+  template< typename T >
+  static void set(T setbits, Address address);
+
   /**
    * Read byte port.
    */
@@ -85,9 +109,39 @@ public:
 };
 
 
+// ----------------------------------------------------------------------
 IMPLEMENTATION:
 
-IMPLEMENT inline 
+IMPLEMENT inline
+template< typename T >
+T Io::read(Address address)
+{ return *(volatile T *)address; }
+
+IMPLEMENT inline
+template< typename T>
+void Io::write(T value, Address address)
+{ *(volatile T *)address = value; }
+
+IMPLEMENT inline
+template< typename T>
+void Io::mask(T mask, Address address)
+{ write(read<T>(address) & mask, address); }
+
+IMPLEMENT inline
+template< typename T>
+void Io::clear(T clearbits, Address address)
+{ write(read<T>(address) & ~clearbits, address); }
+
+IMPLEMENT inline
+template< typename T>
+void Io::set(T setbits, Address address)
+{ write(read<T>(address) | setbits, address); }
+
+
+
+
+
+IMPLEMENT inline
 Unsigned8  Io::in8_p ( unsigned long port )
 {
   Unsigned8 tmp = in8(port);
