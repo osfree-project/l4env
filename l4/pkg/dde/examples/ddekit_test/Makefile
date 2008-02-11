@@ -10,7 +10,7 @@ SRC_C         = main.c
 
 LIBS         += -lddekit -lio -ll4util -llist_alloc
 
-#LIBCINCDIR    = -nostdinc -I$(GCCINCDIR)
+#LIBCINCDIR    = -nostdinc $(I_GCCINCDIR)
 
 WARNINGS      = -Wall -Wstrict-prototypes -fno-strict-aliasing
 

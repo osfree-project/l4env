@@ -9,7 +9,7 @@ SRC_C       = debug.c
 
 ### specialties
 PRIVATE_INCDIR = $(DDE_INCDIR) $(LINUX24_INCDIR)
-LIBCINCDIR  = -nostdinc -I$(GCCINCDIR)
+LIBCINCDIR  = -nostdinc $(I_GCCINCDIR)
 
 LIBS        = -ldde_linux -lio -lomega0 -llist_alloc
 

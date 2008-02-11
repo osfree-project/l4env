@@ -288,10 +288,11 @@ GCCSUBVERSION_f	= $(shell $(CC) -dumpversion | sed -e 's/.*\.\(.*\)/\1/')
 GCCDIR_f	= $(shell LC_ALL=C $(CC) -print-search-dirs|sed -ne 's+^install: \(.*[^/][^/]*\)/+\1+p' )
 GCCLIB_f	= $(shell $(CC) -print-libgcc-file-name)
 GCCLIB_EH_f	= $(filter /%,$(shell $(CC) -print-file-name=libgcc_eh.a))
-GCCINCDIR_f	= $(call GCCDIR_f)/include
+GCCINCDIR_f	= $(addprefix $(call GCCDIR_f),/include /include-fixed)
 GCCNOSTACKPROTOPT_f= $(call checkcc,-fno-stack-protector)
 
-GCCINCDIR	= $(GCCDIR)/include
+GCCINCDIR	= $(GCCDIR)/include $(GCCDIR)/include-fixed
+I_GCCINCDIR	= $(addprefix -I,$(GCCINCDIR))
 
 ifneq ($(PKGDIR),)
   ifeq ($(origin PKGNAME),undefined)

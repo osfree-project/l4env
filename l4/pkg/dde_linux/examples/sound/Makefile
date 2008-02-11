@@ -16,7 +16,7 @@ SRC_C_snddrv-i810 = i810_audio.c ac97_codec.c
 ### specialties
 PRIVATE_INCDIR = $(DDE_INCDIR) \
                  $(PKGDIR)/examples/sound/contrib $(LINUX24_INCDIR)
-LIBCINCDIR  = -nostdinc -I$(GCCINCDIR)
+LIBCINCDIR  = -nostdinc $(I_GCCINCDIR)
 
 LIBS = -ldde_linux -ldde_linux-sound -lio -lomega0 -llist_alloc
 

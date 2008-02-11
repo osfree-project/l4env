@@ -38,7 +38,7 @@ LIBC_INCLUDE   = -nostdinc                                 \
                  -I$(DROPS_STDDIR)/include/$(ARCH)/uclibc  \
                  -I$(DROPS_STDDIR)/include/uclibc          \
                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                 -I$(GCCINCDIR)
+                 $(I_GCCINCDIR)
 LIBC_LIB       = -luc_c
 
 #############################################################################
@@ -130,7 +130,7 @@ LDSCRIPT_all_host               =
 # x86_l4linux - L4Env functions for L4Linux programs
 #
 BID_SUPPORTED_x86_l4linux       = y
-LIBCINCDIR_x86_l4linux          = -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4linux          = $(I_GCCINCDIR)
 LIBCLIBDIR_x86_l4linux          = -L$(DROPS_STDDIR)/lib
 LIBCLIBS_x86_l4linux            = -ldm_generic -ldm_mem -lnames             \
                                   $(ROOTLIB) -lloaderif -ll4env             \
@@ -146,7 +146,7 @@ LDSCRIPT_x86_l4linux            =
 #
 BID_SUPPORTED_x86_l4linux_kern  = y
 LIBCINCDIR_x86_l4linux_kern     = -nostdinc -I$(L4LINUX22_DIR)/include      \
-                                  -D__KERNEL__ -DLINUX_ON_L4 -I$(GCCINCDIR)
+                                  -D__KERNEL__ -DLINUX_ON_L4 $(I_GCCINCDIR)
 LIBCLIBDIR_x86_l4linux_kern     =
 LIBCLIBS_x86_l4linux_kern       =
 CRT0_x86_l4linux_kern           =
@@ -422,7 +422,7 @@ LDSCRIPT_arm_loader             = $(LDS_LOADER)
 # arm_l4linux - L4Env functions for L4Linux programs
 #
 BID_SUPPORTED_arm_l4linux       = y
-LIBCINCDIR_arm_l4linux          = -I$(GCCINCDIR)
+LIBCINCDIR_arm_l4linux          = $(I_GCCINCDIR)
 LIBCLIBDIR_arm_l4linux          = -L$(DROPS_STDDIR)/lib
 LIBCLIBS_arm_l4linux            = -ldm_generic -ldm_mem -lnames             \
                                   $(ROOTLIB) -lloaderif -ll4env             \

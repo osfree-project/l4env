@@ -18,7 +18,7 @@ LIBS			+= -ldde_linux26_net -ldde_linux26 -lddekit -lio -lomega0 -llist_alloc
 PRIVATE_INCDIR 	= $(PKGDIR_ABS)/linux26/include $(MY_DDE_INCDIR) $(MY_LINUX26_INCDIR)  \
 				  $(OBJ_BASE)/include/uclibc
 
-LIBCINCDIR  = -nostdinc -I$(GCCINCDIR)
+LIBCINCDIR  = -nostdinc $(I_GCCINCDIR)
 DEFINES     = -D__KERNEL__ -DDDE_LINUX\
 			  $(KBUILD_DEFINES)
 CPPFLAGS 	+= $(KBUILD_CPPFLAGS)

@@ -7,7 +7,12 @@
 #define __L4_SYS__L4API_l4v2__SYSCALLS_IMPL_H__
 
 
-static inline l4_umword_t
+L4_INLINE l4_umword_t
+l4_thread_ex_regs_reg0(l4_umword_t threadnr,
+                       l4_umword_t tasknr,
+                       l4_umword_t flags);
+
+L4_INLINE l4_umword_t
 l4_thread_ex_regs_reg0(l4_umword_t threadnr,
                        l4_umword_t tasknr,
                        l4_umword_t flags)

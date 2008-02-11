@@ -16,7 +16,7 @@ SRC_C = $(MM_C) $(GLOBAL_C) $(USER_C) $(HMM_C) \
          pci.c irq.c res.c softirq.c time.c ctype.c ctor.c string.c
 
 PRIVATE_INCDIR = $(PKGDIR_ABS)/lib/include $(DDE26_INCDIR) $(LINUX26_INCDIR)
-LIBCINCDIR = -nostdinc -I$(GCCINCDIR)
+LIBCINCDIR = -nostdinc $(I_GCCINCDIR)
 
 DEFINES  = -D__KERNEL__ -DDDE_LINUX
 WARNINGS = -Wall -Wstrict-prototypes

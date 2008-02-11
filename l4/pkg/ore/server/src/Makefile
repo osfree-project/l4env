@@ -58,7 +58,7 @@ LIBS        += -lferret_client -lferret_producer -lferret_client -lferret_util \
 			   -lferret_comm -lferret_fpages -lferret_local_names
 endif
 
-LIBCINCDIR     += -nostdinc -I$(GCCINCDIR)
+LIBCINCDIR     += -nostdinc $(I_GCCINCDIR)
 
 LIBS		+= -levents -lomega0 -lio -ll4rm -lore_server-worker \
 		   -lore_server -lore_notify -llist_alloc -lparsecmdline

@@ -13,7 +13,7 @@ SRC_C = $(MM_C) $(GLOBAL_C) $(USER_C) $(HMM_C) \
         pci.c irq.c softirq.c time.c res.c irq_stat.c bug.c ctor.c
 
 PRIVATE_INCDIR = $(PKGDIR_ABS)/lib/include $(DDE_INCDIR) $(LINUX24_INCDIR)
-LIBCINCDIR  = -nostdinc -I$(GCCINCDIR)
+LIBCINCDIR  = -nostdinc $(I_GCCINCDIR)
 
 DEFINES     = -D__KERNEL__ -DDDE_LINUX
 WARNINGS    = -Wall -Wstrict-prototypes -fno-strict-aliasing
