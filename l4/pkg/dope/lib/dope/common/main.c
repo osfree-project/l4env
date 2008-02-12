@@ -74,13 +74,13 @@ void dope_bindf(long id, const char *varfmt, const char *event_type,
 /*** INTERFACE: PROCESS SINGLE DOpE EVENT ***/
 void dope_process_event(long id) {
 	dope_event *e;
-	char *bindarg, *s;
+	char *bindarg = NULL, *s;
 	unsigned long num1 = 0, num2 = 0;
 
 	dopelib_wait_event(id, &e, &bindarg);
 
 	/* test if cookie is valid */
-	if ((bindarg[0] != '#') || (bindarg[1] != '!')) return;
+	if (!bindarg || (bindarg[0] != '#') || (bindarg[1] != '!')) return;
 
 	/* determine callback adress and callback argument */
 	s = bindarg + 3;

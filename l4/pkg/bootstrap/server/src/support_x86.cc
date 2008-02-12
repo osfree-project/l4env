@@ -39,7 +39,7 @@ namespace L4
 };
 
 
-#include <strings.h>
+#include <string.h>
 #include "base_critical.h"
 #include "ARCH-x86/serial.h"
 #include <l4/util/cpu.h>
@@ -90,8 +90,8 @@ vga_putchar(unsigned char c)
   switch (c)
     {
     case '\n':
-      bcopy(vidbase+80*2, vidbase, 80*2*24);
-      bzero(vidbase+80*2*24, 80*2);
+      memmove(vidbase+80*2, vidbase, 80*2*24);
+      memset(vidbase+80*2*24, 0, 80*2);
       /* fall through... */
     case '\r':
       ofs = 0;
