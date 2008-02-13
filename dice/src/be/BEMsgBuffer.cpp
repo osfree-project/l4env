@@ -133,7 +133,8 @@ int CBEMsgBuffer::GetCount(CBEFunction *pFunction, int nFEType, CMsgStructType n
 
 	CBEMsgBufferType *pMsgType = GetType(pFunction);
 	CBEStructType *pStruct = GetStruct(pFunction, nType);
-	assert(pStruct);
+	if (!pStruct)
+		return 0;
 
 	int nCount = std::count_if(pMsgType->GetStartOfPayload(pStruct),
 		pStruct->m_Members.end(), TypeCount(nFEType));

@@ -84,8 +84,8 @@ void CL4V4IA32IPC::WriteCall(CBEFile& pFile, CBEFunction* pFunction)
     // during mathematical calculations, such as
     // MR0 bit stuffing
     ++pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
-    pFile << "\t\"mov %%gs:[0], %%edi \\n\\t\"\n";
-    pFile << "\t\"call Ipc \\n\\t\"\n";
+    pFile << "\t\"mov %%gs:0, %%edi \\n\\t\"\n";
+    pFile << "\t\"call __L4_Ipc \\n\\t\"\n";
     pFile << "\t\"mov %%ebx, 4(%%edi) \\n\\t\" /* save mr1 */\n";
     pFile << "\t\"mov %%ebp, 8(%%edi) \\n\\t\" /* save mr2 */\n";
     pFile << "\t: /* output */\n";

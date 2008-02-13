@@ -36,6 +36,7 @@
 #include "fe/FEEnumType.h"
 #include "fe/FEEnumDeclarator.h"
 #include <cassert>
+#include <limits>
 
 CBEEnumType::CBEEnumType()
 : m_Members(0, this)

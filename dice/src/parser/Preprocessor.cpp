@@ -35,8 +35,9 @@
 #include <fcntl.h> // open
 #include <sys/wait.h> // waitpid
 #include <sys/stat.h> // S_ISREG, S_ISLNK
-#include <errno.h> // errno
+#include <cerrno> // errno
 #include <iostream> // cerr
+#include <cstring>
 
 using namespace dice::parser;
 

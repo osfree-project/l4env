@@ -51,12 +51,10 @@ CL4V4BEMarshalFunction::~CL4V4BEMarshalFunction()
 /** \brief write the L4 specific marshalling code
  *  \param pFile the file to write to
  */
-void
-CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
+void CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 {
-	assert (m_pTrace);
 	bool bLocalTrace = false;
-	if (!m_bTraceOn)
+	if (!m_bTraceOn && m_pTrace)
 	{
 		m_pTrace->BeforeMarshalling(pFile, this);
 		m_bTraceOn = bLocalTrace = true;

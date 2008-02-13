@@ -58,6 +58,7 @@
 #include "Messages.h"
 #include <cassert>
 #include <algorithm>
+#include <typeinfo>
 
 CBETypedDeclarator::CBETypedDeclarator()
 : CBEObject(),
@@ -228,7 +229,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
 				CBEDeclarator *pDecl = m_Declarators.First();
 				if (pDecl)
 				{
-					pFile << "strlen(";
+					pFile << "_dice_strlen(";
 					if (!pStack)
 					{
 						CDeclStack vStack;

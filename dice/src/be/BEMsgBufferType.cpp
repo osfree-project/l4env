@@ -1230,7 +1230,7 @@ std::string CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction, 
 	// string is '(<var>) ? strlen(<var>) : 0'
 	string sInitStr = sUnionStrPre + "(";
 	CDeclaratorStackLocation::WriteToString(sInitStr, pStack, true);
-	sInitStr += ") ? (strlen(";
+	sInitStr += ") ? (_dice_strlen(";
 	CDeclaratorStackLocation::WriteToString(sInitStr, pStack, true);
 	sInitStr += ")+1) : 0" + sUnionStrSuf;
 	return sInitStr;

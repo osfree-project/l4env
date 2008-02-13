@@ -22,6 +22,7 @@
 #include "fe/FEInterface.h"
 #include "fe/FEFile.h"
 #include <vector>
+#include <typeinfo>
 
 class c_parser_driver;
 

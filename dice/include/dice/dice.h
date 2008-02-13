@@ -30,13 +30,8 @@
 #endif
 
 #undef _dice_memcpy
-#ifdef __GNUC__
 #define _dice_memcpy(to,from,size)   \
-    __builtin_memcpy(to, from, size)
-#else
-#define _dice_memcpy(to,from,size)   \
-    { int _i = size; char *_f = (char*)from, *_t = (char*)to; while (_i--) *_t++= *_f++; }
-#endif
+    { register int _i = size; const char *_f = (const char*)from; char *_t = (char*)to; while (_i--) *_t++= *_f++; }
 
 #undef _dice_max
 #ifdef __GNUC__
@@ -46,6 +41,10 @@
 #define _dice_max(a,b) \
     ((a) > (b) ? (a) : (b))
 #endif
+
+#undef _dice_strlen
+#define _dice_strlen(s) \
+	({ register unsigned long r = 0; register const char* _s = (const char*)s; while (*_s++) r++; r; })
 
 // do some optimization if possible
 #if (__GNUC__ >= 3)

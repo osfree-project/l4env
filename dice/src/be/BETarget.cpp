@@ -54,6 +54,7 @@
 #include "Compiler.h"
 #include <cassert>
 #include <iostream>
+#include <typeinfo>
 
 CBETarget::CBETarget()
 : m_HeaderFiles(0, this),

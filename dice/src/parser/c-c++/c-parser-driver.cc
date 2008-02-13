@@ -6,6 +6,7 @@
 #include <cassert>
 #include <fstream>
 #include <cstdio>
+#include <cstring>
 
 c_parser_driver::c_parser_driver ()
 { }

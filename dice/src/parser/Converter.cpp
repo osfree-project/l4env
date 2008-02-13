@@ -245,7 +245,7 @@ long dice::parser::hex_to_long (char *s, IntType& t)
 					t = INT_ULONG;
 					return m;
 				}
-				n = m;
+				n = (long)m;
 				if (n < 0 &&
 					std::numeric_limits<int>::min() <= n &&
 					n <= std::numeric_limits<int>::max())
