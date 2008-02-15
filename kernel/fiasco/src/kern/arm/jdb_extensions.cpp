@@ -44,9 +44,8 @@ static void inchar(Thread *, Entry_frame *r)
   Vkey::clear();
 }
 
-static void tbuf(Thread *, Entry_frame *r)
+static void tbuf(Thread *t, Entry_frame *r)
 {
-  Thread *t    = current_thread();
   Mem_space *s = t->mem_space();
   Address ip = r->ip();
   Address_type user;
@@ -72,7 +71,7 @@ static void tbuf(Thread *, Entry_frame *r)
 	  Tb_entry_ke *tb =
             static_cast<Tb_entry_ke*>(Jdb_tbuf::new_entry());
           str = regs->str();
-	  tb->set(t, ip-1);
+	  tb->set(t, ip-4);
 	  for (len=0; (c = s->peek(str++, user)); len++)
             tb->set_buf(len, c);
           tb->term_buf(len);
@@ -93,7 +92,7 @@ static void tbuf(Thread *, Entry_frame *r)
           Tb_entry_ke_reg *tb =
             static_cast<Tb_entry_ke_reg*>(Jdb_tbuf::new_entry());
           str = regs->str();
-          tb->set(t, ip-1, regs->val1(), regs->val2(), regs->val3());
+          tb->set(t, ip-4, regs->val1(), regs->val2(), regs->val3());
           for (len=0; (c = s->peek(str++, user)); len++)
             tb->set_buf(len, c);
           tb->term_buf(len);
@@ -120,7 +119,7 @@ static void tbuf(Thread *, Entry_frame *r)
       Tb_entry_ke_bin *tb =
         static_cast<Tb_entry_ke_bin*>(Jdb_tbuf::new_entry());
       str = regs->str();
-      tb->set(t, ip-1);
+      tb->set(t, ip-4);
       for (len=0; len < Tb_entry_ke_bin::SIZE; len++)
         tb->set_buf(len, s->peek(str++, user));
       regs->set_tb_entry(tb);
