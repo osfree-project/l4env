@@ -12,7 +12,6 @@
 #ifdef __KERNEL__
 #ifndef __ASSEMBLY__
 
-
 #ifdef CONFIG_X86_USE_3DNOW
 
 #include <asm/mmx.h>
@@ -136,7 +135,15 @@ extern void *__va(unsigned long addr);
 #ifdef CONFIG_FLATMEM
 #define pfn_valid(pfn)		((pfn) < max_mapnr)
 #endif /* CONFIG_FLATMEM */
+#ifndef DDE_LINUX
 #define virt_to_page(kaddr)	pfn_to_page(__pa(kaddr) >> PAGE_SHIFT)
+#else
+extern struct page *dde_page_lookup(unsigned long va);
+static inline struct page* virt_to_page(void *va)
+{
+	return dde_page_lookup((unsigned long)va);
+}
+#endif /* DDE_LINUX */
 
 #define virt_addr_valid(kaddr)	pfn_valid(__pa(kaddr) >> PAGE_SHIFT)
 

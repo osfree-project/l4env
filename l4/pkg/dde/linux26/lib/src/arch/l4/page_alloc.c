@@ -1,6 +1,7 @@
 /*
  * \brief   Page allocation
- * \author  Christian Helmuth
+ * \author  Christian Helmuth <ch12@tudos.org>
+ *          Bjoern Doebel <doebel@tudos.org>
  * \date    2007-01-22
  *
  * In Linux 2.6 this resides in mm/page_alloc.c.
@@ -42,12 +43,99 @@ unsigned long max_pfn;
 #define DEBUG_PAGE_ALLOC 0
 
 
+/*
+ * DDE page cache
+ *
+ * We need to store all pages somewhere (which in the Linux kernel is
+ * performed by the huge VM infrastructure. Purpose for us is:
+ *   - make virt_to_phys() work
+ *   - enable external clients to hand in memory (e.g., a dm_phys
+ *     dataspace and make it accessible as Linux pages to the DDE)
+ */
+
+#define DDE_PAGE_CACHE_SHIFT 	10
+#define DDE_PAGE_CACHE_SIZE     (1 << DDE_PAGE_CACHE_SHIFT)
+#define DDE_PAGE_CACHE_MASK     (DDE_PAGE_CACHE_SIZE - 1)
+
+typedef struct
+{
+	struct hlist_node list;
+	struct page *page;
+} page_cache_entry;
+
+static struct hlist_head dde_page_cache[DDE_PAGE_CACHE_SIZE];
+
+/** Hash function to map virtual addresses to page cache buckets. */
+#define VIRT_TO_PAGEHASH(a)           ((((unsigned long)a) >> PAGE_SHIFT) & DDE_PAGE_CACHE_MASK)
+
+
+void dde_page_cache_add(struct page *p)
+{
+	unsigned int hashval = VIRT_TO_PAGEHASH(p->virtual);
+
+	page_cache_entry *e = kmalloc(sizeof(page_cache_entry), GFP_KERNEL);
+
+#if DEBUG_PAGE_ALLOC
+	DEBUG_MSG("virt %p, hash: %x", p->virtual, hashval);
+#endif
+
+	e->page = p;
+	INIT_HLIST_NODE(&e->list);
+
+	hlist_add_head(&e->list, &dde_page_cache[hashval]);
+}
+
+
+void dde_page_cache_remove(struct page *p)
+{
+	unsigned int hashval = VIRT_TO_PAGEHASH(p->virtual);
+	struct hlist_node *hn = NULL;
+	struct hlist_head *h  = &dde_page_cache[hashval];
+	page_cache_entry *e   = NULL;
+	struct hlist_node *v  = NULL;
+
+	hlist_for_each_entry(e, hn, h, list) {
+		if ((unsigned long)e->page->virtual == ((unsigned long)p->virtual & PAGE_MASK))
+			v = hn;
+			break;
+	}
+
+	if (v) {
+#if DEBUG_PAGE_ALLOC
+		DEBUG_MSG("deleting node %p which contained page %p", v, p);
+#endif
+		hlist_del(v);
+	}
+}
+
+
+struct page* dde_page_lookup(unsigned long va)
+{
+	unsigned int hashval = VIRT_TO_PAGEHASH(va);
+
+	struct hlist_node *hn = NULL;
+	struct hlist_head *h  = &dde_page_cache[hashval];
+	page_cache_entry *e   = NULL;
+
+	hlist_for_each_entry(e, hn, h, list) {
+		if ((unsigned long)e->page->virtual == (va & PAGE_MASK))
+			return e->page;
+	}
+
+	return NULL;
+}
+
+
 struct page * fastcall __alloc_pages(gfp_t gfp_mask, unsigned int order,
                                      struct zonelist *zonelist)
 {
+	/* XXX: In fact, according to order, we should have one struct page
+	 *      for every page, not only for the first one.
+	 */
 	struct page *ret = kmalloc(sizeof(*ret), GFP_KERNEL);
 	
 	ret->virtual = (void *)__get_free_pages(gfp_mask, order);
+	dde_page_cache_add(ret);
 
 	return ret;
 }
@@ -80,10 +168,14 @@ void fastcall free_hot_page(struct page *page)
 	WARN_UNIMPL;
 }
 
-
+/* 
+ * XXX: If alloc_pages() gets fixed to allocate a page struct per page,
+ *      this needs to be adapted, too.
+ */
 fastcall void __free_pages(struct page *page, unsigned int order)
 {
 	free_pages((unsigned long)page->virtual, order);
+	dde_page_cache_remove(page);
 }
 
 void __pagevec_free(struct pagevec *pvec)
@@ -115,7 +207,7 @@ fastcall void free_pages(unsigned long addr, unsigned int order)
 
 unsigned long __pa(volatile void *addr)
 {
-	return ddekit_pgtab_get_physaddr(addr);
+	return ddekit_pgtab_get_physaddr((void*)addr);
 }
 
 void *__va(unsigned long addr)
@@ -129,3 +221,15 @@ int set_page_dirty_lock(struct page *page)
 	WARN_UNIMPL;
 	return 0;
 }
+
+
+static void __init dde_page_cache_init(void)
+{
+	printk("Initializing DDE page cache\n");
+	int i=0;
+
+	for (i; i < DDE_PAGE_CACHE_SIZE; ++i)
+		INIT_HLIST_HEAD(&dde_page_cache[i]);
+}
+
+core_initcall(dde_page_cache_init);

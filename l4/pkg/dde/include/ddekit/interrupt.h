@@ -14,6 +14,8 @@
 
 #include <l4/dde/ddekit/thread.h>
 
+#define DDEKIT_IRQ_PRIO         0x11
+
 /**
  * Attach to hardware interrupt
  *

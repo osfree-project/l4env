@@ -69,6 +69,8 @@ static void intloop(void *arg)
 {
 	struct intloop_params *params = arg;
 
+	l4thread_set_prio(l4thread_myself(), DDEKIT_IRQ_PRIO);
+
     omega0_request_t req  = { .i = 0 };
 	int o0handle;
 	int my_index = params->irq;
