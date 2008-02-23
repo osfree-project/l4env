@@ -243,8 +243,7 @@ FILE* CPreprocessor::Preprocess(string sFile, string& sPath)
     if (!fInput)
 	return 0; // error message printed by OpenFile
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CPreprocessor::%s: start preprocessing input file \"%s\" ...\n", __func__,
+    CCompiler::Verbose("CPreprocessor::%s: start preprocessing input file \"%s\" ...\n", __func__,
 	sFile.c_str());
 
     FILE *fOutput;
@@ -280,8 +279,7 @@ FILE* CPreprocessor::Preprocess(string sFile, string& sPath)
 
     fclose(fInput);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CPreprocessor::%s: finished preprocessing input file \"%s\".\n", __func__,
+    CCompiler::Verbose("CPreprocessor::%s: finished preprocessing input file \"%s\".\n", __func__,
 	sFile.c_str());
 
     rewind(fOutput);
@@ -390,9 +388,9 @@ FILE* CPreprocessor::OpenFile(string sFile, string& sPath)
         sCurPath = sIncludePaths[nCurrentIncPath];
     /* try to open included file */
     if (sCurPath.empty())
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Try to open include \"%s\"\n", sFile.c_str());
+	CCompiler::Verbose("Try to open include \"%s\"\n", sFile.c_str());
     else
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Try to open include \"%s\" in path \"%s\"\n",
+	CCompiler::Verbose("Try to open include \"%s\" in path \"%s\"\n",
 	    sFile.c_str(), sCurPath.c_str());
     FILE *fReturn = 0;
     // check if this is a file
@@ -408,13 +406,13 @@ FILE* CPreprocessor::OpenFile(string sFile, string& sPath)
 	for (int i = 0; i < (int)sIncludePaths.size() && !fReturn; i++)
 	{
 	    s = sIncludePaths[i];
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Search file in path \"%s\".\n", s.c_str());
+	    CCompiler::Verbose("Search file in path \"%s\".\n", s.c_str());
 	    s += sFile;
 	    if (CheckName(s))
 	    {
 		nCurrentIncPath = i;
 		sCurPath = sIncludePaths[i];
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Try to open with path %s.\n", s.c_str());
+		CCompiler::Verbose("Try to open with path %s.\n", s.c_str());
 		// it's there
 		fReturn = fopen(s.c_str(), "r");
 	    }
@@ -429,15 +427,15 @@ FILE* CPreprocessor::OpenFile(string sFile, string& sPath)
     if (fReturn)
     {
 	if (sCurPath.empty())
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Found file \"%s\" in current path.\n",
+	    CCompiler::Verbose("Found file \"%s\" in current path.\n",
 		sFile.c_str());
 	else
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Found file \"%s\" in path \"%s\".\n",
+	    CCompiler::Verbose("Found file \"%s\" in path \"%s\".\n",
 		sFile.c_str(), sIncludePaths[nCurrentIncPath].c_str());
     }
     else
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "Couldn't find file\n");
+	CCompiler::Verbose("Couldn't find file\n");
         return 0; // causes error to be printed (with file stack)
     }
 

@@ -200,8 +200,7 @@ CBEExpression *CBEConstant::GetValue()
  */
 void CBEConstant::AddToHeader(CBEHeaderFile* pHeader)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEConstant::%s(header: %s) for const %s called\n", __func__,
+	CCompiler::Verbose("CBEConstant::%s(header: %s) for const %s called\n", __func__,
 		pHeader->GetFileName().c_str(), m_sName.c_str());
 	if (IsTargetFile(pHeader))
 		pHeader->m_Constants.Add(this);

@@ -131,8 +131,7 @@ void CBEMarshalExceptionFunction::AddParameter(CFEIdentifier * pFEIdentifier)
  */
 void CBEMarshalExceptionFunction::AddAfterParameters()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalExceptionFunction::%s called\n", __func__);
+	CCompiler::VerboseI("CBEMarshalExceptionFunction::%s called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -153,8 +152,7 @@ void CBEMarshalExceptionFunction::AddAfterParameters()
 
 	CBEOperationFunction::AddAfterParameters();
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalExceptionFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMarshalExceptionFunction::%s returns\n", __func__);
 }
 
 /** \brief test if this function should be written
@@ -219,7 +217,7 @@ CBETypedDeclarator* CBEMarshalExceptionFunction::GetExceptionVariable()
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);
 	CBEMsgBuffer *pMsgBuf = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
+	CCompiler::Verbose("CBEMarshalExceptionFunction::%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)
 		return 0;
@@ -228,7 +226,7 @@ CBETypedDeclarator* CBEMarshalExceptionFunction::GetExceptionVariable()
 	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
 		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s exception var %s at %p\n", __func__,
+	CCompiler::Verbose("CBEMarshalExceptionFunction::%s exception var %s at %p\n", __func__,
 		sName.c_str(), pRet);
 
 	return pRet;
@@ -333,8 +331,7 @@ CBEMarshalExceptionFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  */
 void CBEMarshalExceptionFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalExceptionFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEMarshalExceptionFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&

@@ -1,6 +1,6 @@
 /* Single-threaded socket example */
 
-#include "local.h"
+#include "local_s.h"
 
 int sock_listen,                /* server listen socket */
  sock_srv,                      /* server socket */

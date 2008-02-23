@@ -5,7 +5,7 @@
 
 /* local */
 #include "flips-server.h"
-#include "local.h"
+#include "local_s.h"
 
 /* loglib tag */
 char LOG_tag[9] = "flips";

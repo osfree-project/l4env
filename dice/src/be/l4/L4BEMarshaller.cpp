@@ -141,7 +141,7 @@ bool CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction, CBETypedDeclarator
 	m_nSkipSize += nParamSize;
 
 	// do NOT skip exception variable
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "param %p, exc %p\n", pParameter,
+	CCompiler::Verbose("param %p, exc %p\n", pParameter,
 		pFunction->GetExceptionVariable());
 	if (pParameter == pFunction->GetExceptionVariable())
 		return false;
@@ -165,7 +165,7 @@ bool
 CL4BEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
 	assert(pMember);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4BEMarshaller::%s(%s) called\n",
+	CCompiler::Verbose("CL4BEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
 	if (CBEMarshaller::MarshalSpecialMember(pFile, pMember))
 		return true;
@@ -179,7 +179,7 @@ CL4BEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMembe
 	if (MarshalZeroFlexpage(pFile, pMember))
 		return true;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4BEMarshaller::%s(%s) returns false\n",
+	CCompiler::Verbose("CL4BEMarshaller::%s(%s) returns false\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
 	return false;
 }
@@ -301,8 +301,7 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
 	int nPosition)
 {
 	m_pFunction = pFunction;
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s called for func %s and param %s (%s at pos %d)\n",
+	CCompiler::Verbose("CL4BEMarshaller::%s called for func %s and param %s (%s at pos %d)\n",
 		__func__, pFunction ? pFunction->GetName().c_str() : "(none)",
 		pParameter ? pParameter->m_Declarators.First()->GetName().c_str() : "(none)",
 		bMarshal ? "marshalling" : "unmarshalling", nPosition);
@@ -342,8 +341,7 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
  * This method decides which strategy should be used to marshal the given
  * parameter. It also checks if there is a special treatment necessary.
  */
-void
-CL4BEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
+void CL4BEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack)
 {
 	if (MarshalRefstring(pFile, pParameter, pStack))
@@ -367,19 +365,13 @@ CL4BEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pPar
  * We have to use the rcv_str member to set incoming strings, because snd_str
  * is not se properly.
  */
-bool
-CL4BEMarshaller::MarshalRefstring(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack)
+bool CL4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack)
 {
 	assert(pParameter);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4BEMarshaller::%s called for %s with%s [ref]\n", __func__,
+	CCompiler::Verbose("CL4BEMarshaller::%s called for %s with%s [ref]\n", __func__,
 		pParameter->m_Declarators.First()->GetName().c_str(),
 		pParameter->m_Attributes.Find(ATTR_REF) ? "" : "out");
-	if (!pParameter->m_Attributes.Find(ATTR_REF))
-		return false;
 
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
 	CBETypedDeclarator *pMember = FindMarshalMember(pStack);
@@ -389,6 +381,11 @@ CL4BEMarshaller::MarshalRefstring(CBEFile& pFile,
 			__func__, pParameter->m_Declarators.First()->GetName().c_str());
 	}
 	assert(pMember);
+	// check if either parameter or member have [ref] attribute
+	if (!pParameter->m_Attributes.Find(ATTR_REF) &&
+		!pMember->m_Attributes.Find(ATTR_REF))
+		return false;
+
 	CBEType *pType = pParameter->GetType();
 	// try to find respective member and assign
 	if (m_bMarshal)
@@ -684,4 +681,3 @@ void CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, CMsgStructType nT
 		pFile << " + " << os.str();
 	pFile << "])))";
 }
-

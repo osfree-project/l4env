@@ -65,7 +65,7 @@ void CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 	string sMsgBuffer = pNF->GetMessageBufferVariable();
 	string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
 	// clear message
-	pFile << "\tL4_MsgClear ( (" << sType << "*) " << sMsgBuffer << " );\n";
+	pFile << "\tL4_MsgClear ( (L4_Msg_t*) " << sMsgBuffer << " );\n";
 	// set exception in msgbuffer and return if there was an exception.
 	WriteMarshalException(pFile, true, true);
 	// call base class

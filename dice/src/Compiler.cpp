@@ -1493,7 +1493,7 @@ void CCompiler::PrepareWrite()
 	if (IsOptionSet(PROGRAM_STOP_AFTER_PRE))
 		return;
 
-	Verbose(PROGRAM_VERBOSE_NORMAL, "Check consistency of parsed input ...\n");
+	Verbose("Check consistency of parsed input ...\n");
 	if (!m_pRootFE)
 		CMessages::Error("Internal Error: Current file not set.\n");
 	// consistency check
@@ -1506,10 +1506,10 @@ void CCompiler::PrepareWrite()
 	{
 		CMessages::Error("Consistency check failed.\n");
 	}
-	Verbose(PROGRAM_VERBOSE_NORMAL, "... finished consistency check.\n");
+	Verbose("... finished consistency check.\n");
 
 	// create context
-	Verbose(PROGRAM_VERBOSE_NORMAL, "Create Context...\n");
+	Verbose("Create Context...\n");
 
 	// set sizes
 	CBESizes *pSizes = CBEClassFactory::Instance()->GetNewSizes();
@@ -1520,7 +1520,7 @@ void CCompiler::PrepareWrite()
 	/** Prepare write for the back-end does some intialization which cannot be
 	 * performed during the write run.
 	 */
-	Verbose(PROGRAM_VERBOSE_NORMAL, "Create backend...\n");
+	Verbose("Create backend...\n");
 	m_pRootBE = CBEClassFactory::Instance()->GetNewRoot();
 	try
 	{
@@ -1528,24 +1528,24 @@ void CCompiler::PrepareWrite()
 	}
 	catch (error::create_error *e)
 	{
-		Verbose(PROGRAM_VERBOSE_NORMAL, "Back-End creation failed\n");
+		Verbose("Back-End creation failed\n");
 		std::cerr << e->what();
 		delete e;
 		delete m_pRootBE;
 		m_pRootBE = 0;
 		CMessages::Error("Creating back-end failed.\n");
 	}
-	Verbose(PROGRAM_VERBOSE_NORMAL, "...done.\n");
+	Verbose("...done.\n");
 
 	// print dependency tree
-	Verbose(PROGRAM_VERBOSE_NORMAL, "Print dependencies...\n");
+	Verbose("Print dependencies...\n");
 	if (m_Depend.any())
 	{
 		CDependency *pD = new CDependency(m_sDependsFile, m_pRootFE, m_pRootBE);
 		pD->PrintDependencies();
 		delete pD;
 	}
-	Verbose(PROGRAM_VERBOSE_NORMAL, "... dependencies done.\n");
+	Verbose("... dependencies done.\n");
 
 	// if we should stop after printing the dependencies, stop here
 	if (IsDependsOptionSet(PROGRAM_DEPEND_M) ||
@@ -1574,9 +1574,9 @@ void CCompiler::Write()
 	// arguments. So we have to open it right at the beginning.
 
 	// write backend
-	Verbose(PROGRAM_VERBOSE_NORMAL, "Write backend...\n");
+	Verbose("Write backend...\n");
 	m_pRootBE->Write();
-	Verbose(PROGRAM_VERBOSE_NORMAL, "...done.\n");
+	Verbose("...done.\n");
 }
 
 /** \brief print verbose message
@@ -1625,6 +1625,63 @@ void CCompiler::VerboseI(ProgramVerbose_Type level, const char *format, ...)
 void CCompiler::VerboseD(ProgramVerbose_Type level, const char *format, ...)
 {
 	if (!IsVerboseLevel(level))
+		return;
+
+	if (m_nVerboseInd >= 0)
+		fprintf(stdout, "[%02d] ", m_nVerboseInd);
+	if (m_nVerboseInd > 0)
+		m_nVerboseInd--;
+
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
+	fflush (stdout);
+}
+
+/** \brief print verbose message
+ *  \param format the format string
+ */
+void CCompiler::Verbose(const char *format, ...)
+{
+	if (!IsVerboseLevel(PROGRAM_VERBOSE_NORMAL))
+		return;
+
+	if (m_nVerboseInd >= 0)
+		fprintf(stdout, "[%02d] ", m_nVerboseInd);
+
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
+	fflush (stdout);
+}
+
+/** \brief print verbose message
+ *  \param format the format string
+ */
+void CCompiler::VerboseI(const char *format, ...)
+{
+	if (!IsVerboseLevel(PROGRAM_VERBOSE_NORMAL))
+		return;
+
+	m_nVerboseInd++;
+	if (m_nVerboseInd >= 0)
+		fprintf(stdout, "[%02d] ", m_nVerboseInd);
+
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
+	fflush (stdout);
+}
+
+/** \brief print verbose message
+ *  \param format the format string
+ */
+void CCompiler::VerboseD(const char *format, ...)
+{
+	if (!IsVerboseLevel(PROGRAM_VERBOSE_NORMAL))
 		return;
 
 	if (m_nVerboseInd >= 0)

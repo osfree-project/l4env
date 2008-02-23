@@ -198,7 +198,7 @@ void CBEClass::AddBaseClass(std::string sName)
  */
 void CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(interf: %s) called\n",
+	CCompiler::VerboseI("CBEClass::%s(interf: %s) called\n",
 		__func__, pFEInterface->GetName().c_str());
 
 	// call CBEObject's CreateBackEnd method
@@ -206,8 +206,7 @@ void CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 
 	// set target file name
 	CFEFile *pFEFile = pFEInterface->GetSpecificParent<CFEFile>();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEClass::%s(interf: %s) set target file, if has parent file %s\n",
+	CCompiler::Verbose("CBEClass::%s(interf: %s) set target file, if has parent file %s\n",
 		__func__, pFEInterface->GetName().c_str(),
 		pFEFile ? pFEFile->GetFileName().c_str() : "(no file)");
 	SetTargetFileName(pFEInterface);
@@ -303,7 +302,7 @@ void CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	// check if any two base interfaces have same opcodes
 	CheckOpcodeCollision(pFEInterface);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief add the message buffer
@@ -323,8 +322,7 @@ void CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
  */
 void CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(if: %s) called\n", __func__,
+	CCompiler::VerboseI("CBEClass::%s(if: %s) called\n", __func__,
 		pFEInterface->GetName().c_str());
 
 	if (m_pMsgBuffer)
@@ -343,7 +341,7 @@ void CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 	// do post creation stuff
 	m_pMsgBuffer->PostCreate(this, pFEInterface);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s returns\n", __func__);
 }
 
 /** \brief make function specific initialization
@@ -380,7 +378,7 @@ void CBEClass::MsgBufferInitialization()
  */
 void CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::VerboseI("%s called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	/* wait any */
@@ -413,7 +411,7 @@ void CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 		pFunction->CreateBackEnd(pFEInterface, true);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief creates an alias type for the class
@@ -425,8 +423,7 @@ void CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 void CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
 {
 	assert(pFEInterface);
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(interface) called\n", __func__);
+	CCompiler::VerboseI("CBEClass::%s(interface) called\n", __func__);
 	// create the BE type
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedef *pTypedef = pCF->GetNewTypedef();
@@ -443,8 +440,7 @@ void CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
 	// set source line and file
 	pTypedef->m_sourceLoc = pFEInterface->m_sourceLoc;
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(interface) returns\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s(interface) returns\n", __func__);
 }
 
 /** \brief internal function to create a constant
@@ -452,7 +448,7 @@ void CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
  */
 void CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(const) called\n",
+	CCompiler::VerboseI("CBEClass::%s(const) called\n",
 		__func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -461,8 +457,7 @@ void CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
 	pConstant->SetParent(this);
 	pConstant->CreateBackEnd(pFEConstant);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(const) returns\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s(const) returns\n", __func__);
 }
 
 /** \brief internal function to create a typedefinition
@@ -470,8 +465,7 @@ void CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
  */
 void CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(typedef) called\n", __func__);
+	CCompiler::VerboseI("CBEClass::%s(typedef) called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedef *pTypedef = pCF->GetNewTypedef();
@@ -479,8 +473,7 @@ void CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
 	pTypedef->SetParent(this);
 	pTypedef->CreateBackEnd(pFETypedef);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(typedef) returns\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s(typedef) returns\n", __func__);
 }
 
 /** \brief internal function to create a functions for attribute declarator
@@ -495,7 +488,7 @@ void CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
 		throw new error::create_error(exc);
 	}
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(attr-decl) called\n",
+	CCompiler::VerboseI("CBEClass::%s(attr-decl) called\n",
 		__func__);
 
 	// add function "<param_type_spec> [out]__get_<simple_declarator>();" for
@@ -557,7 +550,7 @@ void CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
 		}
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::VerboseD("%s called\n", __func__);
 }
 
 /** \brief internal function to create the back-end functions
@@ -574,7 +567,7 @@ void CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
  */
 void CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called.\n", __func__);
+	CCompiler::VerboseI("%s called.\n", __func__);
 
 	CFunctionGroup *pGroup = new CFunctionGroup(pFEOperation);
 	m_FunctionGroups.Add(pGroup);
@@ -653,7 +646,7 @@ void CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 		}
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns.\n", __func__);
+	CCompiler::VerboseD("%s returns.\n", __func__);
 }
 
 /** \brief internal function to create the back-end functions
@@ -727,7 +720,7 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 void
 CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(attr) called\n",
+	CCompiler::VerboseI("CBEClass::%s(attr) called\n",
 		__func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -735,7 +728,7 @@ CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
 	m_Attributes.Add(pAttribute);
 	pAttribute->CreateBackEnd(pFEAttribute);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief internal function to create an exception
@@ -744,7 +737,7 @@ CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
 void
 CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n",
+	CCompiler::VerboseI("CBEClass::%s called\n",
 		__func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -752,7 +745,7 @@ CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
 	m_Typedefs.Add(pException);
 	pException->CreateBackEnd(pFEException);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n",
+	CCompiler::VerboseD("CBEClass::%s finished\n",
 		__func__);
 }
 
@@ -764,15 +757,13 @@ CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
  */
 void CBEClass::AddToHeader(CBEHeaderFile* pHeader)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(header: %s) for class %s called\n", __func__,
+	CCompiler::VerboseI("CBEClass::%s(header: %s) for class %s called\n", __func__,
 		pHeader->GetFileName().c_str(), GetName().c_str());
 	// add this class to the file
 	if (IsTargetFile(pHeader))
 		pHeader->m_Classes.Add(this);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(header: %s) for class %s returns true\n", __func__,
+	CCompiler::VerboseD("CBEClass::%s(header: %s) for class %s returns true\n", __func__,
 		pHeader->GetFileName().c_str(), GetName().c_str());
 }
 
@@ -786,8 +777,7 @@ void CBEClass::AddToHeader(CBEHeaderFile* pHeader)
  */
 void CBEClass::AddToImpl(CBEImplementationFile* pImpl)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(impl: %s) for class %s called\n", __func__,
+	CCompiler::VerboseI("CBEClass::%s(impl: %s) for class %s called\n", __func__,
 		pImpl->GetFileName().c_str(), GetName().c_str());
 	// check compiler option
 	if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION) &&
@@ -800,8 +790,7 @@ void CBEClass::AddToImpl(CBEImplementationFile* pImpl)
 	if (IsTargetFile(pImpl))
 		pImpl->m_Classes.Add(this);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(impl: %s) for class %s returns true\n", __func__,
+	CCompiler::VerboseD("CBEClass::%s(impl: %s) for class %s returns true\n", __func__,
 		pImpl->GetFileName().c_str(), GetName().c_str());
 }
 
@@ -826,8 +815,7 @@ CBEClass::GetParameterCount(int nFEType,
 	}
 
 	int nCount = 0, nCurr;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s(%d, %s, %d) called: max is %d\n", __func__,
+	CCompiler::Verbose("CBEClass::%s(%d, %s, %d) called: max is %d\n", __func__,
 		nFEType, bSameCount ? "true" : "false", nDirection, nCount);
 	vector<CBEFunction*>::iterator iter;
 	for (iter = m_Functions.begin();
@@ -835,16 +823,14 @@ CBEClass::GetParameterCount(int nFEType,
 		iter++)
 	{
 		nCurr = (*iter)->GetParameterCount(nFEType, nDirection);
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s: checking %s: has %d parameter of type %d, max is %d\n", __func__,
+		CCompiler::Verbose("CBEClass::%s: checking %s: has %d parameter of type %d, max is %d\n", __func__,
 			(*iter)->GetName().c_str(), nCurr, nFEType, nCount);
 		if ((nCount > 0) && (nCurr != nCount) && (nCurr > 0))
 			bSameCount = false;
 		nCount = std::max(nCurr, nCount);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s: returns %d (same %s)\n", __func__,
+	CCompiler::Verbose("CBEClass::%s: returns %d (same %s)\n", __func__,
 		nCount, bSameCount ? "true" : "false");
 	return nCount;
 }
@@ -969,7 +955,7 @@ CBEFunction* CBEClass::FindFunctionFor(CBEFunction *pFunction, FUNCTION_TYPE nFu
  */
 CBETypedef* CBEClass::FindTypedef(std::string sTypeName, CBETypedef *pPrev)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s(%s, %p) in %s called\n",
+	CCompiler::Verbose("CBEClass::%s(%s, %p) in %s called\n",
 		__func__, sTypeName.c_str(), pPrev, GetName().c_str());
 
 	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
@@ -1008,7 +994,7 @@ CBETypedef* CBEClass::FindTypedef(std::string sTypeName, CBETypedef *pPrev)
 			return pTypedef;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s not found in class or base, try namespace\n",
+	CCompiler::Verbose("CBEClass::%s not found in class or base, try namespace\n",
 		__func__);
 	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
 	if (pNameSpace)
@@ -1082,7 +1068,7 @@ CBEType* CBEClass::FindTaggedType(int nType, std::string sTag)
  */
 CBEFunction* CBEClass::FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(%s, %d) called\n", __func__,
+	CCompiler::Verbose("CBEClass::%s(%s, %d) called\n", __func__,
 		sFunctionName.c_str(), nFunctionType);
 
 	// simply scan the function for a match
@@ -1091,8 +1077,7 @@ CBEFunction* CBEClass::FindFunction(std::string sFunctionName, FUNCTION_TYPE nFu
 		iter != m_Functions.end();
 		iter++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEClass::%s checking function %s (compare to %s)\n", __func__,
+		CCompiler::Verbose("CBEClass::%s checking function %s (compare to %s)\n", __func__,
 			(*iter)->GetName().c_str(), sFunctionName.c_str());
 
 		if ((*iter)->GetName() == sFunctionName &&
@@ -1109,7 +1094,7 @@ CBEFunction* CBEClass::FindFunction(std::string sFunctionName, FUNCTION_TYPE nFu
 			return pRet;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s function %s not found, return 0\n",
+	CCompiler::Verbose("CBEClass::%s function %s not found, return 0\n",
 		__func__, sFunctionName.c_str());
 	return 0;
 }
@@ -1157,13 +1142,12 @@ CBEEnumType* CBEClass::FindEnum(std::string sName)
  */
 void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(header: %s) called\n",
+	CCompiler::VerboseI("CBEClass::%s(header: %s) called\n",
 		__func__, pFile->GetFileName().c_str());
 	// check if the file is really our target file
 	if (!IsTargetFile(pFile))
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEClass::%s wrong target file\n", __func__);
+		CCompiler::VerboseD("CBEClass::%s wrong target file\n", __func__);
 		return;
 	}
 
@@ -1214,7 +1198,7 @@ void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 		AddOpcodesToFile((*iter)->GetOperation(), pFile);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief adds the opcode for a single function
@@ -1226,8 +1210,7 @@ void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, std::string sName,
 	CBEHeaderFile* pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::AddOpcodesToFile(operation: %s) called\n",
+	CCompiler::VerboseI("CBEClass::AddOpcodesToFile(operation: %s) called\n",
 		pFEOperation->GetName().c_str());
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -1296,7 +1279,7 @@ void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, std::st
 	pFile->m_Constants.Add(pOpcode);
 	pOpcode->CreateBackEnd(pType, sName, pTopBrace, true/*always defined*/);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 
@@ -1306,8 +1289,7 @@ void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, std::st
  */
 void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::AddOpcodesToFile(operation: %s) called\n",
+	CCompiler::VerboseI("CBEClass::AddOpcodesToFile(operation: %s) called\n",
 		pFEOperation->GetName().c_str());
 
 	int nOperationNb = GetOperationNumber(pFEOperation);
@@ -1325,7 +1307,7 @@ void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile
 		AddOpcodesToFile(pFEOperation, pFERangeAttribute->GetUpperValue(), sName, pFile);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief calculates the number used as base opcode number
@@ -1373,7 +1355,7 @@ int CBEClass::GetClassNumber()
  */
 void CBEClass::Write(CBEHeaderFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
+	CCompiler::VerboseI("CBEClass::%s called\n", __func__);
 
 	// since message buffer is local for this class, the class declaration
 	// wraps the message buffer
@@ -1433,7 +1415,7 @@ void CBEClass::Write(CBEHeaderFile& pFile)
 		IsTargetFile(&pFile))
 		pFile << "\t};\n";
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief writes the class name, which might be different for clnt & srv
@@ -1628,13 +1610,13 @@ void CBEClass::WriteDestructor(CBEHeaderFile& pFile)
  */
 void CBEClass::Write(CBEImplementationFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
+	CCompiler::VerboseI("CBEClass::%s called\n", __func__);
 	// write implementation for functions
 	WriteElements(pFile);
 	// write helper functions if any
 	WriteHelperFunctions(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief writes the class to the target file
@@ -1647,8 +1629,7 @@ void CBEClass::Write(CBEImplementationFile& pFile)
  */
 void CBEClass::WriteElements(CBEHeaderFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s for %s called\n", __func__, GetName().c_str());
+	CCompiler::VerboseI("CBEClass::%s for %s called\n", __func__, GetName().c_str());
 
 	// sort our members/elements depending on source line number
 	// into extra vector
@@ -1682,8 +1663,7 @@ void CBEClass::WriteElements(CBEHeaderFile& pFile)
 		IsTargetFile(&pFile))
 		--pFile;
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::Write(head, %s) finished\n", GetName().c_str());
+	CCompiler::VerboseD("CBEClass::Write(head, %s) finished\n", GetName().c_str());
 }
 
 /** \brief writes the function declarations for the header file
@@ -1692,12 +1672,11 @@ void CBEClass::WriteElements(CBEHeaderFile& pFile)
 void
 CBEClass::WriteFunctions(CBEHeaderFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(head, %s) called\n", __func__, GetName().c_str());
+	CCompiler::VerboseI("CBEClass::%s(head, %s) called\n", __func__, GetName().c_str());
 
 	int nFuncCount = GetFunctionWriteCount(pFile);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s %d functions\n",
+	CCompiler::Verbose("CBEClass::%s %d functions\n",
 		__func__, nFuncCount);
 
 	if (nFuncCount > 0)
@@ -1724,7 +1703,7 @@ CBEClass::WriteFunctions(CBEHeaderFile& pFile)
 		WriteExternCEnd(pFile);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(head, %s) finished\n",
+	CCompiler::VerboseD("CBEClass::%s(head, %s) finished\n",
 		__func__, GetName().c_str());
 }
 
@@ -1734,12 +1713,11 @@ CBEClass::WriteFunctions(CBEHeaderFile& pFile)
 void
 CBEClass::WriteFunctions(CBEImplementationFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s(impl, %s) called\n", __func__, GetName().c_str());
+	CCompiler::VerboseI("CBEClass::%s(impl, %s) called\n", __func__, GetName().c_str());
 
 	int nFuncCount = GetFunctionWriteCount(pFile);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s %d functions\n",
+	CCompiler::Verbose("CBEClass::%s %d functions\n",
 		__func__, nFuncCount);
 
 	if (nFuncCount > 0)
@@ -1762,7 +1740,7 @@ CBEClass::WriteFunctions(CBEImplementationFile& pFile)
 		WriteExternCEnd(pFile);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(impl, %s) finished\n",
+	CCompiler::VerboseD("CBEClass::%s(impl, %s) finished\n",
 		__func__, GetName().c_str());
 }
 
@@ -1774,16 +1752,14 @@ CBEClass::WriteFunctions(CBEImplementationFile& pFile)
  */
 void CBEClass::WriteElements(CBEImplementationFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::Write(impl, %s) called\n", GetName().c_str());
+	CCompiler::VerboseI("CBEClass::Write(impl, %s) called\n", GetName().c_str());
 
 	// sort our members/elements depending on source line number
 	// into extra vector
 	CreateOrderedElementList();
 	WriteFunctions(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::Write(impl, %s) finished\n", GetName().c_str());
+	CCompiler::VerboseD("CBEClass::Write(impl, %s) finished\n", GetName().c_str());
 }
 
 /** \brief writes the line directive
@@ -1811,11 +1787,11 @@ void CBEClass::WriteConstant(CBEConstant *pConstant,
 	if (!pConstant->IsTargetFile(&pFile))
 		return;
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
+	CCompiler::VerboseI("CBEClass::%s called\n", __func__);
 
 	pConstant->Write(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief write a type definition
@@ -1829,11 +1805,11 @@ void CBEClass::WriteTypedef(CBETypedef *pTypedef,
 	if (!pTypedef->IsTargetFile(&pFile))
 		return;
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
+	CCompiler::VerboseI("CBEClass::%s called\n", __func__);
 
 	pTypedef->WriteDeclaration(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief write a function to the header file
@@ -1845,7 +1821,7 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
 {
 	assert(pFunction);
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(%s, %s) called\n",
+	CCompiler::VerboseI("CBEClass::%s(%s, %s) called\n",
 		__func__, pFunction->GetName().c_str(), pFile.GetFileName().c_str());
 
 	if (pFunction->DoWriteFunction(&pFile))
@@ -1854,7 +1830,7 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
 		pFile << "\n";
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief write a function to the implementation file
@@ -1866,7 +1842,7 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
 {
 	assert(pFunction);
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(%s, %s) called\n",
+	CCompiler::VerboseI("CBEClass::%s(%s, %s) called\n",
 		__func__, pFunction->GetName().c_str(), pFile.GetFileName().c_str());
 
 	if (pFunction->DoWriteFunction(&pFile))
@@ -1875,7 +1851,7 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
 		pFile << "\n";
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+	CCompiler::VerboseD("CBEClass::%s finished\n", __func__);
 }
 
 /** \brief calculates the function identifier
@@ -1903,7 +1879,7 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
 int CBEClass::GetOperationNumber(CFEOperation *pFEOperation)
 {
 	assert(pFEOperation);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::GetOperationNumber for %s\n",
+	CCompiler::Verbose("CBEClass::GetOperationNumber for %s\n",
 		pFEOperation->GetName().c_str());
 	CFEInterface *pFEInterface = pFEOperation->GetSpecificParent<CFEInterface>();
 	int nInterfaceNumber = GetInterfaceNumber(pFEInterface);
@@ -2313,7 +2289,7 @@ CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface,
  */
 bool CBEClass::IsTargetFile(CBEFile* pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::IsTargetFile(%s) called\n",
+	CCompiler::Verbose("CBEClass::IsTargetFile(%s) called\n",
 		pFile->GetFileName().c_str());
 
 	vector<CBEFunction*>::iterator iter;
@@ -2325,7 +2301,7 @@ bool CBEClass::IsTargetFile(CBEFile* pFile)
 			return true;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::IsTargetFile returns false\n");
+	CCompiler::Verbose("CBEClass::IsTargetFile returns false\n");
 	return false;
 }
 
@@ -2336,7 +2312,7 @@ bool CBEClass::IsTargetFile(CBEFile* pFile)
 void
 CBEClass::CreateBackEndTaggedDecl(CFEConstructedType *pFEType)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(constr type) called\n",
+	CCompiler::VerboseI("CBEClass::%s(constr type) called\n",
 		__func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -2344,7 +2320,7 @@ CBEClass::CreateBackEndTaggedDecl(CFEConstructedType *pFEType)
 	m_TypeDeclarations.Add(pType);
 	pType->SetParent(this);
 	pType->CreateBackEnd(pFEType);
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(constr type) returns\n",
+	CCompiler::VerboseD("CBEClass::%s(constr type) returns\n",
 		__func__);
 }
 

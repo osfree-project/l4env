@@ -32,6 +32,7 @@
 #include "BEDeclarator.h"
 #include "BEExpression.h"
 #include "BESizes.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "fe/FEEnumType.h"
 #include "fe/FEEnumDeclarator.h"
@@ -53,7 +54,7 @@ CBEEnumType::~CBEEnumType()
 void
 CBEEnumType::CreateBackEnd(CFETypeSpec *pFEType)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEEnumType::%s(fe) called\n",
+	CCompiler::VerboseI("CBEEnumType::%s(fe) called\n",
 		__func__);
 
 	CBEType::CreateBackEnd(pFEType);
@@ -89,7 +90,7 @@ CBEEnumType::CreateBackEnd(CFETypeSpec *pFEType)
 		m_nMaxSize = m_nSize;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEEnumType::%s(fe) returns\n",
+	CCompiler::VerboseD("CBEEnumType::%s(fe) returns\n",
 		__func__);
 }
 
@@ -101,7 +102,8 @@ void CBEEnumType::AddMember(CFEEnumDeclarator* pFEDeclarator)
 	if (!pFEDeclarator)
 		return;
 
-	CBEDeclarator *pDeclarator = new CBEDeclarator();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBEDeclarator *pDeclarator = pCF->GetNewDeclarator();
 	m_Members.Add(pDeclarator);
 	pDeclarator->CreateBackEnd(pFEDeclarator);
 }

@@ -1,4 +1,4 @@
-#include "local.h"
+#include "local_s.h"
 
 /** UTILITY: PRINT SOCKET FLAGS */
 void print_flags(struct ifreq *ifr)

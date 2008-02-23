@@ -56,7 +56,7 @@ CL4FiascoBEClassFactory::~CL4FiascoBEClassFactory()
  */
 CBESizes * CL4FiascoBEClassFactory::GetNewSizes()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4FiascoBEClassFactory: created class CL4V2BESizes\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4V2BESizes\n");
 	return new CL4FiascoBESizes();
 }
 
@@ -65,7 +65,7 @@ CBESizes * CL4FiascoBEClassFactory::GetNewSizes()
  */
 CBECommunication* CL4FiascoBEClassFactory::GetNewCommunication()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4FiascoBEClassFactory: created class CL4V2BEIPC\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4V2BEIPC\n");
 	return new CL4FiascoBEIPC();
 }
 
@@ -74,8 +74,7 @@ CBECommunication* CL4FiascoBEClassFactory::GetNewCommunication()
  */
 CBEMsgBuffer* CL4FiascoBEClassFactory::GetNewMessageBuffer()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEMsgBuffer\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEMsgBuffer\n");
 	return new CL4FiascoBEMsgBuffer();
 }
 
@@ -84,8 +83,7 @@ CBEMsgBuffer* CL4FiascoBEClassFactory::GetNewMessageBuffer()
  */
 CBEDispatchFunction* CL4FiascoBEClassFactory::GetNewDispatchFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEDispatchFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEDispatchFunction\n");
 	return new CL4FiascoBEDispatchFunction();
 }
 
@@ -94,8 +92,7 @@ CBEDispatchFunction* CL4FiascoBEClassFactory::GetNewDispatchFunction()
  */
 CBECallFunction* CL4FiascoBEClassFactory::GetNewCallFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBECallFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBECallFunction\n");
 	return new CL4FiascoBECallFunction();
 }
 
@@ -104,8 +101,7 @@ CBECallFunction* CL4FiascoBEClassFactory::GetNewCallFunction()
  */
 CBEClass * CL4FiascoBEClassFactory::GetNewClass()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEClass\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEClass\n");
 	return new CL4FiascoBEClass;
 }
 
@@ -114,8 +110,7 @@ CBEClass * CL4FiascoBEClassFactory::GetNewClass()
  */
 CBESrvLoopFunction *CL4FiascoBEClassFactory::GetNewSrvLoopFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBESrvLoopFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBESrvLoopFunction\n");
 	return new CL4FiascoBESrvLoopFunction();
 }
 
@@ -124,8 +119,7 @@ CBESrvLoopFunction *CL4FiascoBEClassFactory::GetNewSrvLoopFunction()
  */
 CBEWaitAnyFunction *CL4FiascoBEClassFactory::GetNewWaitAnyFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitAnyFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEWaitAnyFunction\n");
 	return new CL4FiascoBEWaitAnyFunction(true, false);
 }
 
@@ -134,8 +128,7 @@ CBEWaitAnyFunction *CL4FiascoBEClassFactory::GetNewWaitAnyFunction()
  */
 CBEWaitAnyFunction * CL4FiascoBEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEReplyAnyWaitAnyFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEReplyAnyWaitAnyFunction\n");
 	return new CL4FiascoBEWaitAnyFunction(true, true);
 }
 
@@ -144,8 +137,7 @@ CBEWaitAnyFunction * CL4FiascoBEClassFactory::GetNewReplyAnyWaitAnyFunction()
  */
 CBEWaitAnyFunction * CL4FiascoBEClassFactory::GetNewRcvAnyFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitAnyFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEWaitAnyFunction\n");
 	return new CL4FiascoBEWaitAnyFunction(false, false);
 }
 
@@ -154,8 +146,7 @@ CBEWaitAnyFunction * CL4FiascoBEClassFactory::GetNewRcvAnyFunction()
  */
 CBEUnmarshalFunction * CL4FiascoBEClassFactory::GetNewUnmarshalFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEUnmarshalFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEUnmarshalFunction\n");
 	return new CL4FiascoBEUnmarshalFunction();
 }
 
@@ -164,8 +155,7 @@ CBEUnmarshalFunction * CL4FiascoBEClassFactory::GetNewUnmarshalFunction()
  */
 CBEMarshalFunction * CL4FiascoBEClassFactory::GetNewMarshalFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEMarshalFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEMarshalFunction\n");
 	return new CL4FiascoBEMarshalFunction();
 }
 
@@ -174,8 +164,7 @@ CBEMarshalFunction * CL4FiascoBEClassFactory::GetNewMarshalFunction()
  */
 CBEWaitFunction * CL4FiascoBEClassFactory::GetNewRcvFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEWaitFunction\n");
 	return new CL4FiascoBEWaitFunction(false);
 }
 
@@ -184,8 +173,7 @@ CBEWaitFunction * CL4FiascoBEClassFactory::GetNewRcvFunction()
  */
 CBEWaitFunction * CL4FiascoBEClassFactory::GetNewWaitFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEWaitFunction\n");
 	return new CL4FiascoBEWaitFunction(true);
 }
 
@@ -194,8 +182,7 @@ CBEWaitFunction * CL4FiascoBEClassFactory::GetNewWaitFunction()
  */
 CBESndFunction * CL4FiascoBEClassFactory::GetNewSndFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBESndFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBESndFunction\n");
 	return new CL4FiascoBESndFunction();
 }
 
@@ -204,8 +191,7 @@ CBESndFunction * CL4FiascoBEClassFactory::GetNewSndFunction()
  */
 CBEReplyFunction * CL4FiascoBEClassFactory::GetNewReplyFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4FiascoBEClassFactory: created class CL4FiascoBEReplyFunction\n");
+	CCompiler::Verbose("CL4FiascoBEClassFactory: created class CL4FiascoBEReplyFunction\n");
 	return new CL4FiascoBEReplyFunction();
 }
 

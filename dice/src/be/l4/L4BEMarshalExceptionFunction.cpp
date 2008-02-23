@@ -56,8 +56,7 @@ CL4BEMarshalExceptionFunction::~CL4BEMarshalExceptionFunction()
  */
 void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4BEMarshalExceptionFunction::WriteMarshalling(%s) called\n",
+	CCompiler::Verbose("CL4BEMarshalExceptionFunction::WriteMarshalling(%s) called\n",
 		pFile.GetFileName().c_str());
 
 	bool bLocalTrace = false;
@@ -82,7 +81,6 @@ void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 		m_bTraceOn = false;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4BEMarshalExceptionFunction::WriteMarshalling returns\n");
+	CCompiler::Verbose("CL4BEMarshalExceptionFunction::WriteMarshalling returns\n");
 }
 

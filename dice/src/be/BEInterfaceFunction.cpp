@@ -57,7 +57,7 @@ void CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bCompo
 {
 	assert(pFEInterface);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEInterfaceFunction::%s called\n", __func__);
 	// basic init
 	CBEFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
@@ -94,7 +94,7 @@ void CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bCompo
  */
 void CBEInterfaceFunction::AddParameters()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::VerboseI("%s called\n", __func__);
 
 	// this adds the CORBA_Object
 	AddBeforeParameters();
@@ -107,6 +107,6 @@ void CBEInterfaceFunction::AddParameters()
 	// this adds the environment
 	AddAfterParameters();
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::VerboseD("%s returns true\n", __func__);
 }
 

@@ -280,8 +280,8 @@ typedef struct CORBA_Environment
 	union
 	{
 		void *param;
-		l4_uint32_t ipc_error;
-		l4_uint32_t sched_bits;
+		unsigned int ipc_error;
+		unsigned int sched_bits;
 	} _p;
 
 	l4_timeout_t timeout;
@@ -304,8 +304,8 @@ typedef struct CORBA_Server_Environment
 	union
 	{
 		void *param;
-		l4_uint32_t ipc_error;
-		l4_uint32_t sched_bits;
+		unsigned int ipc_error;
+		unsigned int sched_bits;
 	} _p;
 
 	l4_timeout_t timeout;
@@ -550,12 +550,6 @@ dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2)
 	return 0;
     return o1->raw == o2->raw;
 }
-
-NAMESPACE_DICE_END /* exclude included files */
-
-#include <l4/sys/ipc.h> /* for L4_IPC_DECEIT_MASK */
-
-NAMESPACE_DICE_BEG
 
 #define DICE_IPC_DECEIT 1
 

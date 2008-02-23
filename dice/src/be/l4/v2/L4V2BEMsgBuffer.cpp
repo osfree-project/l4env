@@ -70,7 +70,7 @@ CL4V2BEMsgBuffer* CL4V2BEMsgBuffer::Clone()
  */
 void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
+	CCompiler::VerboseI("CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
 		__func__, pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
 	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct);
@@ -85,7 +85,7 @@ void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStr
 	CBETypedDeclarator *pSendDope = GetSendDopeVariable();
 	pStruct->m_Members.Add(pSendDope);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s: returns true\n", __func__);
+	CCompiler::VerboseD("CL4V2BEMsgBuffer::%s: returns true\n", __func__);
 }
 /** \brief return the offset where the payload starts
  *  \return the offset in bytes

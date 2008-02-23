@@ -78,14 +78,14 @@ void
 CL4BEMsgBufferType::AddElements(CFEOperation *pFEOperation,
 	CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+	CCompiler::Verbose("CL4BEMsgBufferType::%s(%s, %d) called\n",
 		__func__, pFEOperation->GetName().c_str(), (int)nType);
 
 	CBEMsgBufferType::AddElements(pFEOperation, nType);
 
 	AddZeroFlexpage(pFEOperation, nType);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s returns\n", __func__);
+	CCompiler::Verbose("CL4BEMsgBufferType::%s returns\n", __func__);
 }
 
 /** \brief adds elements for a single parameter to the message buffer
@@ -97,7 +97,7 @@ CL4BEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType)
 {
 	assert(pFEParameter);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+	CCompiler::Verbose("CL4BEMsgBufferType::%s(%s, %d) called\n",
 		__func__, pFEParameter->m_Declarators.First()->GetName().c_str(), (int)nType);
 
 	if (pFEParameter->m_Attributes.Find(ATTR_REF))
@@ -118,12 +118,10 @@ CL4BEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
  *  \param pFEParameter the parameter to add the elements for
  *  \param nType the type of the struct
  */
-void
-CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
-	CMsgStructType nType)
+void CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType)
 {
 	assert(pFEParameter);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+	CCompiler::Verbose("CL4BEMsgBufferType::%s(%s, %d) called\n",
 		__func__, pFEParameter->m_Declarators.First()->GetName().c_str(), (int)nType);
 	// get struct
 	CFEOperation *pFEOperation =
@@ -146,6 +144,8 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
 	pMember->ReplaceType(pType);
 	// set the pointer of the declarator to zero
 	pMember->m_Declarators.First()->SetStars(0);
+	// assert the ref attribute
+	assert(pMember->m_Attributes.Find(ATTR_REF));
 
 	// add C language property to avoid const qualifier
 	// in struct
@@ -163,7 +163,7 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType)
 {
 	assert(pFEParameter);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+	CCompiler::Verbose("CL4BEMsgBufferType::%s(%s, %d) called\n",
 		__func__, pFEParameter->m_Declarators.First()->GetName().c_str(), (int)nType);
 	// get struct
 	CFEOperation *pFEOperation =
@@ -197,7 +197,7 @@ void
 CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
 	CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+	CCompiler::Verbose("CL4BEMsgBufferType::%s(%s, %d) called\n",
 		__func__, pFEOperation->GetName().c_str(), (int)nType);
 	bool bFlexpage = false;
 

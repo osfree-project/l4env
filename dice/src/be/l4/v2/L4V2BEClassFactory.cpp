@@ -52,7 +52,7 @@ CL4V2BEClassFactory::~CL4V2BEClassFactory()
  */
 CBESizes * CL4V2BEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V2BEClassFactory: created class CL4V2BESizes\n");
+    CCompiler::Verbose("CL4V2BEClassFactory: created class CL4V2BESizes\n");
     return new CL4V2BESizes();
 }
 
@@ -61,7 +61,7 @@ CBESizes * CL4V2BEClassFactory::GetNewSizes()
  */
 CBECommunication* CL4V2BEClassFactory::GetNewCommunication()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V2BEClassFactory: created class CL4V2BEIPC\n");
+    CCompiler::Verbose("CL4V2BEClassFactory: created class CL4V2BEIPC\n");
     return new CL4V2BEIPC();
 }
 
@@ -70,8 +70,7 @@ CBECommunication* CL4V2BEClassFactory::GetNewCommunication()
  */
 CBEDispatchFunction* CL4V2BEClassFactory::GetNewDispatchFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CL4V2BEClassFactory: created class CL4V2BEDispatchFunction\n");
+    CCompiler::Verbose("CL4V2BEClassFactory: created class CL4V2BEDispatchFunction\n");
     return new CL4V2BEDispatchFunction();
 }
 
@@ -80,7 +79,7 @@ CBEDispatchFunction* CL4V2BEClassFactory::GetNewDispatchFunction()
  */
 CBEMsgBuffer* CL4V2BEClassFactory::GetNewMessageBuffer()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V2BEClassFactory: created class CL4V2BEMsgBuffer\n");
+    CCompiler::Verbose("CL4V2BEClassFactory: created class CL4V2BEMsgBuffer\n");
     return new CL4V2BEMsgBuffer();
 }
 

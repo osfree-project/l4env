@@ -33,7 +33,9 @@
 #include "be/BEFunction.h"
 #include "be/BETypedDeclarator.h"
 #include "be/l4/v4/L4V4BENameFactory.h"
+#include "be/l4/L4BEMarshaller.h"
 #include "Compiler.h"
+#include <cassert>
 
 CL4V4IA32IPC::CL4V4IA32IPC()
  : CL4V4BEIPC()
@@ -59,7 +61,11 @@ void CL4V4IA32IPC::WriteCall(CBEFile& pFile, CBEFunction* pFunction)
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	CMsgStructType nSndDir(pFunction->GetSendDirection());
 
+	CL4BEMarshaller *pMarshaller =
+		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+	assert(pMarshaller);
     CBEDeclarator *pObjName = pFunction->GetObject()->m_Declarators.First();;
     // Call(to, sndtimeout, rcvtimeout)
     //  = Ipc(to, to, timeouts(sndtimeout, rcvtimeout), -)
@@ -83,19 +89,26 @@ void CL4V4IA32IPC::WriteCall(CBEFile& pFile, CBEFunction* pFunction)
     // do not load to into EAX, because EAX is used
     // during mathematical calculations, such as
     // MR0 bit stuffing
-    ++pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
+    ++pFile;// << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
+	pFile << "\t__L4_SAVE_REGS\n";
+	pFile << "\t\"mov %%edx,%%eax \\n\\t\"\n";
     pFile << "\t\"mov %%gs:0, %%edi \\n\\t\"\n";
     pFile << "\t\"call __L4_Ipc \\n\\t\"\n";
     pFile << "\t\"mov %%ebx, 4(%%edi) \\n\\t\" /* save mr1 */\n";
     pFile << "\t\"mov %%ebp, 8(%%edi) \\n\\t\" /* save mr2 */\n";
+	pFile << "\t__L4_RESTORE_REGS\n";
     pFile << "\t: /* output */\n";
     pFile << "\t\"=S\" (" << sMsgTag << ") /* ESI */\n";
     pFile << "\t: /* input */\n";
-    pFile << "\t\"d\" (" << pObjName->GetName() << "), /* EDX */\n";
+    pFile << "\t\"d\" (*" << pObjName->GetName() << "), /* EDX, copy in EAX */\n";
     pFile << "\t\"c\" (" << sTimeout << "), /* ECX */\n";
-    pFile << "\t\"S\" (" << sMsgTag << ") /* ESI */\n";
+    pFile << "\t\"0\" (";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, -1,
+			false, false))
+		pFile << sMsgTag;
+	pFile << ") /* ESI */\n";
     pFile << "\t: /* clobber list */\n";
-    pFile << "\t\"memory\"\n";
+    pFile << "\t\"ebx\", \"eax\", \"memory\"\n";
 
     --pFile << "\t);\n";
 }

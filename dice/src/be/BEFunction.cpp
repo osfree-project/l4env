@@ -189,8 +189,7 @@ CBEFunction::AddAfterParameters()
 void
 CBEFunction::Write(CBEHeaderFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	// in header file write access specifier
@@ -207,8 +206,7 @@ CBEFunction::Write(CBEHeaderFile& pFile)
 	else
 		WriteFunctionDeclaration(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief writes the content of the function to the target implementation file
@@ -218,15 +216,13 @@ CBEFunction::Write(CBEHeaderFile& pFile)
  */
 void CBEFunction::Write(CBEImplementationFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	if (!DoWriteFunctionInline(pFile))
 		WriteFunctionDefinition(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief test if this function is written inline
@@ -250,7 +246,7 @@ CBEFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 void
 CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) in %s called\n",
+	CCompiler::Verbose("CBEFunction::%s(%s) in %s called\n",
 		__func__, pFile.GetFileName().c_str(), GetName().c_str());
 
 	// CPP TODOs:
@@ -277,7 +273,7 @@ CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 	// ); newline
 	pFile << ");\n";
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief writes the definition of the function to the target file
@@ -294,8 +290,7 @@ CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 void
 CBEFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	m_nParameterIndent = pFile.GetIndent();
@@ -334,7 +329,7 @@ CBEFunction::WriteFunctionDefinition(CBEFile& pFile)
 	// } newline
 	--pFile << "\t}\n\n";
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n",
+	CCompiler::VerboseD("CBEFunction::%s returns\n",
 		__func__);
 }
 
@@ -363,7 +358,7 @@ void CBEFunction::WriteReturnType(CBEFile& pFile)
  */
 bool CBEFunction::WriteParameterList(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s called for %s\n", __func__,
 		GetName().c_str());
 	int nDiffIndent = m_nParameterIndent - pFile.GetIndent();
 	pFile+=nDiffIndent;
@@ -431,8 +426,7 @@ CBEFunction::WriteParameter(CBEFile& pFile,
  */
 void CBEFunction::WriteBody(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	// function local typedefs
@@ -451,7 +445,7 @@ void CBEFunction::WriteBody(CBEFile& pFile)
 	WriteCleanup(pFile);
 	WriteReturn(pFile);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n",
+	CCompiler::VerboseD("CBEFunction::%s returns\n",
 		__func__);
 }
 
@@ -498,7 +492,7 @@ CBEFunction::WriteVariableDeclaration(CBEFile& pFile)
 void
 CBEFunction::WriteMarshalling(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n",
+	CCompiler::VerboseI("CBEFunction::%s(%s) called\n",
 		__func__, GetName().c_str());
 
 	bool bLocalTrace = false;
@@ -517,8 +511,7 @@ CBEFunction::WriteMarshalling(CBEFile& pFile)
 		m_bTraceOn = false;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
+	CCompiler::VerboseD("CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
 }
 
 /** \brief writes the clean up of the function
@@ -541,15 +534,14 @@ void CBEFunction::WriteCleanup(CBEFile& /*pFile*/)
  */
 void CBEFunction::WriteReturn(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n",
+	CCompiler::VerboseI("CBEFunction::%s(%s) called\n",
 		__func__, GetName().c_str());
 
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	if (!pReturn || GetReturnType()->IsVoid())
 	{
 		pFile << "\treturn;\n";
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
+		CCompiler::VerboseD("CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
 		return;
 	}
 
@@ -559,8 +551,7 @@ void CBEFunction::WriteReturn(CBEFile& pFile)
 	pRetVar->WriteDeclaration(pFile);
 	pFile << ";\n";
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
+	CCompiler::VerboseD("CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
 }
 
 /** \brief writes the unmarshlling of the message buffer
@@ -571,7 +562,7 @@ void CBEFunction::WriteReturn(CBEFile& pFile)
 void
 CBEFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n",
+	CCompiler::VerboseI("CBEFunction::%s(%s) called\n",
 		__func__, GetName().c_str());
 
 	bool bLocalTrace = false;
@@ -590,8 +581,7 @@ CBEFunction::WriteUnmarshalling(CBEFile& pFile)
 		m_bTraceOn = false;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
+	CCompiler::VerboseD("CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
 }
 
 /** \brief writes a function call to this function
@@ -607,7 +597,7 @@ CBEFunction::WriteUnmarshalling(CBEFile& pFile)
  */
 void CBEFunction::WriteCall(CBEFile& pFile, std::string sReturnVar, bool bCallFromSameClass)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n",
+	CCompiler::VerboseI("CBEFunction::%s(%s) called\n",
 		__func__, GetName().c_str());
 
 	pFile << "\t";
@@ -629,8 +619,7 @@ void CBEFunction::WriteCall(CBEFile& pFile, std::string sReturnVar, bool bCallFr
 	pFile-=m_nParameterIndent;
 	pFile << ");\n";
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
+	CCompiler::VerboseD("CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
 }
 
 /** \brief writes the parameter list for a function call
@@ -639,7 +628,7 @@ void CBEFunction::WriteCall(CBEFile& pFile, std::string sReturnVar, bool bCallFr
  */
 void CBEFunction::WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s called for %s\n", __func__,
 		GetName().c_str());
 	bool bComma = false;
 	vector<CBETypedDeclarator*>::iterator iter;
@@ -670,11 +659,11 @@ void CBEFunction::WriteCallParameter(CBEFile& pFile, CBETypedDeclarator * pParam
 {
 	CBEDeclarator *pOriginalDecl = pParameter->m_Declarators.First();
 	CBEDeclarator *pCallDecl = pParameter->GetCallDeclarator();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s: orig @ %p, call q %p\n",
+	CCompiler::Verbose("CBEFunction::%s: orig @ %p, call q %p\n",
 		__func__, pOriginalDecl, pCallDecl);
 	if (!pCallDecl)
 		pCallDecl = pOriginalDecl;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s: write parameter %s\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s: write parameter %s\n", __func__,
 		pOriginalDecl->GetName().c_str());
 	WriteCallParameterName(pFile, pOriginalDecl, pCallDecl);
 }
@@ -700,15 +689,12 @@ void CBEFunction::WriteCallParameter(CBEFile& pFile, CBETypedDeclarator * pParam
 void CBEFunction::WriteCallParameterName(CBEFile& pFile, CBEDeclarator * pInternalDecl,
 	CBEDeclarator * pExternalDecl)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s called\n", __func__);
 	// check stars
 	int nDiffStars = pExternalDecl->GetStars() - pInternalDecl->GetStars();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s nDiffStars = %d = %d - %d (1)\n", __func__, nDiffStars,
+	CCompiler::Verbose("CBEFunction::%s nDiffStars = %d = %d - %d (1)\n", __func__, nDiffStars,
 		pExternalDecl->GetStars(), pInternalDecl->GetStars());
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s nDiffStars = %d (2)\n", __func__, nDiffStars);
+	CCompiler::Verbose("CBEFunction::%s nDiffStars = %d (2)\n", __func__, nDiffStars);
 
 	int nCount;
 	for (nCount = nDiffStars; nCount < 0; nCount++)
@@ -727,7 +713,7 @@ void CBEFunction::WriteCallParameterName(CBEFile& pFile, CBEDeclarator * pIntern
 	for (nCount = nDiffStars+1; nCount < 0; nCount++)
 		pFile << ")";
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s returns\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief counts the number of string parameters
@@ -1113,7 +1099,7 @@ int CBEFunction::GetFixedReturnSize(DIRECTION_TYPE nDirection)
  */
 void CBEFunction::AddMessageBuffer()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s called\n", __func__);
 
 	if (m_pMsgBuffer)
 		delete m_pMsgBuffer;
@@ -1137,7 +1123,7 @@ void CBEFunction::AddMessageBuffer()
 	// (all done in msgbuffers used to create class' message buffer)
 	MsgBufferInitialization(m_pMsgBuffer);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a message buffer parameter for a specific function
@@ -1158,7 +1144,7 @@ void CBEFunction::AddMessageBuffer()
  */
 void CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s called\n", __func__);
 
 	/* create the function local typedef */
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -1186,7 +1172,7 @@ void CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
 	// add as user defined type
 	m_pMsgBuffer->CreateBackEnd(sTypeName, sName, 0);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief manipulates the message buffer
@@ -1208,7 +1194,7 @@ int
 CBEFunction::WriteMarshalReturn(CBEFile& pFile,
 	bool bMarshal)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
+	CCompiler::Verbose("CBEFunction::%s for %s called\n", __func__, GetName().c_str());
 
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	if (!pReturn)
@@ -1219,7 +1205,7 @@ CBEFunction::WriteMarshalReturn(CBEFile& pFile,
 	CBEMarshaller *pMarshaller = GetMarshaller();
 	pMarshaller->MarshalParameter(pFile, this, pReturn, bMarshal);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns\n", __func__, GetName().c_str());
+	CCompiler::Verbose("CBEFunction::%s for %s returns\n", __func__, GetName().c_str());
 	return pType->GetSize();
 }
 
@@ -1235,7 +1221,7 @@ int
 CBEFunction::WriteMarshalOpcode(CBEFile& pFile,
 	bool bMarshal)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
+	CCompiler::Verbose("CBEFunction::%s for %s called\n", __func__, GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcode = pNF->GetOpcodeVariable();
@@ -1246,7 +1232,7 @@ CBEFunction::WriteMarshalOpcode(CBEFile& pFile,
 	pMarshaller->MarshalParameter(pFile, this, pOpcode, bMarshal);
 	int nSize = pOpcode->GetType()->GetSize();
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns %d\n", __func__, GetName().c_str(), nSize);
+	CCompiler::Verbose("CBEFunction::%s for %s returns %d\n", __func__, GetName().c_str(), nSize);
 	return nSize;
 }
 
@@ -1269,16 +1255,14 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
 	bool bMarshal,
 	bool bReturn)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::WriteMarshalException(%s, %s, %s) for %s called\n",
+	CCompiler::Verbose("CBEFunction::WriteMarshalException(%s, %s, %s) for %s called\n",
 		pFile.GetFileName().c_str(), bMarshal ? "true" : "false",
 		bReturn ? "true" : "false", GetName().c_str());
 
 	CBETypedDeclarator *pExceptionVar = GetExceptionVariable();
 	if (!pExceptionVar)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEFunction::WriteMarshalException no exception variable found\n");
+		CCompiler::Verbose("CBEFunction::WriteMarshalException no exception variable found\n");
 		return;
 	}
 	CBEMarshaller *pMarshaller = GetMarshaller();
@@ -1297,8 +1281,7 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
 		--pFile;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::WriteMarshalException for %s finished\n",
+	CCompiler::Verbose("CBEFunction::WriteMarshalException for %s finished\n",
 		GetName().c_str());
 }
 
@@ -1308,7 +1291,7 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
  */
 void CBEFunction::SetNoReturnVar()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s called\n", __func__);
 	// recycle old var
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 
@@ -1336,7 +1319,7 @@ void CBEFunction::SetNoReturnVar()
 	}
 
 	SetReturnVarAttributes(pReturn);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief initializes and sets the return var to a new value
@@ -1440,8 +1423,7 @@ CBEFunction::SetReturnVarAttributes(CBETypedDeclarator *pReturn)
  */
 CBETypedDeclarator* CBEFunction::FindParameter(std::string sName, bool bCall)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(%s, %s) called\n", __func__,
+	CCompiler::VerboseI("CBEFunction::%s(%s, %s) called\n", __func__,
 		sName.c_str(), bCall ? "true" : "false");
 
 	CBETypedDeclarator *pParameter;
@@ -1451,13 +1433,11 @@ CBETypedDeclarator* CBEFunction::FindParameter(std::string sName, bool bCall)
 		pParameter = m_Parameters.Find(sName);
 	if (pParameter)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEFunction::%s found, returns\n", __func__);
+		CCompiler::VerboseD("CBEFunction::%s found, returns\n", __func__);
 		return pParameter;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s returns NULL\n", __func__);
+	CCompiler::VerboseD("CBEFunction::%s returns NULL\n", __func__);
 	return 0;
 }
 
@@ -1471,8 +1451,7 @@ CBETypedDeclarator* CBEFunction::FindParameter(CDeclStack* pStack, bool bCall)
 	if (!pStack || pStack->empty())
 		return 0;
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s(stack, %s) called in %s\n", __func__,
+	CCompiler::VerboseI("CBEFunction::%s(stack, %s) called in %s\n", __func__,
 		bCall ? "true" : "false", GetName().c_str());
 
 	// find parameter
@@ -1480,13 +1459,11 @@ CBETypedDeclarator* CBEFunction::FindParameter(CDeclStack* pStack, bool bCall)
 		FindParameter(pStack->front().pDeclarator->GetName(), bCall);
 	if (!pParameter)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEFunction::%s no param, returns 0\n", __func__);
+		CCompiler::VerboseD("CBEFunction::%s no param, returns 0\n", __func__);
 		return 0;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEFunction::%s calling FindParameterMember(%s,,stack)\n",
+	CCompiler::VerboseD("CBEFunction::%s calling FindParameterMember(%s,,stack)\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str());
 
 	return FindParameterMember(pParameter, pStack->begin() + 1, pStack);
@@ -1501,7 +1478,7 @@ CBETypedDeclarator* CBEFunction::FindParameter(CDeclStack* pStack, bool bCall)
 CBETypedDeclarator* CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
 	CDeclStack::iterator iter, CDeclStack* pStack)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%p (%s)) called\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s(%p (%s)) called\n", __func__,
 		pParameter,
 		pParameter ? pParameter->m_Declarators.First()->GetName().c_str() : "");
 	// if no parameter, return
@@ -1521,7 +1498,7 @@ CBETypedDeclarator* CBEFunction::FindParameterMember(CBETypedDeclarator *pParame
 	CBEStructType *pStruct = dynamic_cast<CBEStructType*>(pType);
 	if (pStruct)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: type of parameter is struct\n",
+		CCompiler::Verbose("CBEFunction::%s: type of parameter is struct\n",
 			__func__);
 		CBETypedDeclarator *pMember =
 			pStruct->m_Members.Find(iter->pDeclarator->GetName());
@@ -1531,14 +1508,14 @@ CBETypedDeclarator* CBEFunction::FindParameterMember(CBETypedDeclarator *pParame
 	CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pType);
 	if (pUnion)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: type of parameter is union\n",
+		CCompiler::Verbose("CBEFunction::%s: type of parameter is union\n",
 			__func__);
 		CBETypedDeclarator *pMember =
 			pUnion->m_UnionCases.Find(iter->pDeclarator->GetName());
 		return FindParameterMember(pMember, iter + 1, pStack);
 	}
 	// no constructed type, and stack not empty, something is wrong
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: no constructed type: return 0\n",
+	CCompiler::Verbose("CBEFunction::%s: no constructed type: return 0\n",
 		__func__);
 	return 0;
 }
@@ -1576,8 +1553,7 @@ CBEFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 	{
 		if (!(*iter)->IsDirection(nDirection))
 			continue;
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s checking %s (var: %s, str: %s)\n", __func__,
+		CCompiler::Verbose("CBEFunction::%s checking %s (var: %s, str: %s)\n", __func__,
 			(*iter)->m_Declarators.First()->GetName().c_str(),
 			((*iter)->IsVariableSized()) ? "yes" : "no",
 			((*iter)->IsString()) ? "yes" : "no");
@@ -1587,8 +1563,7 @@ CBEFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 	CBETypedDeclarator *pRet = GetReturnVariable();
 	if (pRet && pRet->IsDirection(nDirection))
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s checking %s (var: %s, str: %s)\n", __func__,
+		CCompiler::Verbose("CBEFunction::%s checking %s (var: %s, str: %s)\n", __func__,
 			pRet->m_Declarators.First()->GetName().c_str(),
 			(pRet->IsVariableSized()) ? "yes" : "no",
 			(pRet->IsString()) ? "yes" : "no");
@@ -1739,7 +1714,7 @@ bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
 		if (!(*iter)->IsDirection(nDirection))
 			continue;
 		CBEDeclarator *pDecl = (*iter)->m_Declarators.First();
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s checking %s (array: %s)\n",
+		CCompiler::Verbose("CBEFunction::%s checking %s (array: %s)\n",
 			__func__, pDecl->GetName().c_str(), (pDecl->IsArray()) ? "yes" : "no");
 		if (pDecl->IsArray())
 			return true;
@@ -1748,7 +1723,7 @@ bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
 	if (pRet && pRet->IsDirection(nDirection))
 	{
 		CBEDeclarator *pDecl = pRet->m_Declarators.First();
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s checking %s (array: %s)\n",
+		CCompiler::Verbose("CBEFunction::%s checking %s (array: %s)\n",
 			__func__, pDecl->GetName().c_str(), (pDecl->IsArray()) ? "yes" : "no");
 		if (pDecl->IsArray())
 			return true;
@@ -1823,7 +1798,7 @@ CMsgStructType CBEFunction::GetReceiveDirection()
  */
 void CBEFunction::CreateBackEnd(CFEBase *pFEObject, bool bComponentSide)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s called\n", __func__);
 
 	// call CBEObject's CreateBackEnd method
 	SetComponentSide(bComponentSide);
@@ -1962,8 +1937,7 @@ void CBEFunction::SetEnvironment(CBETypedDeclarator* pEnv)
  */
 void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, std::string sNewDeclName, int nStars)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s(decl: %s, %s, %d) called\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s(decl: %s, %s, %d) called\n", __func__,
 		pTypedDecl->m_Declarators.First()->GetName().c_str(),
 		sNewDeclName.c_str(), nStars);
 	// check if there is already a second declarator
@@ -1976,8 +1950,7 @@ void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, std::string sN
 		pTypedDecl->m_Declarators.Add(pSecond);
 		pSecond->CreateBackEnd(sNewDeclName, nStars);
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s(decl) returns\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s(decl) returns\n", __func__);
 }
 
 /** \brief create a call varaiable for the original parameter
@@ -2004,8 +1977,7 @@ void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, std::string sN
  */
 void CBEFunction::SetCallVariable(std::string sOriginalName, int nStars, std::string sCallName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s(%s, %d, %s) called\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s(%s, %d, %s) called\n", __func__,
 		sOriginalName.c_str(), nStars, sCallName.c_str());
 	// clone existing parameters if not yet done
 	if (m_CallParameters.empty())
@@ -2013,16 +1985,14 @@ void CBEFunction::SetCallVariable(std::string sOriginalName, int nStars, std::st
 		vector<CBETypedDeclarator*>::iterator iter;
 		for (iter = m_Parameters.begin(); iter != m_Parameters.end(); iter++)
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"CBEFunction::%s cloning %s\n", __func__,
+			CCompiler::Verbose("CBEFunction::%s cloning %s\n", __func__,
 				(*iter)->m_Declarators.First()->GetName().c_str());
 			m_CallParameters.Add((*iter)->Clone());
 		}
 	}
 	// search for original name
 	CBETypedDeclarator *pCallParam = m_CallParameters.Find(sOriginalName);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s call param for %s at %p\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s call param for %s at %p\n", __func__,
 		sOriginalName.c_str(), pCallParam);
 	// if we didn't find anything, then pCallParam is 0
 	if (!pCallParam)
@@ -2030,8 +2000,7 @@ void CBEFunction::SetCallVariable(std::string sOriginalName, int nStars, std::st
 	// new name and new stars
 	SetCallVariable(pCallParam, sCallName, nStars);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::%s returns\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief remove the call declarator set for a parameter
@@ -2055,7 +2024,7 @@ CBETypedDeclarator* CBEFunction::GetParameter(CBEDeclarator *pDeclarator, bool b
 	assert(pDeclarator);
 	CBETypedDeclarator *pParameter =
 		FindParameter(pDeclarator->GetName(), bCall);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s FindParameter(%s) returned %p\n",
+	CCompiler::Verbose("CBEFunction::%s FindParameter(%s) returned %p\n",
 		__func__, pDeclarator->GetName().c_str(), pParameter);
 	// declarators should be the same, e.g.
 	// the function 'f(int x, struct_t b)' with struct_t = { int x, y; },
@@ -2127,7 +2096,7 @@ CBETypedDeclarator* CBEFunction::FindParameterIsAttribute(ATTR_TYPE nAttributeTy
  */
 CBETypedef* CBEFunction::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s(%s, %p) in %s called\n",
+	CCompiler::Verbose("CBEFunction::%s(%s, %p) in %s called\n",
 		__func__, sTypeName.c_str(), pPrev, GetName().c_str());
 
 	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
@@ -2149,7 +2118,7 @@ CBETypedef* CBEFunction::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 			return *iter;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s not found in func, try class\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s not found in func, try class\n", __func__);
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);
 	return pClass->FindTypedef(sTypeName, pPrev);
@@ -2198,7 +2167,7 @@ string CBEFunction::GetExceptionWordInitString()
  */
 void CBEFunction::WriteExceptionWordInitialization(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s for %s called\n", __func__,
 		GetName().c_str());
 
 	CBETypedDeclarator *pExceptionVar = GetExceptionVariable();
@@ -2211,7 +2180,7 @@ void CBEFunction::WriteExceptionWordInitialization(CBEFile& pFile)
 	// get name of exception word
 	pFile << "\t" << pDecl->GetName() << " = " << sInitString << ";\n";
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s for %s returns\n", __func__,
 		GetName().c_str());
 }
 
@@ -2248,7 +2217,7 @@ int CBEFunction::GetParameterAlignment(int nCurrentOffset, int nParamSize)
  */
 void CBEFunction::AddLocalVariable(CBETypedDeclarator *pVariable)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s (%p) called\n", __func__,
+	CCompiler::Verbose("CBEFunction::%s (%p) called\n", __func__,
 		pVariable);
 	if (!pVariable)
 		return;
@@ -2303,8 +2272,7 @@ CBETypedDeclarator* CBEFunction::GetReturnVariable()
  */
 void CBEFunction::AddLocalVariable(std::string sUserType, std::string sName, int nStars, std::string sInit)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEFunction::AddLocalVariable(%s, %s, %d, %s) called\n",
+	CCompiler::Verbose("CBEFunction::AddLocalVariable(%s, %s, %d, %s) called\n",
 		sUserType.c_str(), sName.c_str(), nStars, sInit.c_str());
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -2411,7 +2379,7 @@ void CBEFunction::AddExceptionVariable()
 	if (m_Attributes.Find(ATTR_NOEXCEPTIONS))
 		return;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -2435,7 +2403,7 @@ void CBEFunction::AddExceptionVariable()
 	AddLocalVariable(pExceptionVar);
 	//     pExceptionVar->SetDefaultInitString(GetExceptionWordInitString());
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s returns true\n", __func__);
 }
 
 /** \brief check if parameter should be written
@@ -2447,7 +2415,7 @@ void CBEFunction::AddExceptionVariable()
 bool
 CBEFunction::DoWriteParameter(CBETypedDeclarator* /*pParam*/)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s() called\n", __func__);
+	CCompiler::Verbose("CBEFunction::%s() called\n", __func__);
 	return true;
 }
 

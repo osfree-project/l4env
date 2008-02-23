@@ -62,10 +62,10 @@ CBEComponent::~CBEComponent()
  */
 void CBEComponent::Write()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    CCompiler::Verbose("CBEComponent::%s called\n", __func__);
     WriteHeaderFiles();
     WriteImplementationFiles();
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s done.\n", __func__);
+    CCompiler::Verbose("CBEComponent::%s done.\n", __func__);
 }
 
 /** \brief checks whether this interface needs a server loop

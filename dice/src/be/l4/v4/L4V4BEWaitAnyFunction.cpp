@@ -85,7 +85,10 @@ CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 
 	WriteIPCErrorCheck(pFile); // set IPC exception
 	if (m_bReply)
+	{
+		pFile << "\t/* release memory here */\n";
 		WriteReleaseMemory(pFile);
+	}
 }
 
 /** \brief writes the ipc code
@@ -176,7 +179,7 @@ CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 		((pMsgBuffer->m_Declarators.First()->GetStars() > 0) ||
 		 pMsgBuffer->IsVariableSized(GetReceiveDirection())))
 		bVarSized = true;
-	pFile << "\tL4_Set_MsgLabel ( (" << sType << "*) " << ((bVarSized) ? "" : "&") <<
+	pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) " << ((bVarSized) ? "" : "&") <<
 		pMsgBuffer->m_Declarators.First()->GetName() << ", 0);\n";
 	// set exception
 	CBEDeclarator *pDecl = pEnv->m_Declarators.First();

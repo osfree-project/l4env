@@ -43,6 +43,10 @@ public:
 	CL4V4BEMarshaller();
 	virtual ~CL4V4BEMarshaller();
 
+public:
+	virtual bool MarshalWordMember(CBEFile& pFile, CBEFunction *pFunction,
+		CMsgStructType nType, int nPosition, bool bReference, bool bLValue);
+
 protected:
 	virtual bool DoSkipParameter(CBEFunction *pFunction,
 		CBETypedDeclarator *pParameter, CMsgStructType nType);
@@ -51,7 +55,6 @@ protected:
 	virtual void WriteRefstringCastMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
 		CBETypedDeclarator *pMember);
 
-protected:
 	virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
 
 };

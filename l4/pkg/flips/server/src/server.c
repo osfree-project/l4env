@@ -6,7 +6,7 @@
 #include <l4/env/errno.h>
 
 /*** LOCAL INCLUDES ***/
-#include "local.h"
+#include "local_s.h"
 #include "flips-server.h"
 
 #define FLIPS_DEBUG         0
@@ -48,7 +48,7 @@ void flips_session_thread(void *arg)
 	*my_tid_ptr = my_tid;
 	LOGd(FLIPS_DEBUG, "Flips(session_thread): new thread_id %x.%x\n",
 		my_tid.id.task, my_tid.id.lthread);
-	l4dde_process_add_worker();
+        FLIPS_PROCESS_WORKER();
 	l4thread_started(NULL);
 	flips_server_loop(&env);
 }

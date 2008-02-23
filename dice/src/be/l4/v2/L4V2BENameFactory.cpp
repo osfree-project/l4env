@@ -99,8 +99,7 @@ string CL4V2BENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize)
 	}
 	else
 		sReturn = CL4BENameFactory::GetTypeName(nType, bUnsigned, nSize);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CL4V2BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+	CCompiler::Verbose("CL4V2BENameFactory::%s Generated type name \"%s\" for type code %d\n",
 		__func__, sReturn.c_str(), nType);
 	return sReturn;
 }

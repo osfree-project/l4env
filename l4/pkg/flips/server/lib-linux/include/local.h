@@ -29,8 +29,5 @@ void liblinux_net_rx_action(struct softirq_action *);
 void liblinux_skb_stats(struct sk_buff *skb, int rx);
 void liblinux_check_netif_rx(struct net_device *dev, int value);
 
-//#include <l4/thread/thread.h>
-//l4thread_t liblinux_sofirq_nr2id(int nr);
-
 #endif
 

@@ -43,8 +43,7 @@ CL4FiascoAMD64BEClassFactory::~CL4FiascoAMD64BEClassFactory()
  */
 CBESizes * CL4FiascoAMD64BEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CL4FiascoAMD64BEClassFactory: created class CL4FiascoBESizes\n");
+    CCompiler::Verbose("CL4FiascoAMD64BEClassFactory: created class CL4FiascoBESizes\n");
     return new CL4FiascoAMD64BESizes();
 }
 

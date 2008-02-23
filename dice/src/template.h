@@ -239,7 +239,7 @@ public:
 		return (T*)0;
 	}
 
-private:
+protected:
 	/** \brief alias function to call object's match function
 	 *  \param o the object to use
 	 *  \param k the key to find

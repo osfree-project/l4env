@@ -77,7 +77,7 @@ std::string CL4V2AMD64BENameFactory::GetTypeName(int nType, bool bUnsigned, int 
         sReturn = CL4V2BENameFactory::GetTypeName(nType, bUnsigned, nSize);
         break;
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: Generated type name \"%s\" for type code %d\n",
+    CCompiler::Verbose("CL4V2AMD64BENameFactory::%s: Generated type name \"%s\" for type code %d\n",
 	__func__, sReturn.c_str(), nType);
     return sReturn;
 }

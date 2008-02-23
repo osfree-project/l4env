@@ -1,6 +1,6 @@
 /* Multi-threaded socket example */
 
-#include "local.h"
+#include "local_s.h"
 
 /*** CLIENT ***/
 

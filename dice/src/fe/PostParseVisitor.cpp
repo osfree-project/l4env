@@ -62,8 +62,7 @@ void CPostParseVisitor::Visit(CFEInterface& interface)
 		iterBIN != interface.m_BaseInterfaceNames.end();
 		iterBIN++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s: checking base interface \"%s\" of interface \"%s\"\n", __func__,
+		CCompiler::Verbose("CPostParseVisitor::%s: checking base interface \"%s\" of interface \"%s\"\n", __func__,
 			(*iterBIN)->GetName().c_str(), interface.GetName().c_str());
 		CFEInterface *pBase = 0;
 		if ((*iterBIN)->GetName().find("::") != string::npos)

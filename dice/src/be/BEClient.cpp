@@ -65,10 +65,10 @@ CBEClient::~CBEClient()
  */
 void CBEClient::Write()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    CCompiler::Verbose("CBEClient::%s called\n", __func__);
     WriteHeaderFiles();
     WriteImplementationFiles();
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s done.\n", __func__);
+    CCompiler::Verbose("CBEClient::%s done.\n", __func__);
 }
 
 /** \brief creates the back-end files for a function
@@ -77,7 +77,7 @@ void CBEClient::Write()
  */
 void CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s for %s called\n", __func__,
+	CCompiler::Verbose("CBEClient::%s for %s called\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	// find appropriate header file
@@ -133,7 +133,7 @@ void CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 		pFunction->AddToImpl(pImpl);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s returns\n", __func__);
+	CCompiler::Verbose("CBEClient::%s returns\n", __func__);
 }
 
 /** \brief creates the header files of the client
@@ -147,7 +147,7 @@ void CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 void CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
 {
 	string exc = string(__func__);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndHeader(file: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndHeader(file: %s) called\n",
 		pFEFile->GetFileName().c_str());
 	CBERoot *pRoot = GetSpecificParent<CBERoot>();
 	assert(pRoot);
@@ -171,7 +171,7 @@ void CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
 		pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true, false,
 			pFEFile);
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndHeader(file: %s) return true\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndHeader(file: %s) return true\n",
 		pFEFile->GetFileName().c_str());
 }
 
@@ -181,7 +181,7 @@ void CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
  */
 void CBEClient::CreateBackEndImplementation(CFEFile * pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndImplementation(file: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndImplementation(file: %s) called\n",
 		pFEFile->GetFileName().c_str());
 	// depending on options call respective functions
 	if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL) ||
@@ -207,7 +207,7 @@ void CBEClient::CreateBackEndFile(CFEFile *pFEFile)
 	if (!pFEFile->IsIDLFile())
 		return;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndFile(file: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndFile(file: %s) called\n",
 		pFEFile->GetFileName().c_str());
 
 	string exc = string(__func__);
@@ -232,7 +232,7 @@ void CBEClient::CreateBackEndFile(CFEFile *pFEFile)
  */
 void CBEClient::CreateBackEndFile(CFEFile * pFEFile, CBEImplementationFile* pImpl)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndFile(file: %s, impl: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndFile(file: %s, impl: %s) called\n",
 		pFEFile->GetFileName().c_str(), pImpl->GetFileName().c_str());
 
 	// iterate over interfaces and add them
@@ -288,7 +288,7 @@ void CBEClient::CreateBackEndModule(CFEFile *pFEFile)
 	if (!pFEFile->IsIDLFile())
 		return; // do not abort creation
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s(file: %s) called\n",
+	CCompiler::Verbose("CBEClient::%s(file: %s) called\n",
 		__func__, pFEFile->GetFileName().c_str());
 
 	// find appropriate header file
@@ -330,7 +330,7 @@ void CBEClient::CreateBackEndModule(CFEFile *pFEFile)
  */
 void CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s(lib: %s) called\n",
+	CCompiler::Verbose("CBEClient::%s(lib: %s) called\n",
 		__func__, pFELibrary->GetName().c_str());
 
 	// find appropriate header file
@@ -358,7 +358,7 @@ void CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
  */
 void CBEClient::CreateBackEndInterface(CFEFile *pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndInterface(file: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndInterface(file: %s) called\n",
 		pFEFile->GetFileName().c_str());
 	// search for top-level interfaces
 	for_each(pFEFile->m_Interfaces.begin(), pFEFile->m_Interfaces.end(),
@@ -374,8 +374,7 @@ void CBEClient::CreateBackEndInterface(CFEFile *pFEFile)
  */
 void CBEClient::CreateBackEndInterface(CFELibrary *pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEClient::CreateBackEndInterface(lib: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndInterface(lib: %s) called\n",
 		pFELibrary->GetName().c_str());
 	// search for interfaces
 	for_each(pFELibrary->m_Interfaces.begin(), pFELibrary->m_Interfaces.end(),
@@ -391,7 +390,7 @@ void CBEClient::CreateBackEndInterface(CFELibrary *pFELibrary)
  */
 void CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndInterface(interface: %s) called\n",
+	CCompiler::Verbose("CBEClient::CreateBackEndInterface(interface: %s) called\n",
 		pFEInterface->GetName().c_str());
 
 	// find appropriate header file
@@ -416,7 +415,7 @@ void CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
  */
 void CBEClient::CreateBackEndFunction(CFEFile *pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBEClient::%s for %s called\n", __func__,
 		pFEFile->GetFileName().c_str());
 	// if there are any top level type definitions and  constants
 	// iterate over interfaces
@@ -433,7 +432,7 @@ void CBEClient::CreateBackEndFunction(CFEFile *pFEFile)
  */
 void CBEClient::CreateBackEndFunction(CFELibrary *pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBEClient::%s for %s called\n", __func__,
 		pFELibrary->GetName().c_str());
 	// search for interface
 	for_each(pFELibrary->m_Interfaces.begin(), pFELibrary->m_Interfaces.end(),
@@ -449,7 +448,7 @@ void CBEClient::CreateBackEndFunction(CFELibrary *pFELibrary)
  */
 void CBEClient::CreateBackEndFunction(CFEInterface *pFEInterface)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBEClient::%s for %s called\n", __func__,
 		pFEInterface->GetName().c_str());
 	// search the interface
 	for_each(pFEInterface->m_Operations.begin(), pFEInterface->m_Operations.end(),

@@ -7,7 +7,9 @@ SRC_C = dummy.c softirq.c notifier.c init.c timer.c proc.c sysctl.c \
 ### DEVICES
 SRC_C += lo.c
 
-PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include $(PKGDIR)/server/include \
+PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include \
+		 $(PKGDIR)/server/lib-linux/src/include \
+		 $(PKGDIR)/server/include \
                  $(DDE_INCDIR) $(LINUX24_INCDIR)
 DEFINES = -D__KERNEL__ -DDDE_LINUX -DHZ=100
 WARNINGS = -Wall -Wstrict-prototypes -Wno-unused

@@ -69,7 +69,7 @@ CBETarget::~CBETarget()
  */
 void CBETarget::WriteHeaderFiles()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBETarget::%s called\n", __func__);
 	vector<CBEHeaderFile*>::iterator iter;
 	for (iter = m_HeaderFiles.begin();
 		iter != m_HeaderFiles.end();
@@ -83,7 +83,7 @@ void CBETarget::WriteHeaderFiles()
  */
 void CBETarget::WriteImplementationFiles()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBETarget::%s called\n", __func__);
 	vector<CBEImplementationFile*>::iterator iter;
 	for (iter = m_ImplementationFiles.begin();
 		iter != m_ImplementationFiles.end();
@@ -107,14 +107,12 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEFile * pFEFile)
 {
 	if (!pFEFile)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBETarget::%s aborted because front-end file is 0\n", __func__);
+		CCompiler::Verbose("CBETarget::%s aborted because front-end file is 0\n", __func__);
 		return true;
 	}
 	if (!pFEFile->IsIDLFile())
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBETarget::%s aborted because front-end file is not IDL file\n",
+		CCompiler::Verbose("CBETarget::%s aborted because front-end file is not IDL file\n",
 			__func__);
 		return true;
 	}
@@ -213,8 +211,7 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEInterface * pFEInterface)
 {
 	if (!pFEInterface)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBETarget::%s (interface) aborted because FE interface is 0\n",
+		CCompiler::Verbose("CBETarget::%s (interface) aborted because FE interface is 0\n",
 			__func__);
 		return true;
 	}
@@ -493,7 +490,7 @@ CBETarget::CreateBackEnd(CFEFile *pFEFile)
 	// if argument is 0, we assume a mistaken include file
 	if (!pFEFile)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file is 0\n",
+		CCompiler::Verbose("CBETarget::%s aborted because front-end file is 0\n",
 			__func__);
 		return;
 	}
@@ -501,7 +498,7 @@ CBETarget::CreateBackEnd(CFEFile *pFEFile)
 	// might also be included files
 	if (!pFEFile->IsIDLFile())
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file (%s) is not IDL file\n",
+		CCompiler::Verbose("CBETarget::%s aborted because front-end file (%s) is not IDL file\n",
 			__func__, pFEFile->GetFileName().c_str());
 		return;
 	}

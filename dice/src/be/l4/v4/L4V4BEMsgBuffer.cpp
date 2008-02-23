@@ -84,26 +84,63 @@ void CL4V4BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStr
 	AddMsgTagMember(pFunction, pStruct);
 }
 
-/** \brief sorts one struct in the message buffer
- *  \param pStruct the struct to sort
- *  \return true if sorting was successful
+/** \brief sorts one struct in the message buffer \param pStruct the struct to
+ * sort \return true if sorting was successful
  *
- * Do sort the message tag up front.
+ * This implementation first moves the message tag up front and then calls the
+ * base class' Sort method.  This order is important, because the Sort method
+ * calls GetStartOfPayload, which in turn tries to skip the message tag.  Thus
+ * it has to be at the begin of the message buffer before calling base class'
+ * Sort.
  */
 void CL4V4BEMsgBuffer::Sort(CBEStructType *pStruct)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s called for struct\n", __func__);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s called for struct\n", __func__);
+
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sName = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	pStruct->m_Members.Move(sName, 0);
 
 	// sort payload
 	CL4BEMsgBuffer::Sort(pStruct);
 
-	CBENameFactory *pNF = CBENameFactory::Instance();
-	// find msgtag
-	string sName = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	// move message tag up front again
 	pStruct->m_Members.Move(sName, 0);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s returns\n", __func__);
+}
+
+/** \brief checks if two members of a struct should be exchanged
+ *  \param pFirst the first member
+ *  \param pSecond the second member - first's successor
+ *  \return true if exchange
+ *
+ * This methods overrides the L4 default behaviour to move flexpages up front.
+ * Instead, they stay at the rear.
+ */
+bool CL4V4BEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclarator *pSecond)
+{
+	assert(pFirst);
+	assert(pSecond);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s called with (%s, %s)\n", __func__,
+		pFirst->m_Declarators.First()->GetName().c_str(),
+		pSecond->m_Declarators.First()->GetName().c_str());
+
+	int nFirstType = pFirst->GetType()->GetFEType();
+	int nSecondType = pSecond->GetType()->GetFEType();
+
+	// test flexpages
+	if (TYPE_FLEXPAGE == nFirstType &&
+		TYPE_FLEXPAGE != nSecondType)
+		return true;
+	if (TYPE_FLEXPAGE != nFirstType &&
+		TYPE_FLEXPAGE == nSecondType)
+		return false;
+	if (TYPE_FLEXPAGE == nFirstType &&
+		TYPE_FLEXPAGE == nSecondType)
+		return false;
+
+	return CL4BEMsgBuffer::DoExchangeMembers(pFirst, pSecond);
 }
 
 /** \brief writes the initialization of specific members
@@ -126,7 +163,7 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 	if (nType == TYPE_MSGDOPE_SIZE)
 		return;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s for func %s and dir %d\n",
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s for func %s and dir %d\n",
 		__func__, pFunction ? pFunction->GetName().c_str() : "(no func)", (int)nStructType);
 
 	// if direction is 0 we have to get maximum of IN and OUT
@@ -142,10 +179,10 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 		if (nWordsOut < 0)
 			nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction, CMsgStructType::Out, true);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words out: %d\n", __func__,
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s words out: %d\n", __func__,
 			nWordsOut);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words in: %d words out: %d\n",
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s words in: %d words out: %d\n",
 			__func__, nWordsIn, nWordsOut);
 
 		if (nWordsIn >= 0 && nWordsOut >= 0)
@@ -153,22 +190,26 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 		else
 			nWords = std::min(nWordsIn, nWordsOut);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words: %d\n", __func__, nWords);
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s words generic: %d\n", __func__,
+			nWords);
 	}
 	else
 	{
 		nWords = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction, nStructType, false);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words: %d\n", __func__, nWords);
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s words dir %d: %d\n", __func__,
+			(int)nStructType, nWords);
 
 	}
 	nStrings = GetCount(pFunction, TYPE_REFSTRING, CMsgStructType::Generic);
+	CBESizes *pSizes = CCompiler::GetSizes();
+	nWords = pSizes->WordsFromBytes(pSizes->WordRoundUp(nWords));
 	// check minimum number of words
 	int nMinWords = GetWordMemberCountFunction();
 	if (nWords >= 0)
 		nWords = std::max(nWords, nMinWords);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words (min): %d\n", __func__, nWords);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s words (min): %d\n", __func__, nWords);
 
 	// get name of member
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -181,7 +222,6 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 		pFile << nWords;
 	else // variable sized elements
 	{
-		CBESizes *pSizes = CCompiler::GetSizes();
 		int nRefSize = pSizes->WordsFromBytes(pSizes->GetSizeOfType(TYPE_REFSTRING));
 		// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
 		pFile << "sizeof(";
@@ -248,7 +288,7 @@ void CL4V4BEMsgBuffer::AddMsgTagMember(CBEFunction* /*pFunction*/, CBEStructType
  */
 int CL4V4BEMsgBuffer::GetPayloadOffset()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s called\n", __func__);
 	CBESizes *pSizes = CCompiler::GetSizes();
 	return pSizes->GetSizeOfType(TYPE_MSGTAG);
 }
@@ -478,21 +518,37 @@ void CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile, CBEFunction *
  */
 void CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation)
 {
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s(function %s) called\n", __func__,
+		pFunction->GetName().c_str());
+
+	int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_MESSAGE), nSize;
 	CBEStructType *pStruct = GetStruct(CMsgStructType::In);
 	if (pStruct)
+	{
 		CheckConvertStruct(pStruct);
+		GetMaxSize(nSize, pFunction, CMsgStructType::In);
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s: Check size: %d <= %d?\n", __func__,
+			nSize, nMaxSize);
+		assert(nSize <= nMaxSize);
+	}
 	pStruct = GetStruct(CMsgStructType::Out);
 	if (pStruct)
+	{
 		CheckConvertStruct(pStruct);
+		GetMaxSize(nSize, pFunction, CMsgStructType::Out);
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s: Check size: %d <= %d?\n", __func__,
+			nSize, nMaxSize);
+		assert(nSize <= nMaxSize);
+	}
 	pStruct = GetStruct(CMsgStructType::Exc);
 	if (pStruct)
+	{
 		CheckConvertStruct(pStruct);
-
-	int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_MESSAGE);
-	int nSize = 0;
-	GetMaxSize(nSize);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "Check size: %d <= %d?\n", nSize, nMaxSize);
-	assert(nSize <= nMaxSize);
+		GetMaxSize(nSize, pFunction, CMsgStructType::Exc);
+		CCompiler::Verbose("CL4V4BEMsgBuffer::%s: Check size: %d <= %d?\n", __func__,
+			nSize, nMaxSize);
+		assert(nSize <= nMaxSize);
+	}
 
 	// call base class
 	CL4BEMsgBuffer::PostCreate(pFunction, pFEOperation);
@@ -500,13 +556,16 @@ void CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOpera
 	// resort structs
 	pStruct = GetStruct(CMsgStructType::In);
 	if (pStruct)
-		CheckConvertStruct(pStruct);
+		Sort(pStruct);
 	pStruct = GetStruct(CMsgStructType::Out);
 	if (pStruct)
-		CheckConvertStruct(pStruct);
+		Sort(pStruct);
 	pStruct = GetStruct(CMsgStructType::Exc);
 	if (pStruct)
-		CheckConvertStruct(pStruct);
+		Sort(pStruct);
+
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s(function %s) finished\n", __func__,
+		pFunction->GetName().c_str());
 }
 
 /** \brief pads refstring to specified position
@@ -519,7 +578,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOpera
  */
 void CL4V4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPosition)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V4BEMsgBuffer::%s() called\n", __func__);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s() called\n", __func__);
 	assert(pStruct);
 	// if struct for send direction, call base class.
 	if (CMsgStructType::In == GetStructType(pStruct))
@@ -552,8 +611,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
 {
 	assert(pClass);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4V4BEMsgBuffer::%s(class %s) called\n", __func__,
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s(class %s) called\n", __func__,
 		pClass->GetName().c_str());
 
 	CBEMsgBufferType *pMsgType = GetType(0);
@@ -595,8 +653,9 @@ void CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
 			Sort(pStruct);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4V4BEMsgBuffer::%s finished\n",
-		__func__);
+	CCompiler::Verbose("CL4V4BEMsgBuffer::%s(class %s) finished\n", __func__,
+		pClass->GetName().c_str());
+
 }
 
 /** \brief calculate the number of word sized members required for generic server message buffer
@@ -610,7 +669,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
  */
 int CL4V4BEMsgBuffer::GetWordMemberCountClass()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBuffer::%s() called\n", __func__);
+	CCompiler::Verbose("CL4BEMsgBuffer::%s() called\n", __func__);
 	CBESizes *pSizes = CCompiler::GetSizes();
 	int nMaxSize = pSizes->GetMaxSizeOfType(TYPE_MESSAGE);
 	return pSizes->WordsFromBytes(nMaxSize);

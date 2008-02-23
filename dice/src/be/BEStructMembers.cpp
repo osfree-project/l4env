@@ -29,6 +29,7 @@
 #include "BEStructMembers.h"
 #include "BETypedDeclarator.h"
 #include "Object.h"
+#include "Compiler.h"
 #include <string>
 
 CStructMembers::CStructMembers(vector<CBETypedDeclarator*> *src, CObject *pParent)
@@ -77,13 +78,13 @@ void CStructMembers::Move(std::string sName, int nPos)
 	Remove(pMember);
 	// check if nPos was too big
 	if (nPos == -1 || (unsigned)nPos > size())
+	{
 		Add(pMember);
+		return;
+	}
 
-	// get position to insert at
-	iterator i = begin();
-	while ((nPos-- > 0) && (i != end())) i++;
 	// insert member
-	vector<CBETypedDeclarator*>::insert(i, pMember);
+	vector<CBETypedDeclarator*>::insert(begin() + nPos, pMember);
 }
 
 /** \brief moves a member in the struct
@@ -100,9 +101,7 @@ void CStructMembers::Move(std::string sName, std::string sBeforeHere)
 
 	Remove(pMember);
 	// get position of BeforeHere
-	iterator i = begin();
-	while ((i != end()) &&
-		(!(*i)->m_Declarators.Find(sBeforeHere))) i++;
+	iterator i = std::find_if(begin(), end(), std::bind2nd(std::ptr_fun(Match), sBeforeHere));
 	// check if BeforeHere was member of this struct
 	if (i == end())
 	{
@@ -112,3 +111,29 @@ void CStructMembers::Move(std::string sName, std::string sBeforeHere)
 	// move member
 	vector<CBETypedDeclarator*>::insert(i, pMember);
 }
+
+/** \brief moves a member in the struct
+ *  \param sName the name of the member to move
+ *  \param sAfterHere the name of the member to move after
+ */
+void CStructMembers::MoveAfter(std::string sName, std::string sAfterHere)
+{
+	CBETypedDeclarator *pMember = Find(sName);
+	if (!pMember)
+		return;
+	if (sName == sAfterHere)
+		return;
+
+	Remove(pMember);
+	// get position of AfterHere
+	iterator i = std::find_if(begin(), end(), std::bind2nd(std::ptr_fun(Match), sAfterHere));
+	// check if AfterHere was member of this struct
+	if (i == end())
+	{
+		Add(pMember);
+		return;
+	}
+	// move member
+	vector<CBETypedDeclarator*>::insert(i+1, pMember);
+}
+

@@ -103,8 +103,7 @@ bool CL4BETypedDeclarator::IsFixedSized()
  */
 bool CL4BETypedDeclarator::GetMaxSize(int & nSize, std::string sName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4BETypedDeclarator::%s called\n", __func__);
+	CCompiler::Verbose("CL4BETypedDeclarator::%s(, \"%s\") @ %p called\n", __func__, sName.c_str(), this);
 
 	if (m_Attributes.Find(ATTR_REF))
 	{

@@ -66,8 +66,7 @@ CBEIDLUnionType* CBEIDLUnionType::Clone()
 void
 CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEIDLUnionType::%s(fe) called\n", __func__);
+    CCompiler::VerboseI("CBEIDLUnionType::%s(fe) called\n", __func__);
 
     // get union type
     CFEIDLUnionType *pFEUnion = dynamic_cast<CFEIDLUnionType*>(pFEType);
@@ -104,8 +103,7 @@ CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 	m_sUnionName = "_u";
     pUnionVar->CreateBackEnd(pType, m_sUnionName);
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEIDLUnionType::%s(fe) returns\n", __func__);
+    CCompiler::VerboseD("CBEIDLUnionType::%s(fe) returns\n", __func__);
 }
 
 /** \brief try to find the switch variable

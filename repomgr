@@ -73,7 +73,10 @@ my %modules =
 		    ) ], },
 
    l4env_tools => {
-      paths => [ qw(l4/tool/bin/abs2rel.sh l4/tool/bin/genoffsets.pl) ]
+      paths => [ qw(l4/tool/bin/abs2rel.sh
+                    l4/tool/bin/genoffsets.pl
+                    l4/tool/bin/isocreator
+		    ) ]
    },
 
    preprocess => {

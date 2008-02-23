@@ -108,7 +108,6 @@ enum ProgramVerbose_Type
     PROGRAM_VERBOSE_NORMAL,  /**< normal verboseness level (-v) */
     PROGRAM_VERBOSE_PARSER,  /**< the verboseness level of the parser */
     PROGRAM_VERBOSE_SCANNER, /**< scanner is more verbose than parser */
-    PROGRAM_VERBOSE_DEBUG,   /**< debug output */
     PROGRAM_VERBOSE_MAXLEVEL /**< the maximum verbose level */
 };
 

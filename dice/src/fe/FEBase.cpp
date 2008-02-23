@@ -72,8 +72,7 @@ CFEFile *CFEBase::GetRoot()
 	CObject *pParent = this;
 	while (pParent && pParent->GetParent())
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s: current @ %p, parent @ %p\n", __func__, pParent, pParent->GetParent());
+		CCompiler::Verbose("CFEBase::%s: current @ %p, parent @ %p\n", __func__, pParent, pParent->GetParent());
 		pParent = pParent->GetParent();
 	}
 	return dynamic_cast<CFEFile*>(pParent);

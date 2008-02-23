@@ -59,8 +59,7 @@ CBEReplyCodeType* CBEReplyCodeType::Clone()
  */
 void CBEReplyCodeType::CreateBackEnd()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEReplyCodeType::%s() called\n", __func__);
+	CCompiler::VerboseI("CBEReplyCodeType::%s() called\n", __func__);
 
 	m_bUnsigned = false;
 	m_nSize = 2;    // bytes
@@ -68,7 +67,6 @@ void CBEReplyCodeType::CreateBackEnd()
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sName = pNF->GetTypeName(m_nFEType, false, m_nSize);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEReplyCodeType::%s() returns\n", __func__);
+	CCompiler::VerboseD("CBEReplyCodeType::%s() returns\n", __func__);
 }
 

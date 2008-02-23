@@ -103,8 +103,7 @@ CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
 void CBEUnionCase::CreateBackEnd(CBEType *pType, std::string sName, CBEExpression *pCaseLabel,
 	bool bDefault)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnionCase::%s called for %s\n", __func__, sName.c_str());
+	CCompiler::VerboseI("CBEUnionCase::%s called for %s\n", __func__, sName.c_str());
 
 	CBETypedDeclarator::CreateBackEnd(pType, sName);
 	m_bDefault = bDefault;
@@ -113,7 +112,6 @@ void CBEUnionCase::CreateBackEnd(CBEType *pType, std::string sName, CBEExpressio
 		m_Labels.Add(pCaseLabel);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnionCase::%s returns true\n", __func__);
+	CCompiler::VerboseD("CBEUnionCase::%s returns true\n", __func__);
 }
 

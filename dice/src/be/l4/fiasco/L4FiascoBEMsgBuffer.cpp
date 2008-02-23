@@ -79,7 +79,7 @@ CL4FiascoBEMsgBuffer* CL4FiascoBEMsgBuffer::Clone()
  */
 void CL4FiascoBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4FiascoBEMsgBuffer::%s(%s,, %d) called\n",
+	CCompiler::VerboseI("CL4FiascoBEMsgBuffer::%s(%s,, %d) called\n",
 		__func__, pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
 	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct);
@@ -94,7 +94,7 @@ void CL4FiascoBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CB
 	CBETypedDeclarator *pSendDope = GetSendDopeVariable();
 	pStruct->m_Members.Add(pSendDope);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4FiascoBEMsgBuffer::%s: returns true\n", __func__);
+	CCompiler::VerboseD("CL4FiascoBEMsgBuffer::%s: returns true\n", __func__);
 }
 
 /** \brief return the offset where the payload starts
@@ -102,8 +102,7 @@ void CL4FiascoBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CB
  */
 int CL4FiascoBEMsgBuffer::GetPayloadOffset()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::GetPayloadOffset called\n");
+	CCompiler::Verbose("CL4FiascoBEMsgBuffer::GetPayloadOffset called\n");
 
 	if (IsUtcb())
 		return 0;
@@ -170,8 +169,7 @@ void CL4FiascoBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation
  */
 void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::PostCreate(%s, %s) called\n",
+	CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate(%s, %s) called\n",
 		pFunction ? pFunction->GetName().c_str() : "(none)",
 		pFEOperation ? pFEOperation->GetName().c_str() : "(none fe)");
 
@@ -188,8 +186,7 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 		// if using generic as struct type, all types are counted
 		GetCountAll(TYPE_FLEXPAGE, CMsgStructType::Generic) == 0)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CL4FiascoBEMsgBuffer::PostCreate: size fits and no flexpages, testing ref\n");
+		CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: size fits and no flexpages, testing ref\n");
 		bool bRefFound = false;
 		CBEStructType *pStruct = GetStruct(CMsgStructType::In);
 		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
@@ -201,8 +198,7 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
 			bRefFound = true;
 		m_bIsUtcb = !bRefFound;
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CL4FiascoBEMsgBuffer::PostCreate: m_bIsUtcb is now %s\n", m_bIsUtcb ? "true" : "false");
+		CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: m_bIsUtcb is now %s\n", m_bIsUtcb ? "true" : "false");
 	}
 
 	if (m_bIsUtcb &&
@@ -225,14 +221,12 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 
 	if (m_bIsUtcb)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CL4FiascoBEMsgBuffer::PostCreate: removing superfluous members\n");
+		CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: removing superfluous members\n");
 		CBENameFactory *pNF = CBENameFactory::Instance();
 		CMsgStructType nType(CMsgStructType::Generic);
 		for (; CMsgStructType::Max != nType; ++nType)
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"CL4FiascoBEMsgBuffer::PostCreate: checking struct for dir %d\n", (int)nType);
+			CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: checking struct for dir %d\n", (int)nType);
 			CBEStructType *pStruct = GetStruct(pFunction, nType);
 			if (!pStruct)
 				continue;
@@ -415,8 +409,7 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, CBEFunct
 	{
 		return;
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::WriteDopeShortInitialization called\n");
+	CCompiler::Verbose("CL4FiascoBEMsgBuffer::WriteDopeShortInitialization called\n");
 
 	// get name of member
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -459,8 +452,7 @@ bool CL4FiascoBEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
  */
 bool CL4FiascoBEMsgBuffer::IsUtcb()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::IsUtcb() called for msgbuf @ %p\n",
+	CCompiler::Verbose("CL4FiascoBEMsgBuffer::IsUtcb() called for msgbuf @ %p\n",
 		this);
 
 	CBEType *pBaseType = CBETypedef::GetType();
@@ -473,8 +465,7 @@ bool CL4FiascoBEMsgBuffer::IsUtcb()
 			return pMsgBuf->IsUtcb();
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::IsUtcb: returns %s\n",
+	CCompiler::Verbose("CL4FiascoBEMsgBuffer::IsUtcb: returns %s\n",
 		m_bIsUtcb ? "true" : "false");
 	return m_bIsUtcb;
 }
@@ -490,8 +481,7 @@ bool CL4FiascoBEMsgBuffer::IsUtcb()
  */
 void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(%s, %d) called\n",
+	CCompiler::Verbose("CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(%s, %d) called\n",
 		pFile.GetFileName().c_str(), (int)nType);
 	if (IsUtcb())
 		return;

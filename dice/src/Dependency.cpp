@@ -87,18 +87,17 @@ void CDependency::PrintDependencies()
 		}
 		else
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"%s: opened \"%s\" for output\n", __func__, sOutName.c_str());
+			CCompiler::Verbose("CDependency::%s: opened \"%s\" for output\n", __func__, sOutName.c_str());
 			m_output = of;
 		}
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: start printing target files\n", __func__);
+	CCompiler::Verbose("CDependency::%s: start printing target files\n", __func__);
 	m_nCurCol = 0;
 	m_pRootBE->PrintTargetFiles(*m_output, m_nCurCol, MAX_SHELL_COLS);
 	*m_output << ": ";
 	m_nCurCol += 2;
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: start with files\n", __func__);
+	CCompiler::Verbose("CDependency::%s: start with files\n", __func__);
 	PrintDependentFile(m_pRootFE->GetFullFileName());
 	PrintDependencyTree(m_pRootFE);
 	*m_output << "\n\n";
@@ -118,7 +117,7 @@ void CDependency::PrintDependencies()
 			CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MMD)) &&
 		of->is_open())
 		of->close();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: finished\n", __func__);
+	CCompiler::Verbose("CDependency::%s: finished\n", __func__);
 }
 
 /** \brief prints the included files
@@ -134,7 +133,7 @@ void CDependency::PrintDependencyTree(CFEFile * pFEFile)
 {
 	if (!pFEFile)
 		return;
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for \"%s\" called\n", __func__,
 		pFEFile->GetFileName().c_str());
 	// print names
 	vector<CFEFile*>::iterator iterF;
@@ -142,8 +141,7 @@ void CDependency::PrintDependencyTree(CFEFile * pFEFile)
 		iterF != pFEFile->m_ChildFiles.end();
 		iterF++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"%s: checking child file \"%s\" as directly included\n",
+		CCompiler::Verbose("CDependency::%s: checking child file \"%s\" as directly included\n",
 			__func__, (*iterF)->GetFileName().c_str());
 		if ((*iterF)->IsStdIncludeFile() &&
 			(CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MM) ||
@@ -156,8 +154,7 @@ void CDependency::PrintDependencyTree(CFEFile * pFEFile)
 		iterF != pFEFile->m_ChildFiles.end();
 		iterF++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"%s: checking child file \"%s\" for trees\n", __func__,
+		CCompiler::Verbose("CDependency::%s: checking child file \"%s\" for trees\n", __func__,
 			(*iterF)->GetFileName().c_str());
 		if ((*iterF)->IsStdIncludeFile() &&
 			(CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MM) ||
@@ -175,7 +172,7 @@ void CDependency::PrintGeneratedFiles(CFEFile * pFEFile)
 	if (!pFEFile->IsIDLFile())
 		return;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for \"%s\" called\n", __func__,
 		pFEFile->GetFileName().c_str());
 
 	if (CCompiler::IsFileOptionSet(PROGRAM_FILE_IDLFILE) ||
@@ -229,7 +226,7 @@ void CDependency::PrintGeneratedFiles(CFEFile * pFEFile)
 		}
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done\n", __func__);
 }
 
 /** \brief prints the file-name generated for the front-end file
@@ -240,7 +237,7 @@ void CDependency::PrintGeneratedFiles4File(CFEFile * pFEFile)
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for %s called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for %s called\n", __func__,
 		pFEFile->GetFileName().c_str());
 
 	// client
@@ -258,7 +255,7 @@ void CDependency::PrintGeneratedFiles4File(CFEFile * pFEFile)
 		PrintDependentFile(sName);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief prints a list of generated files for the library granularity
@@ -266,7 +263,7 @@ void CDependency::PrintGeneratedFiles4File(CFEFile * pFEFile)
  */
 void CDependency::PrintGeneratedFiles4Library(CFEFile * pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for file \"%s\" called\n",
+	CCompiler::Verbose("CDependency::%s: for file \"%s\" called\n",
 		__func__, pFEFile->GetFileName().c_str());
 
 	// iterate over libraries
@@ -286,7 +283,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEFile * pFEFile)
 		PrintGeneratedFiles4Library(*iterI);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done\n", __func__);
 }
 
 /** \brief print the list of generated files for the library granularity
@@ -294,8 +291,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEFile * pFEFile)
  */
 void CDependency::PrintGeneratedFiles4Library(CFELibrary * pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s: for lib \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for lib \"%s\" called\n", __func__,
 		pFELibrary->GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -323,7 +319,7 @@ void CDependency::PrintGeneratedFiles4Library(CFELibrary * pFELibrary)
 		PrintGeneratedFiles4Library(*iterL);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for the library granularity
@@ -331,8 +327,7 @@ void CDependency::PrintGeneratedFiles4Library(CFELibrary * pFELibrary)
  */
 void CDependency::PrintGeneratedFiles4Library(CFEInterface * pFEInterface)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s: for interface \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for interface \"%s\" called\n", __func__,
 		pFEInterface->GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -352,7 +347,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEInterface * pFEInterface)
 		PrintDependentFile(sName);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for interface granularity
@@ -360,7 +355,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEInterface * pFEInterface)
  */
 void CDependency::PrintGeneratedFiles4Interface(CFEFile * pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for file \"%s\" called\n",
+	CCompiler::Verbose("CDependency::%s: for file \"%s\" called\n",
 		__func__, pFEFile->GetFileName().c_str());
 
 	// iterate over interfaces
@@ -380,7 +375,7 @@ void CDependency::PrintGeneratedFiles4Interface(CFEFile * pFEFile)
 		PrintGeneratedFiles4Interface(*iterL);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for interface granularity
@@ -389,8 +384,7 @@ void CDependency::PrintGeneratedFiles4Interface(CFEFile * pFEFile)
 void CDependency::PrintGeneratedFiles4Interface(
 	CFELibrary * pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s: for lib \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for lib \"%s\" called\n", __func__,
 		pFELibrary->GetName().c_str());
 
 	// iterate over interfaces
@@ -410,7 +404,7 @@ void CDependency::PrintGeneratedFiles4Interface(
 		PrintGeneratedFiles4Interface(*iterL);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for interface granularity
@@ -419,8 +413,7 @@ void CDependency::PrintGeneratedFiles4Interface(
 void CDependency::PrintGeneratedFiles4Interface(
 	CFEInterface * pFEInterface)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s: for interface \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for interface \"%s\" called\n", __func__,
 		pFEInterface->GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -440,7 +433,7 @@ void CDependency::PrintGeneratedFiles4Interface(
 		PrintDependentFile(sName);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for operation granularity
@@ -448,7 +441,7 @@ void CDependency::PrintGeneratedFiles4Interface(
  */
 void CDependency::PrintGeneratedFiles4Operation(CFEFile * pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for file \"%s\" called\n",
+	CCompiler::Verbose("CDependency::%s: for file \"%s\" called\n",
 		__func__, pFEFile->GetFileName().c_str());
 
 	// iterate over interfaces
@@ -468,7 +461,7 @@ void CDependency::PrintGeneratedFiles4Operation(CFEFile * pFEFile)
 		PrintGeneratedFiles4Operation(*iterL);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for operation granularity
@@ -477,7 +470,7 @@ void CDependency::PrintGeneratedFiles4Operation(CFEFile * pFEFile)
 void CDependency::PrintGeneratedFiles4Operation(
 	CFELibrary * pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for lib \"%s\" called\n",
+	CCompiler::Verbose("CDependency::%s: for lib \"%s\" called\n",
 		__func__, pFELibrary->GetName().c_str());
 
 	// iterate over interfaces
@@ -497,7 +490,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 		PrintGeneratedFiles4Operation(*iterL);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done\n", __func__);
 }
 
 /** \brief print the list of generated files for operation granularity
@@ -506,8 +499,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 void CDependency::PrintGeneratedFiles4Operation(
 	CFEInterface * pFEInterface)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s: for interface \"%s\" caled\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for interface \"%s\" caled\n", __func__,
 		pFEInterface->GetName().c_str());
 
 	// iterate over operations
@@ -519,7 +511,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 		PrintGeneratedFiles4Operation(*iter);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief print the list of generated files for operation granularity
@@ -528,8 +520,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 void CDependency::PrintGeneratedFiles4Operation(
 	CFEOperation * pFEOperation)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s: for op \"%s\" called\n", __func__,
+	CCompiler::Verbose("CDependency::%s: for op \"%s\" called\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -549,7 +540,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 		PrintDependentFile(sName);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: done.\n", __func__);
+	CCompiler::Verbose("CDependency::%s: done.\n", __func__);
 }
 
 /** \brief prints a filename to the dependency tree
@@ -562,7 +553,7 @@ void CDependency::PrintGeneratedFiles4Operation(
  */
 void CDependency::PrintDependentFile(string sFileName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__, sFileName.c_str());
+	CCompiler::Verbose("CDependency::%s(%s) called\n", __func__, sFileName.c_str());
 
 	char real_path_buffer[PATH_MAX];
 	/* Cite: Avoid using this function. It is broken by design... */
@@ -587,6 +578,6 @@ void CDependency::PrintDependentFile(string sFileName)
 	if (CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MP))
 		m_vPhonyDependencies.push_back(string(real_path));
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s done\n", __func__);
+	CCompiler::Verbose("CDependency::%s done\n", __func__);
 }
 

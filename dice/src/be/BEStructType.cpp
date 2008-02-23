@@ -90,8 +90,7 @@ CBEStructType* CBEStructType::Clone()
 void
 CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s(fe) called\n", __func__);
+	CCompiler::VerboseI("CBEStructType::%s(fe) called\n", __func__);
 
 	// sets m_sName to "struct"
 	CBEType::CreateBackEnd(pFEType);
@@ -99,8 +98,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 	if (pFEType->GetType() == TYPE_ARRAY)
 	{
 		CreateBackEndSequence((CFEArrayType*)pFEType);
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s(fe) returns\n", __func__);
+		CCompiler::VerboseD("CBEStructType::%s(fe) returns\n", __func__);
 		return;
 	}
 	// get forward declaration
@@ -164,8 +162,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 		}
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s(fe) returns\n", __func__);
+	CCompiler::VerboseD("CBEStructType::%s(fe) returns\n", __func__);
 }
 
 /** \brief initialize instance of object
@@ -177,8 +174,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
  */
 void CBEStructType::CreateBackEnd(std::string sTag, CFEBase *pRefObj)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s(%s, %p) called\n", __func__,
+	CCompiler::VerboseI("CBEStructType::%s(%s, %p) called\n", __func__,
 		sTag.c_str(), pRefObj);
 	// skip CBEType::CreateBackEnd to avoid asserts
 	CBEObject::CreateBackEnd(pRefObj);
@@ -188,8 +184,7 @@ void CBEStructType::CreateBackEnd(std::string sTag, CFEBase *pRefObj)
 	m_sName = pNF->GetTypeName(TYPE_STRUCT, false);
 	m_sTag = sTag;
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s(%s,) called\n", __func__, sTag.c_str());
+	CCompiler::VerboseD("CBEStructType::%s(%s,) called\n", __func__, sTag.c_str());
 }
 
 /** \brief prepares this instance for the code generation
@@ -199,8 +194,7 @@ void CBEStructType::CreateBackEnd(std::string sTag, CFEBase *pRefObj)
 void
 CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s(fe-array) called\n", __func__);
+	CCompiler::VerboseI("CBEStructType::%s(fe-array) called\n", __func__);
 	// if sequence create own members
 	if (pFEType->GetType() != TYPE_ARRAY)
 	{
@@ -291,8 +285,7 @@ CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
 	// recusively call CreateBackEnd to initialize struct
 	CreateBackEnd(pFEStruct);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s(fe-array) returns\n", __func__);
+	CCompiler::VerboseD("CBEStructType::%s(fe-array) returns\n", __func__);
 }
 
 /** \brief writes the structure into the target file
@@ -308,7 +301,7 @@ CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
  */
 void CBEStructType::Write(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called.\n", __func__);
+	CCompiler::Verbose("CBEStructType::%s called.\n", __func__);
 	// open struct
 	pFile << m_sName;
 	if (!m_sTag.empty())
@@ -339,7 +332,7 @@ void CBEStructType::Write(CBEFile& pFile)
 	{
 		pFile << " { }";
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returned.\n", __func__);
+	CCompiler::Verbose("CBEStructType::%s returned.\n", __func__);
 }
 
 /** \brief calculates the size of the written string
@@ -372,16 +365,14 @@ int CBEStructType::GetStringLength()
  */
 int CBEStructType::GetSize()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s called\n", __func__);
+	CCompiler::VerboseI("CBEStructType::%s called\n", __func__);
 
 	int nSize = 0;
 	// if this is a tagged struct without members, we have to find the
 	// original struct
 	if (m_bForwardDeclaration)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s forward decl of %s (@ %p)\n", __func__,
+		CCompiler::Verbose("CBEStructType::%s forward decl of %s (@ %p)\n", __func__,
 			GetTag().c_str(), this);
 
 		// search for tag
@@ -389,11 +380,9 @@ int CBEStructType::GetSize()
 		// if found, get size from it
 		if ((pTaggedType) && (pTaggedType != this))
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s get size from tagged type\n", __func__);
+			CCompiler::Verbose("CBEStructType::%s get size from tagged type\n", __func__);
 			nSize = pTaggedType->GetSize();
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s returns %d\n", __func__, nSize);
+			CCompiler::VerboseD("CBEStructType::%s returns %d\n", __func__, nSize);
 			return nSize;
 		}
 		// if no tagged struct found, this is a user defined type
@@ -401,25 +390,20 @@ int CBEStructType::GetSize()
 		if (!pTaggedType)
 		{
 			CBETypedef *pTypedef = FindTypedef(m_sTag);
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s found typedef @ %p\n", __func__, pTypedef);
+			CCompiler::Verbose("CBEStructType::%s found typedef @ %p\n", __func__, pTypedef);
 			if (pTypedef && pTypedef->GetTransmitType() == this)
 			{
-				CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-					"CBEStructType::%s typedef's type %p is this %p\n", __func__,
+				CCompiler::Verbose("CBEStructType::%s typedef's type %p is this %p\n", __func__,
 					pTypedef->GetTransmitType(), this);
 				pTypedef = FindTypedef(m_sTag, pTypedef);
-				CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-					"CBEStructType::%s next typedef @ %p\n", __func__, pTypedef);
+				CCompiler::Verbose("CBEStructType::%s next typedef @ %p\n", __func__, pTypedef);
 			}
 			if (!pTypedef)
 			{
-				CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-					"CBEStructType::%s returns 0\n", __func__);
+				CCompiler::VerboseD("CBEStructType::%s returns 0\n", __func__);
 				return 0;
 			}
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s get size from typedef type\n", __func__);
+			CCompiler::VerboseD("CBEStructType::%s get size from typedef type\n", __func__);
 			/* since the typedef is a CBETypedDeclarator, it would evaluate
 			 * the size of it's base type and sum it for all it's declarators.
 			 * We only want it for the declarator we are using. That's why we
@@ -435,16 +419,14 @@ int CBEStructType::GetSize()
 		iter != m_Members.end();
 		iter++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s at member %d, type at %p (%d), first decl at %p\n",
+		CCompiler::Verbose("CBEStructType::%s at member %d, type at %p (%d), first decl at %p\n",
 			__func__, __loop++, (*iter)->GetType(),
 			(*iter)->GetType() ? (*iter)->GetType()->GetFEType() : 0,
 			(*iter)->m_Declarators.First());
 		CBEDeclarator *pDecl = (*iter)->m_Declarators.First();
 		// do not assert pDecl, but check later to allow anonym unions/structs
 		// as members of the struct
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s testing member %s\n",
+		CCompiler::Verbose("CBEStructType::%s testing member %s\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)");
 
 		// special case handling:
@@ -471,8 +453,7 @@ int CBEStructType::GetSize()
 		// if it has the same tag.
 		CBEType *pMemberType = (*iter)->GetType();
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s member %s is of type %d\n",
+		CCompiler::Verbose("CBEStructType::%s member %s is of type %d\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 			pMemberType->GetFEType());
 
@@ -481,8 +462,7 @@ int CBEStructType::GetSize()
 			pMemberType = ((CBEUserDefinedType*)pMemberType)->GetRealType();
 		assert(pMemberType);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s member %s has real type %d\n",
+		CCompiler::Verbose("CBEStructType::%s member %s has real type %d\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 			pMemberType->GetFEType());
 
@@ -492,8 +472,7 @@ int CBEStructType::GetSize()
 		{
 			// FIXME: get size from
 			// CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s self reference (%s): return -1\n",
+			CCompiler::VerboseD("CBEStructType::%s self reference (%s): return -1\n",
 				__func__, m_sTag.c_str());
 			return -1;
 		}
@@ -506,16 +485,14 @@ int CBEStructType::GetSize()
 		if ((*iter)->IsString())
 		{
 			// a string is also variable sized member
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s string member: return -1\n", __func__);
+			CCompiler::VerboseD("CBEStructType::%s string member: return -1\n", __func__);
 			return -1;
 		}
 		else if ((*iter)->IsVariableSized())
 		{
 			// if one of the members is variable sized,
 			// the whole struct is variable sized
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s var-sized member: return -1\n",
+			CCompiler::VerboseD("CBEStructType::%s var-sized member: return -1\n",
 				__func__);
 			return -1;
 		}
@@ -547,8 +524,7 @@ int CBEStructType::GetSize()
 			}
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s size of member is %d, new total: %d\n",
+		CCompiler::Verbose("CBEStructType::%s size of member is %d, new total: %d\n",
 			__func__, nElemSize, nSize);
 	}
 	// some bitfields left? -> align them and add them
@@ -559,8 +535,7 @@ int CBEStructType::GetSize()
 			nSize++;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s returns %d\n", __func__, nSize);
+	CCompiler::VerboseD("CBEStructType::%s returns %d\n", __func__, nSize);
 	return nSize;
 }
 
@@ -576,14 +551,12 @@ int CBEStructType::GetSize()
  */
 int CBEStructType::GetMaxSize()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s called\n", __func__);
+	CCompiler::VerboseI("CBEStructType::%s called\n", __func__);
 
 	int nMaxSize = GetSize();
 	if (nMaxSize > 0)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s normal size is %d, return\n", __func__,
+		CCompiler::VerboseD("CBEStructType::%s normal size is %d, return\n", __func__,
 			nMaxSize);
 		return nMaxSize;
 	}
@@ -598,8 +571,7 @@ int CBEStructType::GetMaxSize()
 		if ((pTaggedType) && (pTaggedType != this))
 		{
 			nMaxSize = pTaggedType->GetMaxSize();
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s size of forward decl struct is %d\n",
+			CCompiler::VerboseD("CBEStructType::%s size of forward decl struct is %d\n",
 				__func__, nMaxSize);
 			return nMaxSize;
 		}
@@ -622,8 +594,7 @@ int CBEStructType::GetMaxSize()
 		CBEDeclarator *pDecl = (*iter)->m_Declarators.First();
 		// do not assert pDecl, but check later to allow anonym unions/structs
 		// as members of the struct
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s testing member %s\n",
+		CCompiler::Verbose("CBEStructType::%s testing member %s\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)");
 		// special case handling:
 		// if the member is a pointer to ourself, then we
@@ -649,8 +620,7 @@ int CBEStructType::GetMaxSize()
 		// if it has the same tag.
 		CBEType *pMemberType = (*iter)->GetType();
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s member %s is of type %d\n",
+		CCompiler::Verbose("CBEStructType::%s member %s is of type %d\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 			pMemberType->GetFEType());
 
@@ -659,20 +629,17 @@ int CBEStructType::GetMaxSize()
 			pMemberType = ((CBEUserDefinedType*)pMemberType)->GetRealType();
 		assert(pMemberType);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s member %s has real type %d\n",
+		CCompiler::Verbose("CBEStructType::%s member %s has real type %d\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 			pMemberType->GetFEType());
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEStructType::%s checking for struct and tag \"%s\"\n", __func__,
+		CCompiler::Verbose("CBEStructType::%s checking for struct and tag \"%s\"\n", __func__,
 			m_sTag.c_str());
 
 		if ((dynamic_cast<CBEStructType*>(pMemberType)) &&
 			!m_sTag.empty() && pMemberType->HasTag(m_sTag))
 		{
 			nMaxSize = pSizes->GetSizeOfType(TYPE_VOID_ASTERISK);
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s pointer to self, return %d\n",
+			CCompiler::VerboseD("CBEStructType::%s pointer to self, return %d\n",
 				__func__, nMaxSize);
 			return nMaxSize;
 		}
@@ -681,8 +648,7 @@ int CBEStructType::GetMaxSize()
 		if (!(*iter)->GetMaxSize(nSize))
 		{
 			nMaxSize = -1;
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEStructType::%s can't determine max of member, return -1\n",
+			CCompiler::VerboseD("CBEStructType::%s can't determine max of member, return -1\n",
 				__func__);
 			return -1;
 		}
@@ -712,8 +678,7 @@ int CBEStructType::GetMaxSize()
 			}
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEStructType::%s: member %s has size %d (bits %d) - total: %d\n",
+		CCompiler::Verbose("CBEStructType::%s: member %s has size %d (bits %d) - total: %d\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 			nSize, nBitSize, nMaxSize);
 	}
@@ -725,8 +690,7 @@ int CBEStructType::GetMaxSize()
 			nMaxSize++;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s return max size %d\n",
+	CCompiler::VerboseD("CBEStructType::%s return max size %d\n",
 		__func__, nMaxSize);
 	return nMaxSize;
 }
@@ -1061,7 +1025,7 @@ CBEStructType::FindMember(CDeclStack* pStack,
 	if (iCurr == pStack->end())
 		return 0;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEStructType::%s(stack) called\n", __func__);
+	CCompiler::Verbose("CBEStructType::%s(stack) called\n", __func__);
 
 	DUMP_STACK(i, pStack, "Find");
 	// try to find member for current declarator
@@ -1087,8 +1051,7 @@ CBEStructType::FindMember(CDeclStack* pStack,
 	if (pUnion)
 		return pUnion->FindMember(pStack, iCurr);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEStructType::%s no member in struct or union found. return 0.\n",
+	CCompiler::Verbose("CBEStructType::%s no member in struct or union found. return 0.\n",
 		__func__);
 	return 0;
 }

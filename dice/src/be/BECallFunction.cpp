@@ -60,8 +60,7 @@ CBECallFunction::~CBECallFunction()
 void
 CBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBECallFunction::WriteVariableInitialization called %s in %s\n",
+	CCompiler::Verbose("CBECallFunction::WriteVariableInitialization called %s in %s\n",
 		GetName().c_str(), pFile.GetFileName().c_str());
 	// init message buffer
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -85,7 +84,7 @@ void CBECallFunction::WriteInvocation(CBEFile& /*pFile*/)
 void
 CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBECallFunction::%s for %s called\n", __func__,
 		GetName().c_str());
 
 	bool bLocalTrace = false;
@@ -109,7 +108,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 		m_bTraceOn = false;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
+	CCompiler::Verbose("CBECallFunction::%s for %s finished\n", __func__,
 		GetName().c_str());
 }
 
@@ -121,7 +120,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
  */
 void CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
+	CCompiler::Verbose("CBECallFunction::%s for operation %s called\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	// set target file name
@@ -157,7 +156,7 @@ void CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponent
 	if (pVariable)
 		pVariable->SetDefaultInitString(string("0"));
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBECallFunction::%s returns true\n", __func__);
 }
 
 /** \brief manipulate the message buffer
@@ -167,7 +166,7 @@ void CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponent
 void
 CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBECallFunction::%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// check return type (do test here because sometimes we like to call
 	// AddReturnVariable under different constraints--return parameter)
@@ -177,7 +176,7 @@ CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 		return; // having a void return type is not an error
 	// add return variable
 	pMsgBuffer->AddReturnVariable(this);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBECallFunction::%s returns true\n", __func__);
 }
 
 /** \brief checks if this parameter has to be marshalled or not
@@ -191,8 +190,7 @@ bool
 CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
 	bool bMarshal)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s called for %s with marshal=%s and IN=%s, OUT=%s\n",
+	CCompiler::Verbose("CBECallFunction::%s called for %s with marshal=%s and IN=%s, OUT=%s\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str(),
 		(bMarshal) ? "yes" : "no",
 		pParameter->m_Attributes.Find(ATTR_IN) ? "yes" : "no",

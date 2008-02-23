@@ -152,7 +152,7 @@ CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation,
  */
 void CBEImplementationFile::Write()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    CCompiler::Verbose("CBEImplementationFile::%s called\n", __func__);
     string sFilename;
     CCompiler::GetBackEndOption(string("output-dir"), sFilename);
     sFilename += GetFileName();
@@ -292,7 +292,7 @@ CBEImplementationFile::WriteFunction(CBEFunction *pFunction)
 void
 CBEImplementationFile::WriteDefaultIncludes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    CCompiler::Verbose("CBEImplementationFile::%s called\n", __func__);
 
     CBEClassFactory *pCF = CBEClassFactory::Instance();
     CTrace *pTrace = pCF->GetNewTrace();

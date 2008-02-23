@@ -16,7 +16,7 @@
 
 // needed for str* functions
 #if !defined(LINUX_ON_L4) && !defined(CONFIG_L4_LINUX) && !defined(DDE_LINUX)
-#if !defined(L4API_l4x2) && !defined(L4API_l4v4)
+#if !defined(L4API_l4x2) && !defined(L4API_l4v4) && !defined(L4API_l4x0)
 #include <string.h>
 #endif
 #endif

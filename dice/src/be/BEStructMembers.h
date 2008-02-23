@@ -56,6 +56,7 @@ public:
     void Add(CBETypedDeclarator *pMember);
     void Move(std::string sName, int nPos);
     void Move(std::string sName, std::string sBeforeHere);
+	void MoveAfter(std::string sName, std::string sAfterHere);
 };
 
 #endif // !__DICE_BESTRUCTTYPE_H__

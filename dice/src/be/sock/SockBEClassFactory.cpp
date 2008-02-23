@@ -55,8 +55,7 @@ CSockBEClassFactory::~CSockBEClassFactory()
  */
 CBECallFunction * CSockBEClassFactory::GetNewCallFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBECallFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBECallFunction\n");
     return new CSockBECallFunction();
 }
 
@@ -65,7 +64,7 @@ CBECallFunction * CSockBEClassFactory::GetNewCallFunction()
  */
 CBESizes * CSockBEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CSockBEClassFactory: created class CSockBESizes\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBESizes\n");
     return new CSockBESizes();
 }
 
@@ -74,8 +73,7 @@ CBESizes * CSockBEClassFactory::GetNewSizes()
  */
 CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBEWaitAnyFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBEWaitAnyFunction\n");
     return new CSockBEWaitAnyFunction(true, false);
 }
 
@@ -84,8 +82,7 @@ CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
  */
 CBESrvLoopFunction * CSockBEClassFactory::GetNewSrvLoopFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBESrvLoopFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBESrvLoopFunction\n");
     return new CSockBESrvLoopFunction();
 }
 
@@ -94,8 +91,7 @@ CBESrvLoopFunction * CSockBEClassFactory::GetNewSrvLoopFunction()
  */
 CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBEUnmarshalFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBEUnmarshalFunction\n");
     return new CSockBEUnmarshalFunction();
 }
 
@@ -104,8 +100,7 @@ CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
  */
 CBEMarshalFunction * CSockBEClassFactory::GetNewMarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBEMarshalFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBEMarshalFunction\n");
     return new CSockBEMarshalFunction();
 }
 
@@ -114,7 +109,7 @@ CBEMarshalFunction * CSockBEClassFactory::GetNewMarshalFunction()
  */
 CBECommunication * CSockBEClassFactory::GetNewCommunication()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CSockBEClassFactory: created class CBESocket\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CBESocket\n");
     return new CBESocket();
 }
 
@@ -123,8 +118,7 @@ CBECommunication * CSockBEClassFactory::GetNewCommunication()
  */
 CBEWaitAnyFunction* CSockBEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBEReplyAnyWaitAnyFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBEReplyAnyWaitAnyFunction\n");
     return new CSockBEWaitAnyFunction(true, true);
 }
 
@@ -133,7 +127,6 @@ CBEWaitAnyFunction* CSockBEClassFactory::GetNewReplyAnyWaitAnyFunction()
  */
 CBESndFunction * CSockBEClassFactory::GetNewSndFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CSockBEClassFactory: created class CSockBESndFunction\n");
+    CCompiler::Verbose("CSockBEClassFactory: created class CSockBESndFunction\n");
     return new CSockBESndFunction();
 }

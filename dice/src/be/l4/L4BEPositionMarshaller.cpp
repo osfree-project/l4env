@@ -90,8 +90,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	bool bReference,
 	bool bLValue)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"PositionMarshaller::%s(%s, %s, %d, %d, %s, %s) called\n", __func__,
+	CCompiler::Verbose("PositionMarshaller::%s(%s, %s, %d, %d, %s, %s) called\n", __func__,
 		pFile.GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "",
 		(int)nType, nPosition, bReference ? "true" : "false",
 		bLValue ? "true" : "false");
@@ -104,8 +103,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	CBETypedDeclarator *pMember = pMsgBuffer->GetMemberAt(nType, nPosition);
 	if (!pMember)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"PositionMarshaller::%s: could not find a member at pos %d in struct\n",
+		CCompiler::Verbose("PositionMarshaller::%s: could not find a member at pos %d in struct\n",
 			__func__, nPosition);
 		return false;
 	}
@@ -116,8 +114,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	int nMemberSize = GetMemberSize(pMember);
 	if (nMemberSize != m_nPosSize)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"PositionMarshaller::%s: member of different size\n", __func__);
+		CCompiler::Verbose("PositionMarshaller::%s: member of different size\n", __func__);
 		if (bReference)
 			pFile << "&";
 		pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
@@ -129,8 +126,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 		CBETypedDeclarator *pParameter = pFunction->FindParameter(sName);
 		if (!pParameter)
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"PositionMarshaller::%s: parameter %s not found, try special\n", __func__,
+			CCompiler::Verbose("PositionMarshaller::%s: parameter %s not found, try special\n", __func__,
 				sName.c_str());
 			// only call this method if we are sure the member is special
 			// e.g. return, opcode, etc.
@@ -139,8 +135,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 		}
 		else
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"PositionMarshaller::%s: parameter found, write access to member\n", __func__);
+			CCompiler::Verbose("PositionMarshaller::%s: parameter found, write access to member\n", __func__);
 			// if there is a transmit_as attribute, replace the type
 			CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS);
 			// if user defined type, then the alias might have a transmit as
@@ -209,13 +204,11 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 				// nasty for simple types, such as float transmitted as long
 				// and generate wrong type casts. Therefore, we have to check
 				// for simple types here.
-				CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-					"PositionMarshaller::%s: bReference=%s, pTransmitType=%p, C++=%s, bLValue=%s\n",
+				CCompiler::Verbose("PositionMarshaller::%s: bReference=%s, pTransmitType=%p, C++=%s, bLValue=%s\n",
 					__func__, bReference ? "true" : "false", pTransmitType,
 					CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
 					bLValue ? "true" : "false");
-				CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-					"PositionMarshaller::%s: !%s && %p && !(%s && %s)\n", __func__,
+				CCompiler::Verbose("PositionMarshaller::%s: !%s && %p && !(%s && %s)\n", __func__,
 					bReference ? "true" : "false", pTransmitType,
 					CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
 					bLValue ? "true" : "false");
@@ -224,8 +217,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 						bLValue))
 				{
 					/* test for that flexpage again */
-					CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-						"PositionMarshaller::%s: %s && %s && !%s\n", __func__,
+					CCompiler::Verbose("PositionMarshaller::%s: %s && %s && !%s\n", __func__,
 						pMemType->IsSimpleType() ? "true" : "false",
 						pParamType->IsSimpleType() ? "true" : "false",
 						pMemType->IsOfType(TYPE_FLEXPAGE) ? "true" : "false");
@@ -244,7 +236,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 		}
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "PositionMarshaller::%s returns true\n", __func__);
+	CCompiler::Verbose("PositionMarshaller::%s returns true\n", __func__);
 	return true;
 }
 
@@ -315,8 +307,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
 	// word, in C declared as constructed type, but internally handled as
 	// simple type)
 	// But do not dereference if bReference is set
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s(%s, %s, %s, %d, %s, %s)\n", __func__,
+	CCompiler::Verbose("PositionMarshaller::%s(%s, %s, %s, %d, %s, %s)\n", __func__,
 		pFile.GetFileName().c_str(), pFunction->GetName().c_str(),
 		pDecl->GetName().c_str(), (int)nType,
 		bReference ? "true" : "false",
@@ -379,18 +370,15 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
 	bool bLValue)
 {
 	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s(, %s, ref:%s, lval:%s) called\n", __func__,
+	CCompiler::Verbose("PositionMarshaller::%s(, %s, ref:%s, lval:%s) called\n", __func__,
 		pDecl->GetName().c_str(), bReference ? "true" : "false",
 		bLValue ? "true" : "false");
 	// get declarator
 	int nStars = pDecl->GetStars();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s stars(1)=%d\n", __func__, nStars);
+	CCompiler::Verbose("PositionMarshaller::%s stars(1)=%d\n", __func__, nStars);
 	if (bReference)
 		nStars--;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s stars(2)=%d\n", __func__, nStars);
+	CCompiler::Verbose("PositionMarshaller::%s stars(2)=%d\n", __func__, nStars);
 	// check type equality
 	// (is sufficient for reference, that is, pointers. Simple types are
 	// casted automatically. Compiler only complaints about mismatching
@@ -424,8 +412,7 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
 		pFile << "&";
 	}
 	// dereference if necessary
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s stars(3)=%d\n", __func__, nStars);
+	CCompiler::Verbose("PositionMarshaller::%s stars(3)=%d\n", __func__, nStars);
 	for (int nIndx = 0; nIndx < nStars; nIndx++)
 		pFile << "*";
 	// print name
@@ -434,7 +421,6 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
 	// FIXME test array
 	// FIXME test complex type?
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s returns\n", __func__);
+	CCompiler::Verbose("PositionMarshaller::%s returns\n", __func__);
 }
 

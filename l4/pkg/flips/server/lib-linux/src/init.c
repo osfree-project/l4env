@@ -62,7 +62,7 @@ static int net_init(int dhcp)
 	net_dev_init();             /* implicitly calls liblinux_lo_init.c */
 
 	if (dhcp) {
-		LOG("DHCP enabled");
+		LOG("DHCP enabled !");
 		ic_enable = 1;
 	}
 
@@ -87,7 +87,10 @@ int liblinux_init(unsigned int vmem, unsigned int kmem, int dhcp)
 	/* XXX errors? */
 	liblinux_proc_init();
 	liblinux_sysctl_init();
-	liblinux_timer_init();
+	if ((err = liblinux_timer_init())) {
+		LOGd(DEBUG_LIBLX, "Timer initialization failed (%d)", err);
+		return err;
+	}
 	liblinux_softirq_init();
 	libsocket_linux_init();
 
@@ -96,6 +99,8 @@ int liblinux_init(unsigned int vmem, unsigned int kmem, int dhcp)
 		LOGd(DEBUG_LIBLX, "NET initialization failed (%d)", err);
 		return err;
 	}
+
+	l4dde_do_initcalls();
 
 	return 0;
 }

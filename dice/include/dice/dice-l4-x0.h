@@ -2,7 +2,11 @@
 #define __DICE_L4_X0_H__
 
 #include <l4/l4.h>
-#include <l4/sys/kdebug.h>
+#if defined(ARCH_x86)
+#include <l4/x86/kdebug.h>
+#else
+#error unsupported architecture
+#endif
 
 #if defined(DICE_TRACE_SERVER) || defined(DICE_TRACE_CLIENT) || defined(DICE_TRACE_MSGBUF)
 #include <l4io.h>
@@ -27,6 +31,27 @@ void free_warning(void* addr)
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifndef L4_IPC_DOPE
+#define L4_IPC_DOPE(dwords, strings) \
+	( (l4_msgdope_t) {md: {0, 0, 0, 0, 0, strings, dwords }})
+#endif
+
+#ifndef L4_IPC_SHORT_FPAGE
+#define L4_IPC_SHORT_FPAGE			((void*)2)
+#endif
+
+#ifndef L4_IPC_SHORT_MSG
+#define L4_IPC_SHORT_MSG			((void*)0)
+#endif
+
+/* error codes */
+#ifndef L4_IPC_SECANCELED
+#define L4_IPC_SECANCELED   0x50
+#endif
+#ifndef L4_IPC_SEABORTED
+#define L4_IPC_SEABORTED	0xB0
 #endif
 
 #ifdef __cplusplus

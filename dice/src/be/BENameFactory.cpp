@@ -99,13 +99,12 @@ string
 CBENameFactory::GetFileName(CFEBase * pFEBase,
 	FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s called\n",
+	CCompiler::Verbose("CBENameFactory::%s called\n",
 		__func__);
 
 	if (!pFEBase)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBENameFactory::%s failed because front-end class is 0\n", __func__);
+		CCompiler::Verbose("CBENameFactory::%s failed because front-end class is 0\n", __func__);
 		return string();
 	}
 
@@ -123,8 +122,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 			sReturn = sPrefix;
 			sReturn += pFEFile->GetFileName();
 			// deliver filename
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBENameFactory::%s(%s, filetype: %d) = %s (!IDL file)\n",
+			CCompiler::Verbose("CBENameFactory::%s(%s, filetype: %d) = %s (!IDL file)\n",
 				__func__, typeid(*pFEBase).name(), nFileType,
 				sReturn.c_str());
 
@@ -141,16 +139,14 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		// should only be files
 		if (!pFEFile)
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBENameFactory::%s failed because filetype required CFEFile and it wasn't\n",
+			CCompiler::Verbose("CBENameFactory::%s failed because filetype required CFEFile and it wasn't\n",
 				__func__);
 			return string();
 		}
 		// assemble string
 		sReturn = sPrefix;
 		sReturn += pFEFile->GetFileNameWithoutExtension();
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBENameFactory::%s filename is %s\n", __func__,
+		CCompiler::Verbose("CBENameFactory::%s filename is %s\n", __func__,
 			pFEFile->GetFileNameWithoutExtension().c_str());
 		switch (nFileType)
 		{
@@ -194,8 +190,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		default:
 			break;
 		}
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBENameFactory::%s(%s, filetype: %d) = %s (header, opcode)\n",
+		CCompiler::Verbose("CBENameFactory::%s(%s, filetype: %d) = %s (header, opcode)\n",
 			__func__, typeid(*pFEBase).name(), nFileType, sReturn.c_str());
 		return sReturn;
 	}
@@ -207,8 +202,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		// check FE type
 		if (!pFEFile)
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBENameFactory::%s failed because PROGRAM_FILE_IDLFILE/ALL and not CFEFile\n",
+			CCompiler::Verbose("CBENameFactory::%s failed because PROGRAM_FILE_IDLFILE/ALL and not CFEFile\n",
 				__func__);
 			return string();
 		}
@@ -233,8 +227,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		// else if no lib: return 0
 		if (!dynamic_cast<CFELibrary*>(pFEBase))
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBENameFactory::%s failed because PROGRAM_FILE_MODULE and not CFELibrary\n",
+			CCompiler::Verbose("CBENameFactory::%s failed because PROGRAM_FILE_MODULE and not CFELibrary\n",
 				__func__);
 			return string();
 		}
@@ -265,8 +258,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		// check FE type
 		if (!dynamic_cast<CFEInterface*>(pFEBase))
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBENameFactory::%s failed because PROGRAM_FILE_INTERFACE and not CFEInterface\n",
+			CCompiler::Verbose("CBENameFactory::%s failed because PROGRAM_FILE_INTERFACE and not CFEInterface\n",
 				__func__);
 			return string();
 		}
@@ -309,8 +301,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		// check FE type
 		if (!dynamic_cast<CFEOperation*>(pFEBase))
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBENameFactory::%s failed because PROGRAM_FILE_FUNCTION and not CFEOperation\n",
+			CCompiler::Verbose("CBENameFactory::%s failed because PROGRAM_FILE_FUNCTION and not CFEOperation\n",
 				__func__);
 			return string();
 		}
@@ -343,8 +334,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 		else
 			sReturn += ".c";
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s(%s, filetype: %d) = %s\n", __func__,
+	CCompiler::Verbose("CBENameFactory::%s(%s, filetype: %d) = %s\n", __func__,
 		typeid(*pFEBase).name(), nFileType, sReturn.c_str());
 	return sReturn;
 }
@@ -363,8 +353,7 @@ string
 CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
 	FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBENameFactory::%s called\n", __func__);
+	CCompiler::Verbose("CBENameFactory::%s called\n", __func__);
 	// first get the file name as usual
 	// adds prefix to non-IDL files
 	string sName = GetFileName(pFEBase, nFileType);
@@ -372,8 +361,7 @@ CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
 	CFEFile *pFEFile = pFEBase->GetSpecificParent<CFEFile>(0);
 	// if no IDL file, return original name
 	string sOriginalName = pFEFile->GetFileName();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBENameFactory::%s sOriginalName=%s\n", __func__,
+	CCompiler::Verbose("CBENameFactory::%s sOriginalName=%s\n", __func__,
 		sOriginalName.c_str());
 	if (!pFEFile->IsIDLFile())
 		return sName;
@@ -383,8 +371,7 @@ CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
 	string sPath;
 	if (nPos > 0)
 		sPath = sOriginalName.substr(0, nPos + 1);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBENameFactory::%s sPath=%s -> sPath + sName = %s\n", __func__,
+	CCompiler::Verbose("CBENameFactory::%s sPath=%s -> sPath + sName = %s\n", __func__,
 		sPath.c_str(), (sPath + sName).c_str());
 	// concat path and name and return
 	return sPath + sName;
@@ -405,7 +392,7 @@ std::string CBENameFactory::GetIncludeFileName(std::string sBaseName)
 	CCompiler::GetBackEndOption(string("file-prefix"), sReturn);
 	sReturn += sBaseName;
 	// deliver filename
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s = %s (!IDL file)\n",
+	CCompiler::Verbose("CBENameFactory::%s = %s (!IDL file)\n",
 		__func__, sReturn.c_str());
 	return sReturn;
 }
@@ -509,8 +496,7 @@ CBENameFactory::GetCORBATypeName(int nType,
 		break;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s Generated type \"%s\" for code %d\n",
+	CCompiler::Verbose("CBENameFactory::%s Generated type \"%s\" for code %d\n",
 		__func__, sReturn.c_str(), nType);
 	return sReturn;
 }
@@ -662,8 +648,7 @@ CBENameFactory::GetTypeName(int nType,
 		}
 		break;
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s: generated type name \"%s\" for type code %d\n",
+	CCompiler::Verbose("CBENameFactory::%s: generated type name \"%s\" for type code %d\n",
 		__func__, sReturn.c_str(), nType);
 	return sReturn;
 }
@@ -707,8 +692,7 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
 {
 	if (!pFEOperation)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBENameFactory::%s failed because the operation is 0\n",
+		CCompiler::Verbose("CBENameFactory::%s failed because the operation is 0\n",
 			__func__);
 		return string();
 	}
@@ -777,8 +761,7 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
 		break;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s(%s, functiontype:%d) = %s\n",
+	CCompiler::Verbose("CBENameFactory::%s(%s, functiontype:%d) = %s\n",
 		__func__, pFEOperation->GetName().c_str(), nFunctionType,
 		sReturn.c_str());
 	return sReturn;
@@ -851,8 +834,7 @@ CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
 		break;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s(%s, functiontype:%d) = %s\n",
+	CCompiler::Verbose("CBENameFactory::%s(%s, functiontype:%d) = %s\n",
 		__func__, pFEInterface->GetName().c_str(), nFunctionType,
 		sReturn.c_str());
 	return sReturn;
@@ -955,8 +937,7 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 {
 	if (!pFunction)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBENameFactory::%s failed because function is 0\n", __func__);
+		CCompiler::Verbose("CBENameFactory::%s failed because function is 0\n", __func__);
 		return string();
 	}
 
@@ -982,7 +963,7 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 	// make upper case
 	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s(BE: %s) = %s\n", __func__,
+	CCompiler::Verbose("CBENameFactory::%s(BE: %s) = %s\n", __func__,
 		pFunction->GetName().c_str(), sReturn.c_str());
 	return sReturn;
 }
@@ -999,8 +980,7 @@ string CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation, bool bSecond)
 {
 	if (!pFEOperation)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBENameFactory::%s failed because FE function is 0\n",
+		CCompiler::Verbose("CBENameFactory::%s failed because FE function is 0\n",
 			__func__);
 		return string();
 	}
@@ -1020,8 +1000,7 @@ string CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation, bool bSecond)
 	// make upper case
 	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s(FE: %s) = %s\n", __func__,
+	CCompiler::Verbose("CBENameFactory::%s(FE: %s) = %s\n", __func__,
 		pFEOperation->GetName().c_str(), sReturn.c_str());
 	return sReturn;
 }
@@ -1037,8 +1016,7 @@ string CBENameFactory::GetOpcodeConst(CBEClass * pClass)
 {
 	if (!pClass)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBENameFactory::%s failed because class is 0\n", __func__);
+		CCompiler::Verbose("CBENameFactory::%s failed because class is 0\n", __func__);
 		return string();
 	}
 
@@ -1050,8 +1028,7 @@ string CBENameFactory::GetOpcodeConst(CBEClass * pClass)
 	// make upper case
 	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), toupper);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameFactory::%s(C: %s) = %s\n", __func__,
+	CCompiler::Verbose("CBENameFactory::%s(C: %s) = %s\n", __func__,
 		pClass->GetName().c_str(), sReturn.c_str());
 	return sReturn;
 }

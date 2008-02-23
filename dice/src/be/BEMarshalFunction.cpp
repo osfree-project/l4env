@@ -104,14 +104,14 @@ void CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bCompon
  */
 void CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEMarshalFunction::%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// add return variable if we have a return parameter
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReturn = pNF->GetReturnVariable();
 	if (FindParameter(sReturn))
 		pMsgBuffer->AddReturnVariable(this);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEMarshalFunction::%s returns true\n", __func__);
 }
 
 /** \brief writes the variable initializations of this function
@@ -168,7 +168,7 @@ CBETypedDeclarator* CBEMarshalFunction::GetExceptionVariable()
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);
 	CBEMsgBuffer *pMsgBuf = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
+	CCompiler::Verbose("CBEMarshalFunction::%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)
 		return 0;
@@ -177,7 +177,7 @@ CBETypedDeclarator* CBEMarshalFunction::GetExceptionVariable()
 	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
 		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s exception var %s at %p\n", __func__,
+	CCompiler::Verbose("CBEMarshalFunction::%s exception var %s at %p\n", __func__,
 		sName.c_str(), pRet);
 
 	return pRet;
@@ -196,8 +196,7 @@ CBETypedDeclarator* CBEMarshalFunction::GetExceptionVariable()
 void
 CBEMarshalFunction::AddBeforeParameters()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalFunction::%s called\n", __func__);
+	CCompiler::VerboseI("CBEMarshalFunction::%s called\n", __func__);
 	// call base class to add object
 	CBEOperationFunction::AddBeforeParameters();
 
@@ -209,8 +208,7 @@ CBEMarshalFunction::AddBeforeParameters()
 		m_Parameters.Add(pReturnParam);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMarshalFunction::%s returns\n", __func__);
 }
 
 /** \brief add parameters after all other parameters
@@ -223,8 +221,7 @@ CBEMarshalFunction::AddBeforeParameters()
  */
 void CBEMarshalFunction::AddAfterParameters()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalFunction::%s called\n", __func__);
+	CCompiler::VerboseI("CBEMarshalFunction::%s called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -244,8 +241,7 @@ void CBEMarshalFunction::AddAfterParameters()
 
 	CBEOperationFunction::AddAfterParameters();
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMarshalFunction::%s returns\n", __func__);
 }
 
 /** \brief adds a single parameter to this function
@@ -440,8 +436,7 @@ bool CBEMarshalFunction::DoWriteFunction(CBEFile* pFile)
 void
 CBEMarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&

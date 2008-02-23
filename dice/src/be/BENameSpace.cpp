@@ -65,14 +65,12 @@ CBENameSpace::CBENameSpace()
  */
 CBEClass* CBENameSpace::FindClass(std::string sClassName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBENameSpace::FindClass(%s) called\n", sClassName.c_str());
+	CCompiler::Verbose("CBENameSpace::FindClass(%s) called\n", sClassName.c_str());
 	// first search own Classes
 	CBEClass *pRet = m_Classes.Find(sClassName);
 	if (pRet)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBENameSpace::FindClass: return own class\n");
+		CCompiler::Verbose("CBENameSpace::FindClass: return own class\n");
 		return pRet;
 	}
 
@@ -310,8 +308,7 @@ CBEConstant* CBENameSpace::FindConstant(std::string sConstantName)
  */
 void CBENameSpace::AddToHeader(CBEHeaderFile* pHeader)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameSpace::%s(header: %s) for namespace %s called\n", __func__,
+	CCompiler::Verbose("CBENameSpace::%s(header: %s) for namespace %s called\n", __func__,
 		pHeader->GetFileName().c_str(), GetName().c_str());
 	// add this namespace to the file
 	if (IsTargetFile(pHeader))
@@ -324,8 +321,7 @@ void CBENameSpace::AddToHeader(CBEHeaderFile* pHeader)
  */
 void CBENameSpace::AddToImpl(CBEImplementationFile* pImpl)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameSpace::%s(impl: %s) for namespace %s called\n", __func__,
+	CCompiler::Verbose("CBENameSpace::%s(impl: %s) for namespace %s called\n", __func__,
 		pImpl->GetFileName().c_str(), GetName().c_str());
 	// if compiler options for interface or function target file are set
 	// iterate over interfaces and add them
@@ -593,7 +589,7 @@ void CBENameSpace::WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile)
  */
 CBETypedef* CBENameSpace::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s(%s, %p) called\n", __func__,
+	CCompiler::Verbose("CBENameSpace::%s(%s, %p) called\n", __func__,
 		sTypeName.c_str(), pPrev);
 
 	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
@@ -613,14 +609,12 @@ CBETypedef* CBENameSpace::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 			return *iter;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameSpace::%s not found in namespace, try parent namespace\n", __func__);
+	CCompiler::Verbose("CBENameSpace::%s not found in namespace, try parent namespace\n", __func__);
 	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
 	if (pNameSpace)
 		return pNameSpace->FindTypedef(sTypeName, pPrev);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBENameSpace:%s not parent namespace, try root\n", __func__);
+	CCompiler::Verbose("CBENameSpace:%s not parent namespace, try root\n", __func__);
 	CBERoot *pRoot = GetSpecificParent<CBERoot>();
 	assert(pRoot);
 	return pRoot->FindTypedef(sTypeName, pPrev);
@@ -635,7 +629,7 @@ CBETypedef* CBENameSpace::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
  */
 bool CBENameSpace::IsTargetFile(CBEFile* pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::IsTargetFile(%s) called\n",
+	CCompiler::Verbose("CBENameSpace::IsTargetFile(%s) called\n",
 		pFile->GetFileName().c_str());
 
 	vector<CBEClass*>::iterator iterC;
@@ -656,7 +650,7 @@ bool CBENameSpace::IsTargetFile(CBEFile* pFile)
 			return true;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::IsTargetFile returns false\n");
+	CCompiler::Verbose("CBENameSpace::IsTargetFile returns false\n");
 	return false;
 }
 
@@ -814,7 +808,7 @@ void CBENameSpace::InsertOrderedElement(CObject *pObj)
  */
 void CBENameSpace::Write(CBEHeaderFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBENameSpace::%s called\n", __func__);
 	WriteElements(pFile);
 }
 
@@ -823,7 +817,7 @@ void CBENameSpace::Write(CBEHeaderFile& pFile)
  */
 void CBENameSpace::Write(CBEImplementationFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBENameSpace::%s called\n", __func__);
 	WriteElements(pFile);
 }
 

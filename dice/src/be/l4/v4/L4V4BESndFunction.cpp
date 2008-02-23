@@ -64,7 +64,7 @@ CL4V4BESndFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSid
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 	string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
-	AddLocalVariable(sType, sMsgTag, 0, sType + "()");
+	AddLocalVariable(sType, sMsgTag, 0, "L4_MsgTag()");
 }
 
 /** \brief writes the marshaling of the message
@@ -80,18 +80,17 @@ CL4V4BESndFunction::WriteMarshalling(CBEFile& pFile)
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sMsgBuffer = pNF->GetMessageBufferVariable();
-	string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
 	// first clear message tag
-	pFile << "\tL4_MsgClear ( (" << sType << "*) &" << sMsgBuffer << " );\n";
+	pFile << "\tL4_MsgClear ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
 	// load msgtag into message buffer
-	pFile << "\tL4_Set_MsgLabel ( (" << sType << "*) &" << sMsgBuffer << ", " <<
+	pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ", " <<
 		m_sOpcodeConstName << " );\n";
 	// set dopes
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, GetSendDirection());
 	// load the message into the UTCB
-	pFile << "\tL4_MsgLoad ( (" << sType << "*) &" << sMsgBuffer << " );\n";
+	pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
 }
 
 /** \brief writes the invocation of the message transfer

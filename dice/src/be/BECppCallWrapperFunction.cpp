@@ -55,7 +55,7 @@ void
 CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide,
 	int nSkipParameter)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
+	CCompiler::Verbose("CBECppCallWrapperFunction::%s for operation %s called\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
@@ -78,7 +78,7 @@ CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 			pDeclarator->CreateBackEnd(sPrefix + sName, pDeclarator->GetStars());
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBECppCallWrapperFunction::%s returns true\n", __func__);
 }
 
 /** \brief writes the body of the function to the target file

@@ -1,0 +1,534 @@
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: 802
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: 8021q
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: appletalk
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: atm
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: ax25
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: bluetooth
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: bridge
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: compat.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: datagram.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: dev.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: dev_mcast.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/core/dst.c net/core/dst.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/core/dst.c	2007-09-08 21:32:44.000000000 +0200
++++ net/core/dst.c	2008-02-20 16:08:02.000000000 +0100
+@@ -35,11 +35,19 @@
+ static DEFINE_SPINLOCK(dst_lock);
+ 
+ static unsigned long dst_gc_timer_expires;
++#ifndef DDE_LINUX
+ static unsigned long dst_gc_timer_inc = DST_GC_MAX;
++#else
++static unsigned long dst_gc_timer_inc;
++#endif
+ static void dst_run_gc(unsigned long);
+ static void ___dst_free(struct dst_entry * dst);
+ 
++#ifndef DDE_LINUX
+ static DEFINE_TIMER(dst_gc_timer, dst_run_gc, DST_GC_MIN, 0);
++#else
++static struct timer_list dst_gc_timer;
++#endif
+ 
+ static void dst_run_gc(unsigned long dummy)
+ {
+@@ -275,6 +283,13 @@
+ 
+ void __init dst_init(void)
+ {
++#ifdef DDE_LINUX
++        dst_gc_timer_inc = DST_GC_MAX;
++        //DEFINE_TIMER(dst_gc_timer, dst_run_gc, DST_GC_MIN, 0);
++	dst_gc_timer.function = dst_run_gc;
++        dst_gc_timer.expires  = DST_GC_MIN;
++        dst_gc_timer.data     = 0;                               
++#endif
+ 	register_netdevice_notifier(&dst_dev_notifier);
+ }
+ 
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: ethtool.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: fib_rules.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: filter.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: flow.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: gen_estimator.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: gen_stats.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: iovec.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: kmap_skb.h
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: link_watch.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: Makefile
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: neighbour.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: netevent.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: netpoll.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: net-sysfs.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: pktgen.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: request_sock.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: rtnetlink.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: scm.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: skbuff.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: sock.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: stream.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: sysctl_net_core.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: user_dma.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: utils.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/core: wireless.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: dccp
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: decnet
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: econet
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: ethernet
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: ieee80211
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ah4.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/arp.c net/ipv4/arp.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/arp.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/arp.c	2008-02-20 16:08:02.000000000 +0100
+@@ -184,20 +184,28 @@
+ 	.id =		"arp_cache",
+ 	.parms = {
+ 		.tbl =			&arp_tbl,
++#ifndef DDE_LINUX
+ 		.base_reachable_time =	30 * HZ,
+ 		.retrans_time =	1 * HZ,
+ 		.gc_staletime =	60 * HZ,
+ 		.reachable_time =		30 * HZ,
+ 		.delay_probe_time =	5 * HZ,
++#endif
+ 		.queue_len =		3,
+ 		.ucast_probes =	3,
+ 		.mcast_probes =	3,
++#ifndef DDE_LINUX
+ 		.anycast_delay =	1 * HZ,
+ 		.proxy_delay =		(8 * HZ) / 10,
++#endif
+ 		.proxy_qlen =		64,
++#ifndef DDE_LINUX
+ 		.locktime =		1 * HZ,
++#endif
+ 	},
++#ifndef DDE_LINUX
+ 	.gc_interval =	30 * HZ,
++#endif
+ 	.gc_thresh1 =	128,
+ 	.gc_thresh2 =	512,
+ 	.gc_thresh3 =	1024,
+@@ -1251,6 +1259,21 @@
+ 	register_netdevice_notifier(&arp_netdev_notifier);
+ }
+ 
++#ifdef DDE_LINUX
++static void dde_hz_init(void)
++{
++	arp_tbl.parms.base_reachable_time =	30 * HZ;
++	arp_tbl.parms.retrans_time =	1 * HZ;
++	arp_tbl.parms.gc_staletime =	60 * HZ;
++	arp_tbl.parms.reachable_time =		30 * HZ;
++	arp_tbl.parms.delay_probe_time =	5 * HZ;
++	arp_tbl.parms.anycast_delay =	1 * HZ;
++	arp_tbl.parms.proxy_delay =		(8 * HZ) / 10;
++	arp_tbl.parms.locktime =		1 * HZ;
++	arp_tbl.gc_interval = 30 * HZ;
++}
++#endif
++
+ #ifdef CONFIG_PROC_FS
+ #if defined(CONFIG_AX25) || defined(CONFIG_AX25_MODULE)
+ 
+@@ -1400,6 +1423,9 @@
+ 
+ static int __init arp_proc_init(void)
+ {
++	#ifdef DDE_LINUX
++        dde_hz_init();
++        #endif
+ 	if (!proc_net_fops_create("arp", S_IRUGO, &arp_seq_fops))
+ 		return -ENOMEM;
+ 	return 0;
+@@ -1409,6 +1435,9 @@
+ 
+ static int __init arp_proc_init(void)
+ {
++	#ifdef DDE_LINUX
++        dde_hz_init();
++        #endif
+ 	return 0;
+ }
+ 
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: cipso_ipv4.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: datagram.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: esp4.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: fib_frontend.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: fib_hash.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: fib_lookup.h
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: fib_rules.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: fib_semantics.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: fib_trie.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/icmp.c net/ipv4/icmp.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/icmp.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/icmp.c	2008-02-20 16:08:02.000000000 +0100
+@@ -205,7 +205,11 @@
+  *	time exceeded (11), parameter problem (12)
+  */
+ 
++#ifndef DDE_LINUX
+ int sysctl_icmp_ratelimit __read_mostly = 1 * HZ;
++#else
++int sysctl_icmp_ratelimit __read_mostly;
++#endif
+ int sysctl_icmp_ratemask __read_mostly = 0x1818;
+ int sysctl_icmp_errors_use_inbound_ifaddr __read_mostly;
+ 
+@@ -1113,6 +1117,9 @@
+ 	struct inet_sock *inet;
+ 	int i;
+ 
++#ifdef DDE_LINUX
++	sysctl_icmp_ratelimit = 1 * HZ;
++#endif
+ 	for_each_possible_cpu(i) {
+ 		int err;
+ 
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: igmp.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: inet_connection_sock.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: inet_diag.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: inet_hashtables.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/inetpeer.c net/ipv4/inetpeer.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/inetpeer.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/inetpeer.c	2008-02-20 16:08:02.000000000 +0100
+@@ -90,8 +90,13 @@
+ /* Exported for sysctl_net_ipv4.  */
+ int inet_peer_threshold = 65536 + 128;	/* start to throw entries more
+ 					 * aggressively at this stage */
++#ifndef DDE_LINUX
+ int inet_peer_minttl = 120 * HZ;	/* TTL under high load: 120 sec */
+ int inet_peer_maxttl = 10 * 60 * HZ;	/* usual time to live: 10 min */
++#else
++int inet_peer_minttl;	/* TTL under high load: 120 sec */
++int inet_peer_maxttl;	/* usual time to live: 10 min */
++#endif
+ 
+ static struct inet_peer *inet_peer_unused_head;
+ static struct inet_peer **inet_peer_unused_tailp = &inet_peer_unused_head;
+@@ -101,14 +106,25 @@
+ static DEFINE_TIMER(peer_periodic_timer, peer_check_expire, 0, 0);
+ 
+ /* Exported for sysctl_net_ipv4.  */
++#ifndef DDE_LINUX
+ int inet_peer_gc_mintime = 10 * HZ,
+     inet_peer_gc_maxtime = 120 * HZ;
++#else
++int inet_peer_gc_mintime;
++int inet_peer_gc_maxtime;
++#endif
+ 
+ /* Called from ip_output.c:ip_init  */
+ void __init inet_initpeers(void)
+ {
+ 	struct sysinfo si;
+ 
++#ifdef DDE_LINUX
++	inet_peer_minttl = 120 * HZ;
++	inet_peer_maxttl = 10 * 60 * HZ;
++        inet_peer_gc_mintime = 10 * HZ,
++        inet_peer_gc_maxtime = 120 * HZ;
++#endif
+ 	/* Use the straight interface to information about memory. */
+ 	si_meminfo(&si);
+ 	/* The values below were suggested by Alexey Kuznetsov
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: inet_timewait_sock.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ipcomp.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/ipconfig.c net/ipv4/ipconfig.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/ipconfig.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/ipconfig.c	2008-02-20 16:14:49.000000000 +0100
+@@ -113,7 +113,11 @@
+  */
+ int ic_set_manually __initdata = 0;		/* IPconfig parameters set manually */
+ 
++#ifndef DDE_LINUX
+ static int ic_enable __initdata = 0;		/* IP config enabled? */
++#else
++int ic_enable __initdata = 0;		/* IP config enabled? */
++#endif
+ 
+ /* Protocol choice */
+ int ic_proto_enabled __initdata = 0
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ip_forward.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/ip_fragment.c net/ipv4/ip_fragment.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/ip_fragment.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/ip_fragment.c	2008-02-20 16:08:02.000000000 +0100
+@@ -62,7 +62,11 @@
+ /* Important NOTE! Fragment queue must be destroyed before MSL expires.
+  * RFC791 is wrong proposing to prolongate timer each fragment arrival by TTL.
+  */
++#ifndef DDE_LINUX
+ int sysctl_ipfrag_time __read_mostly = IP_FRAG_TIME;
++#else
++int sysctl_ipfrag_time __read_mostly;
++#endif
+ 
+ struct ipfrag_skb_cb
+ {
+@@ -131,7 +135,11 @@
+ }
+ 
+ static struct timer_list ipfrag_secret_timer;
++#ifndef DDE_LINUX
+ int sysctl_ipfrag_secret_interval __read_mostly = 10 * 60 * HZ;
++#else
++int sysctl_ipfrag_secret_interval; 
++#endif
+ 
+ static void ipfrag_secret_rebuild(unsigned long dummy)
+ {
+@@ -736,6 +744,10 @@
+ 
+ void ipfrag_init(void)
+ {
++#ifdef DDE_LINUX
++	sysctl_ipfrag_time = IP_FRAG_TIME;
++	sysctl_ipfrag_secret_interval = 10 * 60 * HZ;
++#endif
+ 	ipfrag_hash_rnd = (u32) ((num_physpages ^ (num_physpages>>7)) ^
+ 				 (jiffies ^ (jiffies >> 6)));
+ 
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ip_gre.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ip_input.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ipip.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ipmr.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ip_options.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ip_output.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ip_sockglue.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: ipvs
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: Kconfig
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: Makefile
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: multipath.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: multipath_drr.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: multipath_random.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: multipath_rr.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: multipath_wrandom.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: netfilter
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: netfilter.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: proc.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: protocol.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: raw.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/route.c net/ipv4/route.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/route.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/route.c	2008-02-20 16:13:48.000000000 +0100
+@@ -116,22 +116,48 @@
+ 
+ #define RT_GC_TIMEOUT (300*HZ)
+ 
++#ifndef DDE_LINUX
+ static int ip_rt_min_delay		= 2 * HZ;
+ static int ip_rt_max_delay		= 10 * HZ;
++#else
++static int ip_rt_min_delay;
++static int ip_rt_max_delay;
++#endif
+ static int ip_rt_max_size;
++#ifndef DDE_LINUX
+ static int ip_rt_gc_timeout		= RT_GC_TIMEOUT;
+ static int ip_rt_gc_interval		= 60 * HZ;
+ static int ip_rt_gc_min_interval	= HZ / 2;
++#else
++static int ip_rt_gc_timeout;
++static int ip_rt_gc_interval;	
++static int ip_rt_gc_min_interval;
++#endif
+ static int ip_rt_redirect_number	= 9;
++#ifndef DDE_LINUX
+ static int ip_rt_redirect_load		= HZ / 50;
+ static int ip_rt_redirect_silence	= ((HZ / 50) << (9 + 1));
+ static int ip_rt_error_cost		= HZ;
+ static int ip_rt_error_burst		= 5 * HZ;
++#else
++static int ip_rt_redirect_load;
++static int ip_rt_redirect_silence;
++static int ip_rt_error_cost;
++static int ip_rt_error_burst;
++#endif
+ static int ip_rt_gc_elasticity		= 8;
++#ifndef DDE_LINUX
+ static int ip_rt_mtu_expires		= 10 * 60 * HZ;
++#else
++static int ip_rt_mtu_expires;
++#endif
+ static int ip_rt_min_pmtu		= 512 + 20 + 20;
+ static int ip_rt_min_advmss		= 256;
++#ifndef DDE_LINUX
+ static int ip_rt_secret_interval	= 10 * 60 * HZ;
++#else
++static int ip_rt_secret_interval;
++#endif
+ static unsigned long rt_deadline;
+ 
+ #define RTprint(a...)	printk(KERN_DEBUG a)
+@@ -497,7 +523,11 @@
+ static __inline__ void rt_free(struct rtable *rt)
+ {
+ 	multipath_remove(rt);
++#ifndef DDE_LINUX
+ 	call_rcu_bh(&rt->u.dst.rcu_head, dst_rcu_free);
++#else
++	printk(KERN_WARNING "skip call_rcu_bh\n");
++#endif
+ }
+ 
+ static __inline__ void rt_drop(struct rtable *rt)
+@@ -778,9 +808,15 @@
+    and when load increases it reduces to limit cache size.
+  */
+ 
++#ifdef DDE_LINUX
++	static unsigned long expire;
++#endif
++
+ static int rt_garbage_collect(void)
+ {
++#ifndef DDE_LINUX
+ 	static unsigned long expire = RT_GC_TIMEOUT;
++#endif
+ 	static unsigned long last_gc;
+ 	static int rover;
+ 	static int equilibrium;
+@@ -3117,6 +3153,20 @@
+ int __init ip_rt_init(void)
+ {
+ 	int rc = 0;
++#ifdef DDE_LINUX
++	ip_rt_min_delay		= 2 * HZ;
++	ip_rt_max_delay		= 10 * HZ;
++	ip_rt_gc_timeout	= RT_GC_TIMEOUT;
++	ip_rt_gc_interval	= 60 * HZ;
++	ip_rt_gc_min_interval	= HZ / 2;
++	ip_rt_redirect_load	= HZ / 50;
++	ip_rt_redirect_silence	= ((HZ / 50) << (9 + 1));
++	ip_rt_error_cost	= HZ;
++	ip_rt_error_burst	= 5 * HZ;
++	ip_rt_mtu_expires	= 10 * 60 * HZ;
++	ip_rt_secret_interval	= 10 * 60 * HZ;
++	expire = RT_GC_TIMEOUT;
++#endif
+ 
+ 	rt_hash_rnd = (int) ((num_physpages ^ (num_physpages>>8)) ^
+ 			     (jiffies ^ (jiffies >> 7)));
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: syncookies.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: sysctl_net_ipv4.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_bic.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/tcp.c net/ipv4/tcp.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/tcp.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/tcp.c	2008-02-20 16:08:02.000000000 +0100
+@@ -269,7 +269,11 @@
+ #include <asm/uaccess.h>
+ #include <asm/ioctls.h>
+ 
++#ifndef DDE_LINUX
+ int sysctl_tcp_fin_timeout __read_mostly = TCP_FIN_TIMEOUT;
++#else
++int sysctl_tcp_fin_timeout __read_mostly; 
++#endif
+ 
+ DEFINE_SNMP_STAT(struct tcp_mib, tcp_statistics) __read_mostly;
+ 
+@@ -2391,6 +2395,14 @@
+ 	unsigned long limit;
+ 	int order, i, max_share;
+ 
++#ifdef DDE_LINUX
++	sysctl_tcp_fin_timeout	= TCP_FIN_TIMEOUT;
++	//from tcp_minisocks.c
++        tcp_death_row.period	= TCP_TIMEWAIT_LEN / INET_TWDR_TWKILL_SLOTS;
++        //from tcp_timer.c
++        sysctl_tcp_keepalive_time = TCP_KEEPALIVE_TIME;
++        sysctl_tcp_keepalive_intvl = TCP_KEEPALIVE_INTVL;
++#endif
+ 	if (sizeof(struct tcp_skb_cb) > sizeof(skb->cb))
+ 		__skb_cb_too_small_for_tcp(sizeof(struct tcp_skb_cb),
+ 					   sizeof(skb->cb));
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_cong.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_cubic.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_diag.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_highspeed.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_htcp.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_hybla.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_input.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_ipv4.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_lp.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/tcp_minisocks.c net/ipv4/tcp_minisocks.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/tcp_minisocks.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/tcp_minisocks.c	2008-02-20 16:08:02.000000000 +0100
+@@ -39,7 +39,11 @@
+ 
+ struct inet_timewait_death_row tcp_death_row = {
+ 	.sysctl_max_tw_buckets = NR_FILE * 2,
++#ifndef DDE_LINUX
+ 	.period		= TCP_TIMEWAIT_LEN / INET_TWDR_TWKILL_SLOTS,
++#else
++//initialized in tcp.c -> tcp_init
++#endif
+ 	.death_lock	= __SPIN_LOCK_UNLOCKED(tcp_death_row.death_lock),
+ 	.hashinfo	= &tcp_hashinfo,
+ 	.tw_timer	= TIMER_INITIALIZER(inet_twdr_hangman, 0,
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_output.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_probe.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_scalable.c
+diff -ur /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/tcp_timer.c net/ipv4/tcp_timer.c
+--- /home/alex/download/kernel/linux-2.6.20.19/net/ipv4/tcp_timer.c	2007-09-08 21:32:44.000000000 +0200
++++ net/ipv4/tcp_timer.c	2008-02-20 16:08:02.000000000 +0100
+@@ -25,9 +25,17 @@
+ 
+ int sysctl_tcp_syn_retries __read_mostly = TCP_SYN_RETRIES;
+ int sysctl_tcp_synack_retries __read_mostly = TCP_SYNACK_RETRIES;
++#ifndef DDE_LINUX
+ int sysctl_tcp_keepalive_time __read_mostly = TCP_KEEPALIVE_TIME;
++#else
++int sysctl_tcp_keepalive_time __read_mostly;
++#endif
+ int sysctl_tcp_keepalive_probes __read_mostly = TCP_KEEPALIVE_PROBES;
++#ifndef DDE_LINUX
+ int sysctl_tcp_keepalive_intvl __read_mostly = TCP_KEEPALIVE_INTVL;
++#else
++int sysctl_tcp_keepalive_intvl __read_mostly;
++#endif
+ int sysctl_tcp_retries1 __read_mostly = TCP_RETR1;
+ int sysctl_tcp_retries2 __read_mostly = TCP_RETR2;
+ int sysctl_tcp_orphan_retries __read_mostly;
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_vegas.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_veno.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tcp_westwood.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: tunnel4.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: udp.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: udp_impl.h
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: udplite.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_input.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_mode_beet.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_mode_transport.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_mode_tunnel.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_output.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_policy.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_state.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net/ipv4: xfrm4_tunnel.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: ipv6
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: ipx
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: irda
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: Kconfig
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: key
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: lapb
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: llc
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: Makefile
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: netfilter
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: netlabel
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: netlink
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: netrom
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: nonet.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: packet
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: rose
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: rxrpc
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: sched
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: sctp
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: socket.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: sunrpc
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: sysctl_net.c
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: tipc
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: TUNABLE
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: unix
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: wanrouter
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: x25
+Only in /home/alex/download/kernel/linux-2.6.20.19/net: xfrm

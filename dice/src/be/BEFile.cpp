@@ -197,7 +197,7 @@ int CBEFile::GetFunctionCount()
  */
 bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFile::IsOfFileType(%d) called m_nFileType=%d for %s\n",
+	CCompiler::Verbose("CBEFile::IsOfFileType(%d) called m_nFileType=%d for %s\n",
 		nFileType, m_nFileType, GetFileName().c_str());
 	if (m_nFileType == nFileType)
 		return true;
@@ -220,7 +220,7 @@ bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION) ||
 		 (m_nFileType == FILETYPE_TEMPLATE)))
 		return true;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFile::IsOfFileType returns false\n");
+	CCompiler::Verbose("CBEFile::IsOfFileType returns false\n");
 	return false;
 }
 
@@ -265,7 +265,7 @@ bool CBEFile::HasFunctionWithUserType(std::string sTypeName)
  */
 void CBEFile::WriteIntro()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFile::%s called\n", __func__);
+	CCompiler::Verbose("CBEFile::%s called\n", __func__);
 
 	*this <<
 		"/*\n" <<
@@ -381,8 +381,7 @@ void CBEFile::InsertOrderedElement(CObject *pObj)
  */
 std::ofstream& CBEFile::operator<<(std::string s)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());
+	CCompiler::Verbose("CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());
 
 	if (s.empty())
 		return *this;
@@ -390,8 +389,7 @@ std::ofstream& CBEFile::operator<<(std::string s)
 	if (s[0] == '\t')
 	{
 		PrintIndent();
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEFile::%s(str) print substr after indent\n", __func__);
+		CCompiler::Verbose("CBEFile::%s(str) print substr after indent\n", __func__);
 		*this << s.substr(1);
 		return *this;
 	}
@@ -401,20 +399,17 @@ std::ofstream& CBEFile::operator<<(std::string s)
 		pos != s.length())
 	{
 		/* first print everything up to \n */
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEFile::%s(str) print substr 1\n", __func__);
+		CCompiler::Verbose("CBEFile::%s(str) print substr 1\n", __func__);
 		write(s.substr(0, pos + 1).c_str(), s.substr(0, pos + 1).length());
 
 		/* then call ourselves with the rest */
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEFile::%s(str) print substr 2\n", __func__);
+		CCompiler::Verbose("CBEFile::%s(str) print substr 2\n", __func__);
 		*this << s.substr(pos + 1);
 		return *this;
 	}
 
 	/* simple string */
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEFile::%s(str) calling base class\n", __func__);
+	CCompiler::Verbose("CBEFile::%s(str) calling base class\n", __func__);
 	write(s.c_str(), s.length());
 	return *this;
 }
@@ -424,8 +419,7 @@ std::ofstream& CBEFile::operator<<(std::string s)
  */
 std::ofstream& CBEFile::operator<<(char const * s)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEFile::%s(char const:\"%s\") called\n", __func__, s);
+	CCompiler::Verbose("CBEFile::%s(char const:\"%s\") called\n", __func__, s);
 
 	this->operator<<(string(s));
 	return *this;
@@ -436,8 +430,7 @@ std::ofstream& CBEFile::operator<<(char const * s)
  */
 std::ofstream& CBEFile::operator<<(char* s)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEFile::%s(char:%s) called\n", __func__, s);
+	CCompiler::Verbose("CBEFile::%s(char:%s) called\n", __func__, s);
 
 	this->operator<<(string(s));
 	return *this;

@@ -78,7 +78,7 @@ CBESrvLoopFunction::~CBESrvLoopFunction()
  */
 void CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBESrvLoopFunction::%s called\n", __func__);
 
 	// set target file name
 	SetTargetFileName(pFEInterface);
@@ -136,7 +136,7 @@ void CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bCompon
 	assert(m_pDispatchFunction);
 	SetCallVariables(m_pDispatchFunction);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBESrvLoopFunction::%s returns true\n", __func__);
 }
 
 /** \brief looks globally for a function of a specific type
@@ -529,7 +529,7 @@ CBESrvLoopFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 void
 CBESrvLoopFunction::AddParameters()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::VerboseI("%s called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
@@ -547,6 +547,6 @@ CBESrvLoopFunction::AddParameters()
 
 	m_Parameters.Add(pParameter);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true.\n", __func__);
+	CCompiler::VerboseD("%s returns true.\n", __func__);
 }
 

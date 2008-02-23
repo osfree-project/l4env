@@ -35,13 +35,11 @@
 
 CL4V4BEIPC::CL4V4BEIPC()
  : CL4BEIPC()
-{
-}
+{ }
 
 /** destroys the object */
 CL4V4BEIPC::~CL4V4BEIPC()
-{
-}
+{ }
 
 /** \brief writes the IPC call invocation
  *  \param pFile the file to write to

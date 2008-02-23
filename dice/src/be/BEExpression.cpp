@@ -109,8 +109,7 @@ CBEExpression* CBEExpression::Clone()
 void
 CBEExpression::CreateBackEnd(CFEExpression * pFEExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEnd(fe)\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEnd(fe)\n");
 	// call CBEObject's CreateBackEnd method
 	CBEObject::CreateBackEnd(pFEExpression);
 
@@ -191,8 +190,7 @@ CBEExpression::CreateBackEnd(CFEExpression * pFEExpression)
  */
 void CBEExpression::CreateBackEndConditional(CFEConditionalExpression *pFEExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndConditional\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndConditional\n");
 
 	if (!pFEExpression->GetCondition())
 	{
@@ -212,8 +210,7 @@ void CBEExpression::CreateBackEndConditional(CFEConditionalExpression *pFEExpres
  */
 void CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndBinary(fe)\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndBinary(fe)\n");
 
 	if (!pFEExpression->GetOperand2())
 	{
@@ -234,8 +231,7 @@ void CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression)
 void
 CBEExpression::CreateBackEndUnary(CFEUnaryExpression * pFEExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndUnary(fe)\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndUnary(fe)\n");
 	m_nOperator = pFEExpression->GetOperator();
 	CreateBackEndPrimary(pFEExpression);
 }
@@ -249,8 +245,7 @@ void
 CBEExpression::CreateBackEndUnary(int nOperator,
 	CBEExpression *pOperand)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndUnary\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndUnary\n");
 	m_nOperator = nOperator;
 	m_pOperand1 = pOperand;
 	m_pOperand1->SetParent(this);
@@ -265,8 +260,7 @@ CBEExpression::CreateBackEndUnary(int nOperator,
 void
 CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndPrimary(fe)\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndPrimary(fe)\n");
 	CFEExpression *pFEOperand = pFEExpression->GetOperand();
 	if (!pFEOperand)
 	{
@@ -289,8 +283,7 @@ CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression)
 void
 CBEExpression::CreateBackEndPrimary(int nType, CBEExpression *pExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndPrimary\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndPrimary\n");
 	m_nType = nType;
 	switch (m_nType)
 	{
@@ -333,8 +326,7 @@ CBEExpression::CreateBackEndPrimary(int nType, CBEExpression *pExpression)
 void
 CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndSizeOf\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndSizeOf\n");
 	// can be type
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CFETypeSpec *pFEType = pFEExpression->GetSizeOfType();
@@ -547,8 +539,7 @@ void CBEExpression::WriteUnaryToStr(std::string &sStr)
  */
 void CBEExpression::CreateBackEnd(int nValue)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEnd(int)\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEnd(int)\n");
 	m_nType = EXPR_INT;
 	m_nIntValue = nValue;
 }
@@ -559,8 +550,7 @@ void CBEExpression::CreateBackEnd(int nValue)
  */
 void CBEExpression::CreateBackEnd(std::string sValue)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEnd(string)\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEnd(string)\n");
 	m_nType = EXPR_USER_DEFINED;
 	m_sStringValue = sValue;
 }
@@ -574,8 +564,7 @@ void CBEExpression::CreateBackEnd(std::string sValue)
 void CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1, int nOperator,
 	CBEExpression * pOperand2)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEExpression::CreateBackEndBinary\n");
+	CCompiler::Verbose("CBEExpression::CreateBackEndBinary\n");
 	m_pOperand1 = pOperand1;
 	m_nOperator = nOperator;
 	m_pOperand2 = pOperand2;
@@ -589,8 +578,7 @@ int CBEExpression::GetIntValue()
 {
 	int nValue = 0;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEExpression::GetIntValue() called, m_nType is %d\n", m_nType);
+	CCompiler::Verbose("CBEExpression::GetIntValue() called, m_nType is %d\n", m_nType);
 
 	switch (m_nType)
 	{
@@ -600,8 +588,7 @@ int CBEExpression::GetIntValue()
 		break;
 	case EXPR_USER_DEFINED:
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"CBEExpression::GetIntValue() test for constant or enum %s\n",
+			CCompiler::Verbose("CBEExpression::GetIntValue() test for constant or enum %s\n",
 				m_sStringValue.c_str());
 			// might be constant
 			CBEConstant *pConst;
@@ -610,8 +597,7 @@ int CBEExpression::GetIntValue()
 				CBEExpression *pValue = pConst->GetValue();
 				nValue = pValue ? pValue->GetIntValue() : 0;
 
-				CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-					"CBEExpression::GetIntValue() constant has value %d\n", nValue);
+				CCompiler::Verbose("CBEExpression::GetIntValue() constant has value %d\n", nValue);
 			}
 			// might be an enum
 			CBEEnumType *pEnum;
@@ -620,8 +606,7 @@ int CBEExpression::GetIntValue()
 				// get the integer value of the enumerator from the enum
 				nValue = pEnum->GetIntValue(m_sStringValue);
 
-				CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-					"CBEExpression::GetIntValue() enum has value %d\n", nValue);
+				CCompiler::Verbose("CBEExpression::GetIntValue() enum has value %d\n", nValue);
 			}
 			// if neither nor, issue an error
 			if (!pConst && !pEnum)
@@ -674,8 +659,7 @@ int CBEExpression::GetIntValue()
 		break;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEExpression::GetIntValue returns %d\n", nValue);
+	CCompiler::Verbose("CBEExpression::GetIntValue returns %d\n", nValue);
 
 	return nValue;
 }
@@ -792,7 +776,7 @@ string CBEExpression::GetStringValue()
 {
 	string value;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "type : %d\n", m_nType);
+	CCompiler::Verbose("type : %d\n", m_nType);
 	switch (m_nType)
 	{
 	case EXPR_NONE:

@@ -80,7 +80,7 @@ void CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 {
 	assert(pFEFile);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s(file: %s) called\n",
+	CCompiler::Verbose("CBEHeaderFile::%s(file: %s) called\n",
 		__func__, pFEFile->GetFileName().c_str());
 
 	m_nFileType = nFileType;
@@ -88,8 +88,7 @@ void CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 	m_sFilename = pNF->GetFileName(pFEFile, m_nFileType);
 	m_sIncludeName = pNF->GetIncludeFileName(pFEFile, m_nFileType);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s m_sFilename=%s, m_sIncludeName=%s\n", __func__,
+	CCompiler::Verbose("CBEHeaderFile::%s m_sFilename=%s, m_sIncludeName=%s\n", __func__,
 		m_sFilename.c_str(), m_sIncludeName.c_str());
 
 	CFEFile *pFERoot = pFEFile->GetRoot();
@@ -110,8 +109,7 @@ void CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 			(*iFile)->IsStdIncludeFile(), *iFile);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s(file: %s) finished\n", __func__,
+	CCompiler::VerboseD("CBEHeaderFile::%s(file: %s) finished\n", __func__,
 		pFEFile->GetFileName().c_str());
 }
 
@@ -122,8 +120,7 @@ void CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
  */
 void CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s(library: %s) called\n", __func__,
+	CCompiler::Verbose("CBEHeaderFile::%s(library: %s) called\n", __func__,
 		pFELibrary->GetName().c_str());
 
 	m_nFileType = nFileType;
@@ -139,8 +136,7 @@ void CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, FILE_TYPE nFileType)
  */
 void CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface, FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s(interface: %s) called\n", __func__,
+	CCompiler::Verbose("CBEHeaderFile::%s(interface: %s) called\n", __func__,
 		pFEInterface->GetName().c_str());
 
 	m_nFileType = nFileType;
@@ -156,8 +152,7 @@ void CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface, FILE_TYPE nFileTy
  */
 void CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation, FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s(operation: %s) called\n", __func__,
+	CCompiler::Verbose("CBEHeaderFile::%s(operation: %s) called\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	m_nFileType = nFileType;
@@ -185,8 +180,7 @@ void CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation, FILE_TYPE nFileTy
  */
 void CBEHeaderFile::Write()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s called\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s called\n", __func__);
 	string sFilename;
 	CCompiler::GetBackEndOption(string("output-dir"), sFilename);
 	sFilename += GetFileName();
@@ -205,13 +199,11 @@ void CBEHeaderFile::Write()
 	m_nIndent = m_nLastIndent = 0;
 	// sort our members/elements depending on source line number
 	// into extra vector
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s create ordered elements\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s create ordered elements\n", __func__);
 	CreateOrderedElementList();
 
 	// write intro
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s write intro\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s write intro\n", __func__);
 	WriteIntro();
 	// write include define
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -225,8 +217,7 @@ void CBEHeaderFile::Write()
 
 	// default includes always come first, because they define standard headers
 	// needed by other includes
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s write default includes\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s write default includes\n", __func__);
 	WriteDefaultIncludes();
 
 	// write target file
@@ -332,18 +323,16 @@ void CBEHeaderFile::Write()
 	*this << "\n";
 
 	// close file
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s close file\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s close file\n", __func__);
 	close();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEHeaderFile::%s done.\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s done.\n", __func__);
 }
 
 /** \brief writes includes, which have to appear before any type definition
  */
 void CBEHeaderFile::WriteDefaultIncludes()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s called\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s called\n", __func__);
 
 	string ver(VERSION);
 	string::size_type l = ver.find('.');
@@ -367,7 +356,7 @@ void CBEHeaderFile::WriteDefaultIncludes()
 		"#include \"dice/dice.h\"\n" <<
 		"\n";
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s returns\n", __func__);
+	CCompiler::Verbose("CBEHeaderFile::%s returns\n", __func__);
 }
 
 /** \brief creates a list of ordered elements
@@ -451,7 +440,7 @@ void CBEHeaderFile::WriteConstant(CBEConstant *pConstant)
 void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef)
 {
 	assert(pTypedef);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s.\n", __func__,
+	CCompiler::Verbose("CBEHeaderFile::%s called for %s.\n", __func__,
 		pTypedef->m_Declarators.First()->GetName().c_str());
 	pTypedef->WriteDeclaration(*this);
 }

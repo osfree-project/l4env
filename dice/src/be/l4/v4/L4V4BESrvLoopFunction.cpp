@@ -53,7 +53,7 @@ void CL4V4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bCo
 
 	// init function check
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: for func %s and class at %p\n",
+	CCompiler::Verbose("CL4V4BESrvLoopFunction::%s: for func %s and class at %p\n",
 		__func__, GetName().c_str(), pClass);
 
 	if (IsComponentSide() &&

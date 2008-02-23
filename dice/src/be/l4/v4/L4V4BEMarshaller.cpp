@@ -85,28 +85,27 @@ bool CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction, CBETypedDeclarat
 bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4BEMarshaller::%s called for %s\n", __func__,
-		pParameter->m_Declarators.First()->GetName().c_str());
-
-	if (!pParameter->m_Attributes.Find(ATTR_REF))
-		return false;
+	CCompiler::Verbose("CL4V4BEMarshaller::%s called for %s with%s [ref]\n", __func__,
+		pParameter->m_Declarators.First()->GetName().c_str(),
+		pParameter->m_Attributes.Find(ATTR_REF) ? "" : "out");
 
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
 	CBETypedDeclarator *pMember = FindMarshalMember(pStack);
 	if (!pMember)
 	{
-		CMessages::Warning("%s: could not find member for parameter %s\n",
+		CMessages::Warning("CL4V4BEMarshaller::%s: could not find member for parameter %s\n",
 			__func__, pParameter->m_Declarators.First()->GetName().c_str());
 	}
 	assert(pMember);
+
+	CCompiler::Verbose("CL4V4BEMarshaller::%s member with%s [ref] attribute\n", __func__,
+		pMember->m_Attributes.Find(ATTR_REF) ? "" : "out");
 	// check the member for the ref attribute, because we might have made some
 	// parameters to ref's after adding them to the message buffer
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4BEMarshaller::%s member with%s [ref] attribute\n", __func__,
-		pMember->m_Attributes.Find(ATTR_REF) ? "" : "out");
-	if (!pMember->m_Attributes.Find(ATTR_REF))
+	if (!pParameter->m_Attributes.Find(ATTR_REF) &&
+		!pMember->m_Attributes.Find(ATTR_REF))
 		return false;
+
 	CBEType *pType = pParameter->GetType();
 	// try to find respective member and assign
 	if (m_bMarshal)
@@ -297,5 +296,36 @@ bool CL4V4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *
 	}
 
 	return true;
+}
+
+/** \brief writes a single member fitting to a word sized location
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write for
+ *  \param nType the type of the struct
+ *  \param nPosition the position of the requested parameter
+ *  \param bReference true if a reference to the parameter is required
+ *  \param bLValue true if parameter is l-Value
+ *  \return true if member has been marshalled
+ *
+ * This implementation covers the special case of negative position index.
+ * This means that the mr0 should be marshalled. Otherwise, call base class.
+ */
+bool CL4V4BEMarshaller::MarshalWordMember(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
+	int nPosition, bool bReference, bool bLValue)
+{
+	if (nPosition < 0)
+	{
+		m_pFunction = pFunction;
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+		CBETypedDeclarator *pTag = pFunction->m_LocalVariables.Find(sMsgTag);
+		if (pTag)
+		{
+			WriteMember(pFile, nType, pFunction->GetMessageBuffer(), pTag, 0);
+			return true;
+		}
+	}
+
+	return CL4BEMarshaller::MarshalWordMember(pFile, pFunction, nType, nPosition, bReference, bLValue);
 }
 

@@ -4,9 +4,9 @@
 #include <l4/log/l4log.h>
 #include <l4/l4vfs/select_listener.h>
 #include <l4/l4vfs/types.h>
-#include <l4/dde_linux/dde.h>
 
 /*** LOCAL INCLUDES ***/
+#include "local_s.h"
 #include "liblinux.h"
 #include "private_socket.h"
 
@@ -53,7 +53,7 @@ void notify_select(void)
 /* init and startup of notify thread */
 void notify_thread(void)
 {
-	l4dde_process_add_worker();
+        FLIPS_PROCESS_WORKER();
 	liblinux_init_notify();
 	l4thread_started(NULL);
 	notify_select();

@@ -5,12 +5,13 @@
 
 #include <linux/config.h>
 #include <linux/compiler.h>
+#ifdef CONFIG_PROC_FS
+#include <linux/proc_fs.h>
 
 struct proc_dir_entry *proc_net;
 struct proc_dir_entry *proc_net_stat;
 struct proc_dir_entry *proc_sys_root;
 
-#ifdef CONFIG_PROC_FS
 
 /* we do not supply any fs functionality */
 static struct file_operations proc_dir_operations;

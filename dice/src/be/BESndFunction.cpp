@@ -231,7 +231,7 @@ int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  */
 int CBESndFunction::WriteMarshalReturn(CBEFile& pFile, bool bMarshal)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
+	CCompiler::Verbose("CBESndFunction::%s for %s called\n", __func__, GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReturn = pNF->GetReturnVariable();
@@ -244,7 +244,7 @@ int CBESndFunction::WriteMarshalReturn(CBEFile& pFile, bool bMarshal)
 	CBEMarshaller *pMarshaller = GetMarshaller();
 	pMarshaller->MarshalParameter(pFile, this, pReturn, bMarshal);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns\n", __func__, GetName().c_str());
+	CCompiler::Verbose("CBESndFunction::%s for %s returns\n", __func__, GetName().c_str());
 	return pType->GetSize();
 }
 

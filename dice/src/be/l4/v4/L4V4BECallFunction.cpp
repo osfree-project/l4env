@@ -54,8 +54,7 @@ CL4V4BECallFunction::~CL4V4BECallFunction()
  *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
-void
-CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
+void CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
 	// do not call direct base class (it adds the result var only)
 	CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
@@ -73,8 +72,7 @@ CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSi
  * Simply marshal the message. V4 specific is to put the message after
  * marshalling into the message registers.
  */
-void
-CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
+void CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
 {
 	CL4BECallFunction::WriteMarshalling(pFile);
 
@@ -98,8 +96,7 @@ CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
  *
  * Because this is the call function, we can use the IPC call of L4.
  */
-void
-CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
+void CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
 {
 	// invocate
 	WriteIPC(pFile);
@@ -114,8 +111,7 @@ CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
  * parameter. Before that we have to load the message registers into te
  * message buffer.
  */
-void
-CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
+void CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sMsgBuffer = pNF->GetMessageBufferVariable();
@@ -135,8 +131,7 @@ CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
  * CORBA_SYSTEM_EXCEPTION and then sets the ipc_error value to
  * L4_IPC_ERROR(result).
  */
-void
-CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
+void CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
@@ -168,9 +163,9 @@ CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
 	// return
 	WriteReturn(pFile);
-	// close }
+	// close
 	--pFile << "\t}\n";
-	}
+}
 
 /** \brief calculates the size of the function's parameters
  *  \param nDirection the direction to count

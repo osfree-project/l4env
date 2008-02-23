@@ -71,8 +71,7 @@ CBEUnmarshalFunction::~CBEUnmarshalFunction()
  */
 void CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnmarshalFunction::%s(%s) called\n", __func__,
+	CCompiler::VerboseI("CBEUnmarshalFunction::%s(%s) called\n", __func__,
 		pFEOperation->GetName().c_str());
 	// set target file name
 	SetTargetFileName(pFEOperation);
@@ -99,8 +98,7 @@ void CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 	CreateCommunication();
 	CreateTrace();
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnmarshalFunction::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEUnmarshalFunction::%s returns\n", __func__);
 }
 
 /** \brief manipulate the message buffer
@@ -109,8 +107,7 @@ void CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
  */
 void CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnmarshalFunction::%s called\n", __func__);
+	CCompiler::Verbose("CBEUnmarshalFunction::%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// check return type (do test here because sometimes we like to call
 	// AddReturnVariable depending on other constraint--return is parameter)
@@ -120,7 +117,7 @@ void CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 		return; // having a void return type is not an error
 	// add return variable
 	pMsgBuffer->AddReturnVariable(this);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEUnmarshalFunction::%s returns true\n", __func__);
 }
 
 /** \brief writes the variable initializations of this function
@@ -174,8 +171,7 @@ void CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
 void
 CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEUnmarshalFunction::AddParameter(%s) called\n",
+	CCompiler::Verbose("CBEUnmarshalFunction::AddParameter(%s) called\n",
 		pFEParameter->m_Declarators.First()->GetName().c_str());
 
 	ATTR_TYPE nDirection = IsComponentSide() ? ATTR_IN : ATTR_OUT;
@@ -195,13 +191,11 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 
 	CBEType *pType = pParameter->GetTransmitType();
 	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEUnmarshalFunction::AddParameter: array dims in decl %d, array dims in type %d\n",
+	CCompiler::Verbose("CBEUnmarshalFunction::AddParameter: array dims in decl %d, array dims in type %d\n",
 		pDeclarator->GetArrayDimensionCount(), pType->GetArrayDimensionCount());
 	int nArrayDimensions = pDeclarator->GetArrayDimensionCount() + pType->GetArrayDimensionCount();
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEUnmarshalFunction::AddParameter: decl->stars %d, is ptr type %s, array dims diff %d\n",
+	CCompiler::Verbose("CBEUnmarshalFunction::AddParameter: decl->stars %d, is ptr type %s, array dims diff %d\n",
 		pDeclarator->GetStars(), pType->IsPointerType() ? "yes" : "no", nArrayDimensions);
 	// if there are no array dimensions, then we need to add a pointer
 	if (pDeclarator->GetStars() == 0 && !pType->IsPointerType() &&
@@ -399,7 +393,7 @@ CBETypedDeclarator* CBEUnmarshalFunction::GetExceptionVariable()
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);
 	CBEMsgBuffer *pMsgBuf = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
+	CCompiler::Verbose("CBEUnmarshalFunction::%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)
 		return 0;
@@ -408,7 +402,7 @@ CBETypedDeclarator* CBEUnmarshalFunction::GetExceptionVariable()
 	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
 		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s exception var %s at %p\n", __func__,
+	CCompiler::Verbose("CBEUnmarshalFunction::%s exception var %s at %p\n", __func__,
 		sName.c_str(), pRet);
 
 	return pRet;
@@ -429,8 +423,7 @@ CBETypedDeclarator* CBEUnmarshalFunction::GetExceptionVariable()
  */
 void CBEUnmarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&

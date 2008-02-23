@@ -264,8 +264,7 @@ CFEInterface *CFELibrary::FindInterface(std::string sName, CFELibrary* pStart)
 	if (sName.empty())
 		return 0;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CFELibrary::%s(%s, %s) called (in file %s)\n", __func__,
+	CCompiler::Verbose("CFELibrary::%s(%s, %s) called (in file %s)\n", __func__,
 		sName.c_str(), pStart ? pStart->GetName().c_str() : "(null)",
 		GetSpecificParent<CFEFile>()->GetFileName().c_str());
 
@@ -290,8 +289,7 @@ CFEInterface *CFELibrary::FindInterface(std::string sName, CFELibrary* pStart)
 	}
 
 	CFEInterface *pInterface = m_Interfaces.Find(sName);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CFELibrary::%s: search for own interface found %p\n", __func__,
+	CCompiler::Verbose("CFELibrary::%s: search for own interface found %p\n", __func__,
 		pInterface);
 	if (pInterface)
 		return pInterface;

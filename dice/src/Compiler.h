@@ -91,6 +91,9 @@ public:
 		__attribute__(( format(printf, 2, 3) ));
 	static void VerboseD(ProgramVerbose_Type level, const char *format, ...)
 		__attribute__(( format(printf, 2, 3) ));
+	static void Verbose(const char *format, ...) __attribute__(( format(printf, 1, 2) ));
+	static void VerboseI(const char *format, ...) __attribute__(( format(printf, 1, 2) ));
+	static void VerboseD(const char *format, ...) __attribute__(( format(printf, 1, 2) ));
 	void Parse();
 
 	static bool IsOptionSet(ProgramOption_Type nOption);
@@ -544,7 +547,7 @@ void
 CCompiler::SetDebug(bool bOn)
 {
 	if (bOn)
-		m_VerboseLevel = PROGRAM_VERBOSE_DEBUG;
+		m_VerboseLevel = PROGRAM_VERBOSE_MAXLEVEL;
 	else
 		m_VerboseLevel = PROGRAM_VERBOSE_NONE;
 }

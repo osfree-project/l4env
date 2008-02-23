@@ -3,11 +3,15 @@
 #include <l4/util/parse_cmd.h>
 #include <l4/names/libnames.h>
 
-#include <stdlib.h>
+//This causes trouble, because we mix here uclibc includes
+//with dde/linux kernel includes
+//#include <stdlib.h>
+//Therefore we define exit here explicitly
+extern void exit(int status);
 
 /* local */
 #include "flips-server.h"
-#include "local.h"
+#include "local_s.h"
 
 /* loglib tag */
 char LOG_tag[9] = "flips";
@@ -42,7 +46,6 @@ int main(int argc, const char **argv)
 
 	if (liblinux_init(1024*1024, 1024*1024, use_dhcp))
 		exit(1);
-	l4dde_do_initcalls();
 
 	notif_l4t = l4thread_create_named((l4thread_fn_t) notify_thread,
 	                                  ".notify",
@@ -58,6 +61,8 @@ int main(int argc, const char **argv)
 		LOG_Error("Cannot register at nameserver");
 		exit(2);
 	}
+
+	LOG_printf("FLIPS server is up ...\n");
 
 	flips_server_loop(&env);
 

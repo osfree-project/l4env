@@ -83,8 +83,7 @@ protected: // protected methods
 		int nIndex);
 
 	virtual void Sort(CBEStructType *pStruct);
-	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
-		CBETypedDeclarator *pSecond);
+	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclarator *pSecond);
 
 	virtual void Pad();
 	virtual void PadRefstringToPosition(int nPosition);

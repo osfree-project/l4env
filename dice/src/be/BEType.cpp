@@ -82,7 +82,7 @@ CBEType* CBEType::Clone()
 void
 CBEType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(fe)\n", __func__);
+    CCompiler::VerboseI("CEBType::%s(fe)\n", __func__);
     assert(pFEType);
 
     // call CBEObject's CreateBackEnd method
@@ -118,7 +118,7 @@ CBEType::CreateBackEnd(CFETypeSpec * pFEType)
         throw;
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(fe) returns\n",
+    CCompiler::VerboseD("CEBType::%s(fe) returns\n",
 	__func__);
 }
 
@@ -136,8 +136,7 @@ CBEType::CreateBackEnd(bool bUnsigned,
     int nSize,
     int nFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CEBType::%s(%s, %d, %d) called\n", __func__,
+    CCompiler::VerboseI("CEBType::%s(%s, %d, %d) called\n", __func__,
 	bUnsigned ? "true" : "false", nSize, nFEType);
 
     CBENameFactory *pNF = CBENameFactory::Instance();
@@ -149,8 +148,7 @@ CBEType::CreateBackEnd(bool bUnsigned,
     m_sName = pNF->GetTypeName(nFEType, bUnsigned, m_nSize);
     m_nFEType = nFEType;
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(,,) returns\n",
-	__func__);
+    CCompiler::VerboseD("CEBType::%s(,,) returns\n", __func__);
 }
 
 /** \brief write the type to the target file
@@ -503,8 +501,7 @@ int CBEType::GetArrayDimensionCount()
  */
 void CBEType::AddToHeader(CBEHeaderFile* pHeader)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEType::%s(header: %s) for type %d called\n", __func__,
+    CCompiler::Verbose("CBEType::%s(header: %s) for type %d called\n", __func__,
         pHeader->GetFileName().c_str(), GetFEType());
     if (IsTargetFile(pHeader))
         pHeader->m_TaggedTypes.Add(this);

@@ -128,7 +128,7 @@ void CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponent
  */
 void CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBEReplyFunction::%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// check return type (do test here because sometimes we like to call
 	// AddReturnVariable under different constraints--return parameter)
@@ -138,7 +138,7 @@ void CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 		return; // having a void return type is not an error
 	// add return variable
 	pMsgBuffer->AddReturnVariable(this);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEReplyFunction::%s returns true\n", __func__);
 }
 
 /** \brief checks of this parameter is marshalled or not
@@ -223,7 +223,7 @@ CBETypedDeclarator* CBEReplyFunction::GetExceptionVariable()
 
 	// if no parameter, then try to find it in the message buffer
 	CBEMsgBuffer *pMsgBuf = GetMessageBuffer();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s message buffer in class at %p\n",
+	CCompiler::Verbose("CBEReplyFunction::%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)
 		return 0;
@@ -232,7 +232,7 @@ CBETypedDeclarator* CBEReplyFunction::GetExceptionVariable()
 	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
 		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s exception var %s at %p\n",
+	CCompiler::Verbose("CBEReplyFunction::%s exception var %s at %p\n",
 		__func__, sName.c_str(), pRet);
 
 	return pRet;

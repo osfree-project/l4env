@@ -50,6 +50,7 @@ public:
     virtual CBECommunication* GetNewCommunication();
     virtual CBESizes* GetNewSizes();
     virtual CBECallFunction* GetNewCallFunction();
+	virtual CBEReplyFunction* GetNewReplyFunction();
     virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEWaitAnyFunction* GetNewRecvAnyFunction();
@@ -58,6 +59,7 @@ public:
     virtual CBEWaitFunction* GetNewWaitFunction();
     virtual CBEWaitFunction* GetNewRcvFunction();
     virtual CBEMsgBuffer* GetNewMessageBuffer();
+    virtual CBEMsgBufferType* GetNewMessageBufferType();
     virtual CBEMarshaller* GetNewMarshaller();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
 };

@@ -83,7 +83,7 @@ CBERoot::~CBERoot()
  */
 void CBERoot::CreateBE(CFEFile * pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(file: %s) called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s(file: %s) called\n", __func__,
 		pFEFile->GetFileName().c_str());
 	// clean up
 	if (m_pClient)
@@ -120,10 +120,10 @@ void CBERoot::CreateBE(CFEFile * pFEFile)
  */
 void CBERoot::Write()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s write client\n", __func__);
+	CCompiler::Verbose("CBERoot::%s write client\n", __func__);
 	if (m_pClient)
 		m_pClient->Write();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s write component\n", __func__);
+	CCompiler::Verbose("CBERoot::%s write component\n", __func__);
 	if (m_pComponent)
 		m_pComponent->Write();
 }
@@ -135,7 +135,7 @@ void CBERoot::Write()
  */
 CBETypedef *CBERoot::FindTypedef(std::string sTypeName, CBETypedef *pPrev)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::%s(%s, %p) called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s(%s, %p) called\n", __func__,
 		sTypeName.c_str(), pPrev);
 	return m_Typedefs.Find(sTypeName, pPrev);
 }
@@ -149,8 +149,7 @@ CBETypedef *CBERoot::FindTypedef(std::string sTypeName, CBETypedef *pPrev)
  */
 CBEClass* CBERoot::FindClass(std::string sClassName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBERoot::FindClass(%s) called\n", sClassName.c_str());
+	CCompiler::Verbose("CBERoot::FindClass(%s) called\n", sClassName.c_str());
 	return m_Classes.Find(sClassName);
 }
 
@@ -163,8 +162,7 @@ CBEClass* CBERoot::FindClass(std::string sClassName)
  */
 CBEConstant* CBERoot::FindConstant(std::string sConstantName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBERoot::FindConstant(%s) called\n", sConstantName.c_str());
+	CCompiler::Verbose("CBERoot::FindConstant(%s) called\n", sConstantName.c_str());
 	return m_Constants.Find(sConstantName);
 }
 
@@ -185,7 +183,7 @@ CBENameSpace* CBERoot::FindNameSpace(std::string sNameSpaceName)
  */
 void CBERoot::CreateBackEnd(CFEFile *pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s for %s called\n", __func__,
 		pFEFile->GetFileName().c_str());
 	// first search included files-> may contain base interfaces we need later
 	for_each(pFEFile->m_ChildFiles.begin(), pFEFile->m_ChildFiles.end(),
@@ -212,7 +210,7 @@ void CBERoot::CreateBackEnd(CFEFile *pFEFile)
  */
 void CBERoot::CreateBackEnd(CFELibrary *pFELibrary)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s for %s called\n", __func__,
 		pFELibrary->GetName().c_str());
 	// first check if NameSpace is already there
 	CBENameSpace *pNameSpace = SearchNamespace(pFELibrary->GetName());
@@ -235,7 +233,7 @@ void CBERoot::CreateBackEnd(CFELibrary *pFELibrary)
  */
 void CBERoot::CreateBackEnd(CFEInterface *pFEInterface)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s for %s called\n", __func__,
 		pFEInterface->GetName().c_str());
 	CBEClass *pClass = CBEClassFactory::Instance()->GetNewClass();
 	m_Classes.Add(pClass);
@@ -248,7 +246,7 @@ void CBERoot::CreateBackEnd(CFEInterface *pFEInterface)
 void
 CBERoot::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s for %s called\n", __func__,
 		pFEConstant->GetName().c_str());
 	CBEConstant *pConstant = CBEClassFactory::Instance()->GetNewConstant();
 	m_Constants.Add(pConstant);
@@ -261,11 +259,11 @@ CBERoot::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 void
 CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose("CBERoot::%s called\n", __func__);
 	CBETypedef *pTypedef = CBEClassFactory::Instance()->GetNewTypedef();
 	m_Typedefs.Add(pTypedef);
 	pTypedef->CreateBackEnd(pFETypedef);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::AddTypedef for %s with type at %p called\n",
+	CCompiler::Verbose("CBERoot::AddTypedef for %s with type at %p called\n",
 		pTypedef->m_Declarators.First()->GetName().c_str(),
 		pTypedef->GetType());
 
@@ -293,7 +291,7 @@ CBERoot::CreateBackEnd(CFEConstructedType *pFEType)
  */
 void CBERoot::AddToHeader(CBEHeaderFile* pHeader)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%s) called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s (%s) called\n", __func__,
 		pHeader->GetFileName().c_str());
 	// constants
 	for_each(m_Constants.begin(), m_Constants.end(),
@@ -321,7 +319,7 @@ void CBERoot::AddToHeader(CBEHeaderFile* pHeader)
  */
 void CBERoot::AddToImpl(CBEImplementationFile* pImpl)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s(%s) called\n", __func__,
 		pImpl->GetFileName().c_str());
 	// Classs
 	for_each(m_Classes.begin(), m_Classes.end(),
@@ -342,8 +340,7 @@ void CBERoot::AddToImpl(CBEImplementationFile* pImpl)
  */
 void CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s(header: %s, file: %s) called\n", __func__,
+	CCompiler::Verbose("CBERoot::%s(header: %s, file: %s) called\n", __func__,
 		pHeader->GetFileName().c_str(), pFEFile->GetFileName().c_str());
 	assert(pHeader);
 	assert(pFEFile);
@@ -489,8 +486,7 @@ CBEType* CBERoot::FindTaggedType(unsigned int nType, std::string sTag)
  */
 CBEEnumType* CBERoot::FindEnum(std::string sName)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBERoot::FindEnum(%s) called\n", sName.c_str());
+	CCompiler::Verbose("CBERoot::FindEnum(%s) called\n", sName.c_str());
 
 	// search own types
 	CBEEnumType* pEnum;
@@ -499,8 +495,7 @@ CBEEnumType* CBERoot::FindEnum(std::string sName)
 		iterT != m_TypeDeclarations.end();
 		iterT++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBERoot::FindEnum try to find in own types\n");
+		CCompiler::Verbose("CBERoot::FindEnum try to find in own types\n");
 
 		pEnum = dynamic_cast<CBEEnumType*>(*iterT);
 		if (pEnum && pEnum->m_Members.Find(sName))
@@ -512,15 +507,13 @@ CBEEnumType* CBERoot::FindEnum(std::string sName)
 		iterTD != m_Typedefs.end();
 		iterTD++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBERoot::FindEnum try to find in own typedefs\n");
+		CCompiler::Verbose("CBERoot::FindEnum try to find in own typedefs\n");
 
 		pEnum = dynamic_cast<CBEEnumType*>((*iterTD)->GetType());
 		if (pEnum && pEnum->m_Members.Find(sName))
 			return pEnum;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBERoot::FindEnum returns NULL\n");
+	CCompiler::Verbose("CBERoot::FindEnum returns NULL\n");
 	return 0;
 }

@@ -89,8 +89,7 @@ CBEMsgBuffer* CBEMsgBuffer::Clone()
  */
 bool CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s(%d) called\n", __func__, (int)nType);
+	CCompiler::Verbose("CBEMsgBuffer::%s(%d) called\n", __func__, (int)nType);
 	if (CMsgStructType::Generic == nType)
 	{
 		return IsVariableSized(CMsgStructType::In) ||
@@ -102,8 +101,7 @@ bool CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
 	CBEStructType *pStruct = GetStruct(nType);
 	if (!pStruct)
 		return false;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s(%d) returns %s\n", __func__, (int)nType,
+	CCompiler::Verbose("CBEMsgBuffer::%s(%d) returns %s\n", __func__, (int)nType,
 		(pStruct->GetSize() < 0) ? "true" : "false");
 	return pStruct->GetSize() < 0;
 }
@@ -120,7 +118,7 @@ bool CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
  */
 int CBEMsgBuffer::GetCount(CBEFunction *pFunction, int nFEType, CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s (%s, %d, %d)\n", __func__,
+	CCompiler::Verbose("CBEMsgBufferType::%s (%s, %d, %d)\n", __func__,
 		pFunction ? pFunction->GetName().c_str() : "(none)", nFEType, (int)nType);
 
 	if (CMsgStructType::Generic == nType)
@@ -139,7 +137,7 @@ int CBEMsgBuffer::GetCount(CBEFunction *pFunction, int nFEType, CMsgStructType n
 	int nCount = std::count_if(pMsgType->GetStartOfPayload(pStruct),
 		pStruct->m_Members.end(), TypeCount(nFEType));
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%s, %d, %d) returns %d\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s (%s, %d, %d) returns %d\n", __func__,
 		pFunction ? pFunction->GetName().c_str() : "(none)", nFEType, (int)nType, nCount);
 	return nCount;
 }
@@ -164,7 +162,7 @@ int CBEMsgBuffer::GetCountAll(int nFEType, CMsgStructType nType)
 	}
 
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s (%s, %d, %d)\n", __func__,
+	CCompiler::Verbose("CBEMsgBufferType::%s (%s, %d, %d)\n", __func__,
 		pFunction ? pFunction->GetName().c_str() : "(none)", nFEType, (int)nType);
 
 	CBEMsgBufferType *pMsgType = GetType(pFunction);
@@ -176,23 +174,20 @@ int CBEMsgBuffer::GetCountAll(int nFEType, CMsgStructType nType)
 		iter++)
 	{
 		string sUnion = (*iter)->m_Declarators.First()->GetName();
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s: checking union %s for type %d\n", __func__,
+		CCompiler::Verbose("CBEMsgBuffer::%s: checking union %s for type %d\n", __func__,
 			sUnion.c_str(), (int)nType);
 		CBEStructType *pStruct = static_cast<CBEStructType*>((*iter)->GetType());
 		if (nType != GetStructType(pStruct))
 			continue;
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s: counting members of type %d\n", __func__, nFEType);
+		CCompiler::Verbose("CBEMsgBuffer::%s: counting members of type %d\n", __func__, nFEType);
 		int nCount = std::count_if(pMsgType->GetStartOfPayload(pStruct),
 			pStruct->m_Members.end(), TypeCount(nFEType));
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s: union has %d members of type %d\n", __func__, nCount, nFEType);
+		CCompiler::Verbose("CBEMsgBuffer::%s: union has %d members of type %d\n", __func__, nCount, nFEType);
 		nMaxCount = std::max(nCount, nMaxCount);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%s, %d, %d) returns %d\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s (%s, %d, %d) returns %d\n", __func__,
 		pFunction ? pFunction->GetName().c_str() : "(none)", nFEType, (int)nType, nMaxCount);
 	return nMaxCount;
 }
@@ -204,8 +199,7 @@ int CBEMsgBuffer::GetCountAll(int nFEType, CMsgStructType nType)
 void
 CBEMsgBuffer::CreateBackEnd(CFEOperation *pFEOperation)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(op: %s) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(op: %s) called\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -215,8 +209,7 @@ CBEMsgBuffer::CreateBackEnd(CFEOperation *pFEOperation)
 	CBETypedef::CreateBackEnd(pType, sName, pFEOperation);
 	delete pType; // is cloned in typed decl's create method
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(op) returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s(op) returns\n", __func__);
 }
 
 /** \brief initialize instance of this class
@@ -228,8 +221,7 @@ CBEMsgBuffer::CreateBackEnd(CFEOperation *pFEOperation)
 void
 CBEMsgBuffer::CreateBackEnd(CFEInterface *pFEInterface)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(if: %s) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(if: %s) called\n", __func__,
 		pFEInterface->GetName().c_str());
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -239,8 +231,7 @@ CBEMsgBuffer::CreateBackEnd(CFEInterface *pFEInterface)
 	CBETypedef::CreateBackEnd(pType, sName, pFEInterface);
 	delete pType; // is cloned in typed decl's create method
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(if) returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s(if) returns\n", __func__);
 }
 
 /** \brief creates the type of the message buffer
@@ -267,14 +258,12 @@ CBEMsgBuffer::CreateType(T * pFEObject)
  */
 CBEMsgBufferType* CBEMsgBuffer::GetType(CBEFunction *pFunction)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::GetType(%s) called\n", pFunction ? pFunction->GetName().c_str() : "(null)");
+	CCompiler::Verbose("CBEMsgBuffer::GetType(%s) called\n", pFunction ? pFunction->GetName().c_str() : "(null)");
 
 	CBEMsgBufferType *pType = 0;
 	if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBuffer::GetType: interface function, get class' message buffer type\n");
+		CCompiler::Verbose("CBEMsgBuffer::GetType: interface function, get class' message buffer type\n");
 		// the message buffer's class functin
 		CBEClass *pClass = GetSpecificParent<CBEClass>();
 		assert(pClass);
@@ -283,8 +272,7 @@ CBEMsgBufferType* CBEMsgBuffer::GetType(CBEFunction *pFunction)
 	}
 	else
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBuffer::GetType: either operation function or null: get type of base class\n");
+		CCompiler::Verbose("CBEMsgBuffer::GetType: either operation function or null: get type of base class\n");
 		CBEType *pBaseType = CBETypedef::GetType();
 		CBEUserDefinedType *pUsrType = dynamic_cast<CBEUserDefinedType*>(pBaseType);
 		if (pUsrType)
@@ -324,8 +312,7 @@ CBEMsgBuffer::GetOpcodeVariable()
 CBETypedDeclarator*
 CBEMsgBuffer::GetExceptionVariable()
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s called\n", __func__);
+	CCompiler::VerboseI("CBEMsgBuffer::%s called\n", __func__);
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// create type
@@ -345,8 +332,7 @@ CBEMsgBuffer::GetExceptionVariable()
 	pAttr->CreateBackEnd(ATTR_OUT);
 	pException->m_Attributes.Add(pAttr);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s returns %p\n", __func__, pException);
+	CCompiler::VerboseD("CBEMsgBuffer::%s returns %p\n", __func__, pException);
 	return pException;
 }
 
@@ -360,7 +346,7 @@ CBEMsgBuffer::GetExceptionVariable()
  */
 void CBEMsgBuffer::AddReturnVariable(CBEFunction *pFunction, CBETypedDeclarator *pReturn)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %s) called\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s(%s, %s) called\n",
 		__func__, pFunction->GetName().c_str(),
 		pReturn ? pReturn->m_Declarators.First()->GetName().c_str() : "(null)");
 	// get OUT structure
@@ -396,8 +382,7 @@ void CBEMsgBuffer::AddReturnVariable(CBEFunction *pFunction, CBETypedDeclarator 
 	// members for variable sized return type
 	CBEMsgBufferType *pType = pStruct->GetSpecificParent<CBEMsgBufferType>();
 	assert(pType);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s: add return to struct(%d) for function %s\n", __func__, (int)nType,
+	CCompiler::Verbose("CBEMsgBuffer::%s: add return to struct(%d) for function %s\n", __func__, (int)nType,
 		pFunction->GetName().c_str());
 	pType->AddElement(pStruct, pReturn);
 }
@@ -423,8 +408,7 @@ CBEMsgBuffer::GetReturnVariable(CBEFunction *pFunction)
  */
 void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(func: %s) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(func: %s) called\n", __func__,
 		pFunction->GetName().c_str());
 
 	AddPlatformSpecificMembers(pFunction, CMsgStructType::In);
@@ -433,8 +417,7 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction)
 	if (!pFunction->m_Exceptions.empty())
 		AddPlatformSpecificMembers(pFunction, CMsgStructType::Exc);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s: return true\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s: return true\n", __func__);
 }
 
 /** \brief adds platform specific member to this class for the class
@@ -443,8 +426,7 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction)
  */
 void CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(class: %s) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(class: %s) called\n", __func__,
 		pClass->GetName().c_str());
 
 	// iterate function groups of class, pick a function and use it to
@@ -454,8 +436,7 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 		iter != pClass->m_FunctionGroups.end();
 		iter++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBuffer::AddPlatformSpecificMembers: checking function group of operation %s\n",
+		CCompiler::Verbose("CBEMsgBuffer::AddPlatformSpecificMembers: checking function group of operation %s\n",
 			(*iter)->GetOperation()->GetName().c_str());
 		// iterate the functions of the function group
 		vector<CBEFunction*>::iterator iF;
@@ -477,8 +458,7 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 	for (; iC != pClass->m_BaseClasses.end(); iC++)
 		AddPlatformSpecificMembers(*iC);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s returns true\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s returns true\n", __func__);
 }
 
 /** \brief adds the platform specific members for a specific function and struct type
@@ -503,15 +483,13 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CMsgStruct
  */
 void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
 		pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
 	AddOpcodeMember(pFunction, pStruct);
 	AddExceptionMember(pFunction, pStruct);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s returns true\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s returns true\n", __func__);
 }
 
 /** \brief adds platform specific opcode member
@@ -521,8 +499,7 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructT
  */
 void CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(%s, struct %d) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(%s, struct %d) called\n", __func__,
 		pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
 	CMsgStructType nOpType = pFunction->GetSendDirection();
@@ -538,8 +515,7 @@ void CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruc
 	CBETypedDeclarator *pOpcode = GetOpcodeVariable();
 	pStruct->m_Members.Add(pOpcode);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s returns true\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s returns true\n", __func__);
 }
 
 /** \brief adds platform specific exception member
@@ -549,8 +525,7 @@ void CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruc
  */
 void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(%s, struct %d) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBuffer::%s(%s, struct %d) called\n", __func__,
 		pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
 	CMsgStructType nExType = pFunction->GetReceiveDirection();
@@ -574,8 +549,7 @@ void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pSt
 	CBETypedDeclarator *pException = GetExceptionVariable();
 	pStruct->m_Members.Add(pException);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s returned true\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s returned true\n", __func__);
 }
 
 /** \brief sorts the parameters in the message buffer structs
@@ -587,7 +561,7 @@ void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pSt
  */
 void CBEMsgBuffer::Sort(CBEFunction *pFunction)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for function %s\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s called for function %s\n", __func__,
 		pFunction->GetName().c_str());
 
 	// IN
@@ -606,7 +580,7 @@ void CBEMsgBuffer::Sort(CBEFunction *pFunction)
 		Sort(pStruct);
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s returns\n", __func__);
 }
 
 /** \brief sorts the parameters in the message buffer structs
@@ -655,7 +629,7 @@ void CBEMsgBuffer::Sort(CBEClass *pClass)
  */
 void CBEMsgBuffer::Sort(CBEStructType *pStruct)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for struct\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s called for struct\n", __func__);
 
 	// sort payload
 	SortPayload(pStruct);
@@ -669,7 +643,7 @@ void CBEMsgBuffer::Sort(CBEStructType *pStruct)
 	sName = pNF->GetExceptionWordVariable();
 	pStruct->m_Members.Move(sName, 0);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s returns true\n", __func__);
 }
 
 /** \brief sorts the payload of a message buffer
@@ -699,19 +673,18 @@ void CBEMsgBuffer::Sort(CBEStructType *pStruct)
  */
 void CBEMsgBuffer::SortPayload(CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called for struct\n", __func__);
+	CCompiler::VerboseI("CBEMsgBuffer::%s called for struct\n", __func__);
 
 	CBEMsgBufferType *pType = pStruct->GetSpecificParent<CBEMsgBufferType>();
 	assert(pType);
 	vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = pType->GetStartOfPayload(pStruct);
 		iter != pStruct->m_Members.end(); )
-
 	{
 		vector<CBETypedDeclarator*>::iterator iterS = iter + 1;
 		if (iterS == pStruct->m_Members.end())
 			break;
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s compares %s and %s\n",
+		CCompiler::Verbose("CBEMsgBuffer::%s compares %s and %s\n",
 			__func__, (*iter)->m_Declarators.First()->GetName().c_str(),
 			(*iterS)->m_Declarators.First()->GetName().c_str());
 		if (DoExchangeMembers(*iter, *iterS))
@@ -727,7 +700,7 @@ void CBEMsgBuffer::SortPayload(CBEStructType *pStruct)
 		// continue
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::VerboseD("CBEMsgBuffer::%s returns true\n", __func__);
 }
 
 /** \brief checks if two members of a struct should be exchanged
@@ -756,7 +729,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 {
 	assert(pFirst);
 	assert(pSecond);
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s called with (%s, %s)\n",
+	CCompiler::VerboseI("CBEMsgBuffer::%s called with (%s, %s)\n",
 		__func__, pFirst->m_Declarators.First()->GetName().c_str(),
 		pSecond->m_Declarators.First()->GetName().c_str());
 	// check variable size
@@ -764,8 +737,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	bool bVarSecond = pSecond->IsVariableSized();
 	if (bVarFirst && !bVarSecond)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s (%s, %s) returns true (1)\n", __func__,
+		CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns true (1)\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return true;
@@ -779,8 +751,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (bVarFirst && bVarSecond &&
 		!bConstructedFirst && bConstructedSecond)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s (%s, %s) returns true (2)\n", __func__,
+		CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns true (2)\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return true;
@@ -789,8 +760,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	// sized parameter, leave it after the first (avoids unnecessary swapping)
 	if (bVarSecond)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s (%s, %s) returns true (3)\n", __func__,
+		CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns false (3)\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return false;
@@ -817,8 +787,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	int nSecondSize = pSecond->GetSize();
 	if (nFirstSize == nWordSize)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s (%s, %s) returns false (4)\n", __func__,
+		CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns false (4)\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return false;
@@ -826,22 +795,21 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (nFirstSize > nWordSize &&
 		nSecondSize < nWordSize)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s (%s, %s) returns false (4b)\n", __func__,
+		CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns false (4b)\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return false;
 	}
 	if (nFirstSize > nWordSize)
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%s, %s) returns %s (5)\n",
+		CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns %s (5)\n",
 			__func__, pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str(),
 			(nFirstSize > nSecondSize) ? "true" : "false");
 		return nFirstSize > nSecondSize;
 	}
 	// now first is smaller than word
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%s, %s) returns %s (6)\n",
+	CCompiler::VerboseD("CBEMsgBuffer::%s (%s, %s) returns %s (6)\n",
 		__func__, pFirst->m_Declarators.First()->GetName().c_str(),
 		pSecond->m_Declarators.First()->GetName().c_str(),
 		(nFirstSize < nSecondSize) ? "true" : "false");
@@ -860,8 +828,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
 	CDeclStack* pStack)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s (%s, %s, %d, stack @ %p (%d)) called\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s (%s, %s, %d, stack @ %p (%d)) called\n", __func__,
 		pFile.GetFileName().c_str(),
 		pFunction->GetName().c_str(),
 		(int)nType,
@@ -878,8 +845,7 @@ void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStruc
 		pFile << "." << iter->pDeclarator->GetName();
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::WriteAccess finished\n");
+	CCompiler::Verbose("CBEMsgBuffer::WriteAccess finished\n");
 }
 
 /** \brief wraps write access with stack
@@ -893,8 +859,7 @@ void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStruc
 void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
 	CBETypedDeclarator* pMember)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s (%s, %s, %d, %s) called\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s (%s, %s, %d, %s) called\n",
 		__func__, pFile.GetFileName().c_str(), pFunction->GetName().c_str(), (int)nType,
 		pMember->m_Declarators.First()->GetName().c_str());
 
@@ -903,8 +868,7 @@ void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStruc
 
 	WriteAccess(pFile, pFunction, nType, &vStack);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::WriteAccess finished\n");
+	CCompiler::Verbose("CBEMsgBuffer::WriteAccess finished\n");
 }
 
 /** \brief write the part of the access to a member that contains the struct
@@ -914,8 +878,7 @@ void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStruc
  */
 void CBEMsgBuffer::WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s (%s, %s, %d) called\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s (%s, %s, %d) called\n", __func__,
 		pFile.GetFileName().c_str(), pFunction->GetName().c_str(), (int)nType);
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -945,8 +908,7 @@ void CBEMsgBuffer::WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction, C
 		sName += ".";
 	pFile << sName << sStructName;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::WriteAccessToStruct finished\n");
+	CCompiler::Verbose("CBEMsgBuffer::WriteAccessToStruct finished\n");
 }
 
 /** \brief writes the access to the variable pointing to the message buffer
@@ -1131,14 +1093,12 @@ CBEStructType* CBEMsgBuffer::GetStruct(CBEFunction *pFunction, CMsgStructType nT
 		nType = CMsgStructType::Generic;
 		sClassName = string();
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s: func name: %s, class name: %s, dir %d\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s: func name: %s, class name: %s, dir %d\n",
 		__func__, sFuncName.c_str(), sClassName.c_str(), (int)nType);
 	// get type
 	CBEMsgBufferType *pType = GetType(pFunction);
 	// get struct
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBuffer::%s return struct of type at %p (msgbuf type)\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s return struct of type at %p (msgbuf type)\n", __func__,
 		pType);
 	return pType->GetStruct(sFuncName, sClassName, nType);
 }
@@ -1205,15 +1165,14 @@ void CBEMsgBuffer::WriteInitialization(CBEFile& /*pFile*/, CBEFunction* /*pFunct
  */
 CBETypedDeclarator* CBEMsgBuffer::FindMember(std::string sName, CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %d) called\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s(%s, %d) called\n",
 		__func__, sName.c_str(), (int)nType);
 
 	CBEStructType *pStruct = GetStruct(nType);
 	if (!pStruct)
 		return (CBETypedDeclarator*)0;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s return result of struct's FindMember function\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s return result of struct's FindMember function\n",
 		__func__);
 	return pStruct->m_Members.Find(sName);
 }
@@ -1226,15 +1185,14 @@ CBETypedDeclarator* CBEMsgBuffer::FindMember(std::string sName, CMsgStructType n
  */
 CBETypedDeclarator* CBEMsgBuffer::FindMember(std::string sName, CBEFunction *pFunction, CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %s, %d) called\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s(%s, %s, %d) called\n",
 		__func__, sName.c_str(), pFunction->GetName().c_str(), (int)nType);
 
 	CBEStructType *pStruct = GetStruct(pFunction, nType);
 	if (!pStruct)
 		return (CBETypedDeclarator*)0;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s return result of struct's FindMember function\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s return result of struct's FindMember function\n",
 		__func__);
 	return pStruct->m_Members.Find(sName);
 }
@@ -1365,7 +1323,7 @@ void CBEMsgBuffer::WriteDump(CBEFile& pFile)
 void CBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation)
 {
 	AddGenericStruct(pFunction, pFEOperation);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s calling Pad for func %s\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s calling Pad for func %s\n",
 		__func__, pFunction->GetName().c_str());
 	Pad();
 }
@@ -1378,7 +1336,7 @@ void CBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation
 void CBEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
 {
 	AddGenericStruct(pClass, pFEInterface);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s calling Pad for class %s\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s calling Pad for class %s\n",
 		__func__, pClass->GetName().c_str());
 	Pad();
 }
@@ -1392,7 +1350,7 @@ void CBEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
  */
 int CBEMsgBuffer::GetWordMemberCountFunction()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s() called\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s() called\n", __func__);
 	CBEType *pType = CBETypedef::GetType();
 	if (!pType)
 		return 0;
@@ -1401,7 +1359,7 @@ int CBEMsgBuffer::GetWordMemberCountFunction()
 		ret = pType->GetMaxSize();
 	// calculate words from bytes
 	CBESizes *pSizes = CCompiler::GetSizes();
-	ret = pSizes->WordRoundUp(ret);
+	ret = pSizes->WordsFromBytes(pSizes->WordRoundUp(ret));
 	return ret;
 }
 
@@ -1414,18 +1372,18 @@ int CBEMsgBuffer::GetWordMemberCountFunction()
  */
 int CBEMsgBuffer::GetWordMemberCountClass()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s() called\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s() called\n", __func__);
 	CBEType *pType = CBETypedef::GetType();
 	if (!pType)
 		return 0;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: type is %d\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s: type is %d\n", __func__,
 		pType->GetFEType());
 	int ret = pType->GetSize();
 	if (ret < 0)
 		ret = pType->GetMaxSize();
 	// calculate words from bytes
 	CBESizes *pSizes = CCompiler::GetSizes();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s returns words-from-bytes(%d)\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s returns words-from-bytes(%d)\n",
 		__func__, ret);
 	ret = pSizes->WordsFromBytes(pSizes->WordRoundUp(ret));
 	return ret;
@@ -1502,8 +1460,7 @@ CBETypedDeclarator* CBEMsgBuffer::GetWordMemberVariable(int nNumber)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetWordMemberVariable();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s: creating member %s with %d dimensions\n", __func__,
+	CCompiler::Verbose("CBEMsgBuffer::%s: creating member %s with %d dimensions\n", __func__,
 		sName.c_str(), nNumber);
 	return GetMemberVariable(TYPE_MWORD, true, sName, nNumber);
 }
@@ -1564,7 +1521,7 @@ void CBEMsgBuffer::AddGenericStructMembersClass(CBEStructType *pStruct)
 	CBETypedDeclarator *pMember = GetWordMemberVariable(nMembers);
 	assert(pMember);
 	pStruct->m_Members.Add(pMember);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s added word member\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s added word member\n", __func__);
 }
 
 /** \brief adds the members of to the generic struct
@@ -1579,7 +1536,7 @@ void CBEMsgBuffer::AddGenericStructMembersFunction(CBEStructType *pStruct)
 	if (!pMember)
 		throw error::create_error("word member variable could not be created");
 	pStruct->m_Members.Add(pMember);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s added word member\n", __func__);
+	CCompiler::Verbose("CBEMsgBuffer::%s added word member\n", __func__);
 }
 
 /** \brief return the size of a specific struct
@@ -1603,10 +1560,16 @@ int CBEMsgBuffer::GetSize(CBEFunction *pFunction, CMsgStructType nType)
  */
 bool CBEMsgBuffer::GetMaxSize(int& nSize, CBEFunction *pFunction, CMsgStructType nType)
 {
+	CCompiler::Verbose("CBEMsgBuffer::%s(, %s, %d) called\n", __func__,
+		pFunction->GetName().c_str(), (int)nType);
+
 	CBEStructType *pStruct = GetStruct(pFunction, nType);
 	if (!pStruct)
 		return false;
 	nSize = pStruct->GetMaxSize();
+
+	CCompiler::Verbose("CBEMsgBuffer::%s(, %s, %d) returns %s (size = %d)\n", __func__,
+		pFunction->GetName().c_str(), (int)nType, (nSize >= 0) ? "true" : "false", nSize);
 	return nSize >= 0;
 }
 
@@ -1620,7 +1583,7 @@ bool CBEMsgBuffer::GetMaxSize(int& nSize, CBEFunction *pFunction, CMsgStructType
 int CBEMsgBuffer::GetMemberSize(int nType)
 {
 	int nMaxSize = 0;
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%d) called\n", __func__, nType);
+	CCompiler::Verbose("CBEMsgBuffer::%s(%d) called\n", __func__, nType);
 
 	// iterate over structs of type and get refstring numbers of each struct
 	CBEMsgBufferType *pType = GetType(0);
@@ -1631,7 +1594,7 @@ int CBEMsgBuffer::GetMemberSize(int nType)
 		iterS != pType->m_UnionCases.end();
 		iterS++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMsgBuffer::%s: %d. union\n", __func__,
+		CCompiler::Verbose("CBEMsgBuffer::%s: %d. union\n", __func__,
 			++c);
 		CBEStructType *pStruct = dynamic_cast<CBEStructType*>((*iterS)->GetType());
 		if (!pStruct)
@@ -1639,7 +1602,7 @@ int CBEMsgBuffer::GetMemberSize(int nType)
 
 		int nSize = 0;
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMsgBuffer::%s: iterate members of struct\n",
+		CCompiler::Verbose("CBEMsgBuffer::%s: iterate members of struct\n",
 			__func__);
 		vector<CBETypedDeclarator*>::iterator iterP;
 		for (iterP = GetStartOfPayload(pStruct);
@@ -1649,15 +1612,14 @@ int CBEMsgBuffer::GetMemberSize(int nType)
 			nSize += GetMemberSize(nType, *iterP, false);
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBuffer::%s: size of current struct is %d (max is %d)\n", __func__, nSize,
+		CCompiler::Verbose("CBEMsgBuffer::%s: size of current struct is %d (max is %d)\n", __func__, nSize,
 			nMaxSize);
 
 		if (nSize > nMaxSize)
 			nMaxSize = nSize;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s returns %d\n", __func__, nMaxSize);
+	CCompiler::Verbose("CBEMsgBuffer::%s returns %d\n", __func__, nMaxSize);
 	return nMaxSize;
 }
 
@@ -1674,13 +1636,13 @@ int CBEMsgBuffer::GetMemberSize(int nType)
 int CBEMsgBuffer::GetMemberSize(int nType, CBEFunction *pFunction, CMsgStructType nStructType, bool bMax)
 {
 	int nSize = 0;
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%d, %s, %d, %s) called\n",
+	CCompiler::Verbose("CBEMsgBuffer::%s (%d, %s, %d, %s) called\n",
 		__func__, nType, pFunction->GetName().c_str(), (int)nStructType,
 		bMax ? "true" : "false");
 
 	CBEStructType *pStruct = GetStruct(pFunction, nStructType);
 	assert(pStruct);
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMsgBuffer::%s: struct at %p\n", __func__, pStruct);
+	CCompiler::Verbose("CBEMsgBuffer::%s: struct at %p\n", __func__, pStruct);
 
 	vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = GetStartOfPayload(pStruct);
@@ -1688,7 +1650,7 @@ int CBEMsgBuffer::GetMemberSize(int nType, CBEFunction *pFunction, CMsgStructTyp
 		iter++)
 	{
 		int nMemberSize = GetMemberSize(nType, *iter, bMax);
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMsgBuffer::%s size of member %s is %d\n",
+		CCompiler::Verbose("CBEMsgBuffer::%s size of member %s is %d\n",
 			__func__, (*iter)->m_Declarators.First()->GetName().c_str(), nMemberSize);
 		// if member with variable size, return variable size
 		if (nMemberSize < 0)
@@ -1696,7 +1658,7 @@ int CBEMsgBuffer::GetMemberSize(int nType, CBEFunction *pFunction, CMsgStructTyp
 		nSize += nMemberSize;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s returns %d\n", __func__, nSize);
+	CCompiler::Verbose("CBEMsgBuffer::%s returns %d\n", __func__, nSize);
 	return nSize;
 }
 

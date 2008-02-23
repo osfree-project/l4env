@@ -116,8 +116,7 @@ void CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
  */
 void CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEOperationFunction::%s called for %s\n", __func__,
+	CCompiler::VerboseI("CBEOperationFunction::%s called for %s\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	AddBeforeParameters();
@@ -127,8 +126,7 @@ void CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 
 	AddAfterParameters();
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEOperationFunction::%s returns true\n", __func__);
+	CCompiler::VerboseD("CBEOperationFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a single parameter to this class
@@ -148,13 +146,13 @@ void CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
  */
 void CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s called for %s\n", __func__,
+	CCompiler::Verbose("CBEOperationFunction::%s called for %s\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	for_each(pFEOperation->m_RaisesDeclarators.begin(), pFEOperation->m_RaisesDeclarators.end(),
 		DoCall<CBEOperationFunction, CFEIdentifier>(this, &CBEOperationFunction::AddException));
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s returns true\n", __func__);
+	CCompiler::Verbose("CBEOperationFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a single exception to this class
@@ -174,15 +172,13 @@ void CBEOperationFunction::AddException(CFEIdentifier * pFEException)
  */
 void CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEOperationFunction::%s called for %s\n", __func__,
+	CCompiler::Verbose("CBEOperationFunction::%s called for %s\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	for_each(pFEOperation->m_Attributes.begin(), pFEOperation->m_Attributes.end(),
 		DoCall<CBEOperationFunction, CFEAttribute>(this, &CBEOperationFunction::AddAttribute));
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEOperationFunction::%s returns true\n", __func__);
+	CCompiler::Verbose("CBEOperationFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a single attribute to this function

@@ -651,6 +651,6 @@ void CBEAttribute::WriteToStr(std::string& str)
 	default:
 		break;
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: str = %s (class is %d)\n",
+	CCompiler::Verbose("CBEAttribute::%s: str = %s (class is %d)\n",
 		__func__, str.c_str(), m_nAttrClass);
 }

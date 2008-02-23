@@ -78,7 +78,7 @@ enum
     TYPE_EXCEPTION,		/**< DICE: CORBA exception type */
     TYPE_MESSAGE,		/**< DICE: used to determine (maximum) size for messages */
 	TYPE_MSGDOPE_SIZE,	/**< L4: the l4 message size dope type */
-	TYPE_MSGDOPE_SEND,	/**< L4: the l4 message send dope type */
+	TYPE_MSGDOPE_SEND,	/**< L4: the l4 message send dope type */ // 40
 	TYPE_MSGTAG,		/**< L4: the L4 message tag type */
 	TYPE_UTCB,			/**< L4: the size of the used UTCB */
     TYPE_MAX			/**< delimiter value */

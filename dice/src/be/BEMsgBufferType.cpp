@@ -84,14 +84,12 @@ CBEMsgBufferType* CBEMsgBufferType::Clone()
 void
 CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(fe-op) called\n",	__func__);
+	CCompiler::VerboseI("CBEMsgBufferType::%s(fe-op) called\n",	__func__);
 
 	CBEUnionType::CreateBackEnd(string());
 	AddStruct(pFEOperation);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(fe-op) returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s(fe-op) returns\n", __func__);
 }
 
 /** \brief initialize instance of this class
@@ -120,8 +118,7 @@ CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation)
  */
 void CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(fe-if) called\n",	__func__);
+	CCompiler::VerboseI("CBEMsgBufferType::%s(fe-if) called\n",	__func__);
 
 	// get tag
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -130,8 +127,7 @@ void CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
 	CBEUnionType::CreateBackEnd(sTag);
 	AddStruct(pFEInterface);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(fe-if) called\n",	__func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s(fe-if) called\n",	__func__);
 }
 
 /** \brief adds the structs of an interface
@@ -142,8 +138,7 @@ void CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
  */
 void CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(fe-if) called\n", __func__);
+	CCompiler::VerboseI("CBEMsgBufferType::%s(fe-if) called\n", __func__);
 
 	// iterate the operations of the interface
 	vector<CFEOperation*>::iterator iter;
@@ -165,8 +160,7 @@ void CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
 		AddStruct(*iI);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(fe-if) called\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s(fe-if) called\n", __func__);
 }
 
 /** \brief helper function to add struct for a specific operation
@@ -214,14 +208,12 @@ void CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation, CMsgStructType nTyp
 	// create union case
 	pCase->CreateBackEnd(pType, sTag, 0, false);
 	delete pType; // cloned in CBEUnionCase::CBETypedDeclarator::CreateBackEnd
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::AddStruct(%s, %d) created struct @ %p with name %s\n",
+	CCompiler::Verbose("CBEMsgBufferType::AddStruct(%s, %d) created struct @ %p with name %s\n",
 		pFEOperation->GetName().c_str(), (int)nType, pType, sTag.c_str());
 
 	// add the elements
 	AddElements(pFEOperation, nType);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::AddStruct returns\n");
+	CCompiler::Verbose("CBEMsgBufferType::AddStruct returns\n");
 }
 
 /** \brief adds the elements of the structs
@@ -239,8 +231,7 @@ void CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation, CMsgStructType nTyp
  */
 void CBEMsgBufferType::AddElements(CFEOperation *pFEOperation, CMsgStructType nType)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s called for %s\n", __func__,
+	CCompiler::VerboseI("CBEMsgBufferType::%s called for %s\n", __func__,
 		pFEOperation->GetName().c_str());
 
 	if (CMsgStructType::In == nType)
@@ -273,8 +264,7 @@ void CBEMsgBufferType::AddElements(CFEOperation *pFEOperation, CMsgStructType nT
 		}
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s returns\n", __func__);
 }
 
 /** \brief adds elements for a single parameter to the message buffer
@@ -293,8 +283,7 @@ void CBEMsgBufferType::AddElements(CFEOperation *pFEOperation, CMsgStructType nT
  */
 void CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(%s, %d) called\n", __func__,
+	CCompiler::VerboseI("CBEMsgBufferType::%s(%s, %d) called\n", __func__,
 		pFEParameter->m_Declarators.First()->GetName().c_str(),
 		(int)nType);
 
@@ -311,8 +300,7 @@ void CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter, CMsgStructTy
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// get function
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBufferType::%s(%s, %d) has function %s\n", __func__,
+	CCompiler::Verbose("CBEMsgBufferType::%s(%s, %d) has function %s\n", __func__,
 		pFEParameter->m_Declarators.First()->GetName().c_str(),
 		(int)nType, pFunction ? pFunction->GetName().c_str() : "(null)");
 	// create a member, by either cloning a parameter or if parent is class,
@@ -329,8 +317,7 @@ void CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter, CMsgStructTy
 		// not have OUT parameters. At this point we simply return.
 		if (!pOriginal)
 		{
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEMsgBufferType::%s returns (no orig)\n", __func__);
+			CCompiler::VerboseD("CBEMsgBufferType::%s returns (no orig)\n", __func__);
 			return;
 		}
 		// clone it
@@ -350,8 +337,7 @@ void CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter, CMsgStructTy
 
 	AddElement(pStruct, pParameter);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s returns\n", __func__);
 }
 
 /** \brief really add the element to the struct and do all the init work
@@ -360,8 +346,7 @@ void CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter, CMsgStructTy
  */
 void CBEMsgBufferType::AddElement(CBEStructType *pStruct, CBETypedDeclarator *pParameter)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s for param %s called\n",
+	CCompiler::VerboseI("CBEMsgBufferType::%s for param %s called\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str());
 
 	// if there is a transmit_as attribute, replace the type
@@ -403,15 +388,13 @@ void CBEMsgBufferType::AddElement(CBEStructType *pStruct, CBETypedDeclarator *pP
 	// add to struct
 	pStruct->m_Members.Add(pParameter);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s member %s added to struct\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s member %s added to struct\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str());
 
 	// if variable sized, check size_is/length_is attribute
 	if (pParameter->IsVariableSized())
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s param %s is var sized\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s param %s is var sized\n",
 			__func__, pParameter->m_Declarators.First()->GetName().c_str());
 		// get function
 		CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -433,8 +416,7 @@ void CBEMsgBufferType::AddElement(CBEStructType *pStruct, CBETypedDeclarator *pP
 			pStruct, &vStack);
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s returns\n", __func__);
 }
 
 /** \brief adds a word sized member struct containing no members yet
@@ -475,8 +457,7 @@ bool CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
  */
 CBEStructType* CBEMsgBufferType::GetStruct(std::string sFuncName, std::string sClassName, CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s called for func %s, class %s and %d\n", __func__,
+	CCompiler::Verbose("CBEMsgBufferType::%s called for func %s, class %s and %d\n", __func__,
 		sFuncName.c_str(), sClassName.c_str(), (int)nType);
 
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -487,14 +468,12 @@ CBEStructType* CBEMsgBufferType::GetStruct(std::string sFuncName, std::string sC
 		iter != m_UnionCases.end();
 		iter++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBufferType::%s testing union %s against %s\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s testing union %s against %s\n",
 			__func__, (*iter)->m_Declarators.First()->GetName().c_str(),
 			sFuncName.c_str());
 		if ((*iter)->m_Declarators.First()->GetName() == sFuncName)
 			return (CBEStructType*)(*iter)->GetType();
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBufferType::%s testing union %s against %s\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s testing union %s against %s\n",
 			__func__, (*iter)->m_Declarators.First()->GetName().c_str(),
 			sName.c_str());
 		if ((*iter)->m_Declarators.First()->GetName() == sName)
@@ -515,15 +494,13 @@ CBEStructType* CBEMsgBufferType::GetStruct(std::string sFuncName, std::string sC
  */
 void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(param: %s, struct: %p) called\n",
+	CCompiler::VerboseI("CBEMsgBufferType::%s(param: %s, struct: %p) called\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str(),
 		pStruct);
 
 	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s for %s and has %d stars (%s,%s,%s)\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s for %s and has %d stars (%s,%s,%s)\n",
 		__func__, pDecl->GetName().c_str(), pDecl->GetStars(),
 		pParameter->m_Attributes.Find(ATTR_IN) ? "IN" : "",
 		pParameter->m_Attributes.Find(ATTR_OUT) ? "OUT" : "",
@@ -535,8 +512,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 		pDecl->SetStars(0);
 	// if IN, simple type, stars, and NO pointer or size attributes,
 	// erase pointers
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s stars now %d, %s,%s,%s,%s\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s stars now %d, %s,%s,%s,%s\n",
 		__func__, pDecl->GetStars(),
 		pParameter->GetType()->IsSimpleType() ? "Simple Type" : "",
 		pParameter->m_Attributes.Find(ATTR_SIZE_IS) ? "SIZE" : "",
@@ -551,8 +527,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 			(pParameter->m_Attributes.Find(ATTR_MAX_IS) != 0)))
 	{
 		pDecl->SetStars(0);
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s stars to 0, returns\n", __func__);
+		CCompiler::VerboseD("CBEMsgBufferType::%s stars to 0, returns\n", __func__);
 		return;
 	}
 	// if string, check for max_is and set it as array boundary. Also set type
@@ -560,8 +535,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	if (pParameter->IsString())
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s is string\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s is string\n", __func__);
 		string exc = string(__func__);
 		// check for max_is
 		CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_MAX_IS);
@@ -605,8 +579,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 		}
 		// return here, because the following is not done concurrently with
 		// this branch
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s strings done, returns\n", __func__);
+		CCompiler::VerboseD("CBEMsgBufferType::%s strings done, returns\n", __func__);
 		return;
 	}
 
@@ -629,8 +602,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 			pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
 		(pDecl->GetArrayDimensionCount() == nEmptyBounds))
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s more empty array bounds\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s more empty array bounds\n", __func__);
 		// check for stars of declarator: have to remove one for the array
 		// boundary
 		if (pDecl->GetStars() > 0)
@@ -686,13 +658,13 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 		// is an IN parameter. Now, that we added a array dimension, we can
 		// remove the star.
 		CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s check func %s\n", __func__,
+		CCompiler::Verbose("CBEMsgBufferType::%s check func %s\n", __func__,
 			pFunction ? pFunction->GetName().c_str() : "(none)");
 		if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 			dynamic_cast<CBEUnmarshalFunction*>(pFunction))
 		{
 			ATTR_TYPE nAttribute = (pFunction->GetReceiveDirection() == CMsgStructType::In) ? ATTR_IN : ATTR_OUT;
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s param has attribute %s? %s\n",
+			CCompiler::Verbose("CBEMsgBufferType::%s param has attribute %s? %s\n",
 				__func__, (nAttribute == ATTR_IN) ? "IN" : "OUT",
 				pParameter->m_Attributes.Find(nAttribute) ? "yes" : "no");
 			if (pParameter->m_Attributes.Find(nAttribute))
@@ -700,8 +672,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 		}
 
 		// return here
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s empty array fixed (%d stars left for %s), returns\n",
+		CCompiler::VerboseD("CBEMsgBufferType::%s empty array fixed (%d stars left for %s), returns\n",
 			__func__, pDecl->GetStars(), pDecl->GetName().c_str());
 		return;
 	}
@@ -712,8 +683,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 	if (pParameter->IsVariableSized() &&
 		pParameter->GetType()->IsConstructedType())
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s param is var sized and has constr type\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s param is var sized and has constr type\n",
 			__func__);
 
 		CDeclStack vStack;
@@ -722,8 +692,7 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 		FlattenConstructedElement(pParameter, &vStack, pStruct);
 
 		// done
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s var && const fixed, returns\n",
+		CCompiler::VerboseD("CBEMsgBufferType::%s var && const fixed, returns\n",
 			__func__);
 		return;
 	}
@@ -734,13 +703,11 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 	CBEUserDefinedType *pUserType = dynamic_cast<CBEUserDefinedType*>(pType);
 	if (pType->IsPointerType() && pUserType)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s pointer type and user type\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s pointer type and user type\n",
 			__func__);
 
 		pType = pUserType->GetRealType();
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s user-type %p, real %p\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s user-type %p, real %p\n",
 			__func__, pUserType, pType);
 		// the new type should be different from the previous (GetRealType
 		// returns NULL if not)
@@ -758,14 +725,12 @@ void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructT
 		// again
 		FlattenElement(pParameter, pStruct);
 
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s pointer and user type fixed, returns\n",
+		CCompiler::VerboseD("CBEMsgBufferType::%s pointer and user type fixed, returns\n",
 			__func__);
 		return;
 	}
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s returns\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s returns\n", __func__);
 
 	/// FIXME: implement me
 }
@@ -782,22 +747,19 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 {
 	assert (pParameter);
 
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(%s, stack) called\n",
+	CCompiler::VerboseI("CBEMsgBufferType::%s(%s, stack) called\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str());
 
 	if (pParameter->GetType()->IsSimpleType())
 	{
 		if (!pParameter->IsVariableSized())
 		{
-			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-				"CBEMsgBufferType::%s returns (no var member)\n",
+			CCompiler::VerboseD("CBEMsgBufferType::%s returns (no var member)\n",
 				__func__);
 			return;
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s found var sized member\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s found var sized member\n",
 			__func__);
 
 		// FIXME: found the variable sized member, create new member of fixed
@@ -810,14 +772,12 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 		CBEDeclarator *pDecl = pMember->m_Declarators.First();
 		pDecl->SetName(sName);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s member %s added to struct\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s member %s added to struct\n",
 			__func__, sName.c_str());
 
 		FlattenElement(pMember, pStruct);
 
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s returns\n", __func__);
+		CCompiler::VerboseD("CBEMsgBufferType::%s returns\n", __func__);
 		return;
 	}
 
@@ -828,8 +788,7 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 	CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pType);
 	if (pUnion)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s member has union type\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s member has union type\n", __func__);
 
 		vector<CBEUnionCase*>::iterator iter;
 		for (iter = pUnion->m_UnionCases.begin();
@@ -841,8 +800,7 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 			pStack->pop_back();
 		}
 
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s returns at union\n",
+		CCompiler::VerboseD("CBEMsgBufferType::%s returns at union\n",
 			__func__);
 		return;
 	}
@@ -850,8 +808,7 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 	CBEStructType *pParamStruct = dynamic_cast<CBEStructType*>(pType);
 	if (pParamStruct)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s member has struct type\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s member has struct type\n", __func__);
 
 		vector<CBETypedDeclarator*>::iterator iter;
 		for (iter = pParamStruct->m_Members.begin();
@@ -863,14 +820,12 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 			pStack->pop_back();
 		}
 
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s returns at struct\n", __func__);
+		CCompiler::VerboseD("CBEMsgBufferType::%s returns at struct\n", __func__);
 		return;
 	}
 
 	// done
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s returns (done nothing)\n", __func__);
+	CCompiler::VerboseD("CBEMsgBufferType::%s returns (done nothing)\n", __func__);
 }
 
 /** \brief get iterator pointing at start of payload elements
@@ -885,28 +840,25 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
  * marshalled. Disadvantage is, that MarshalWordMember cannot use this method
  * anymore, because it would need to access these members.
  */
-vector<CBETypedDeclarator*>::iterator
-CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
+vector<CBETypedDeclarator*>::iterator CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
 {
 	CBEMsgBuffer *pMsgBuffer = GetSpecificParent<CBEMsgBuffer>();
 	assert(pMsgBuffer);
 	// GetPayloadOffset is in bytes
 	int nPayloadOffset = pMsgBuffer->GetPayloadOffset();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMsgBufferType::%s called. start at offset %d\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s called. start at offset %d\n",
 		__func__, nPayloadOffset);
 	vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = pStruct->m_Members.begin();
 		iter != pStruct->m_Members.end() && nPayloadOffset > 0;
 		iter++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBufferType::%s taking off %d the size of %s (%d)\n", __func__,
+		CCompiler::Verbose("CBEMsgBufferType::%s taking off %d the size of %s (%d)\n", __func__,
 			nPayloadOffset, (*iter)->m_Declarators.First()->GetName().c_str(),
 			(*iter)->GetSize());
 		nPayloadOffset -= (*iter)->GetSize();
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEMsgBufferType::%s returning iterator pointing at %s\n", __func__,
+	CCompiler::Verbose("CBEMsgBufferType::%s returning iterator pointing at %s\n", __func__,
 		((iter != pStruct->m_Members.end()) &&  (*iter)) ?
 		(*iter)->m_Declarators.First()->GetName().c_str() : "(begin)");
 	return iter;
@@ -935,8 +887,7 @@ void CBEMsgBufferType::AddStruct(CBEStructType *pStruct, CMsgStructType nType, s
 	// get name of struct
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTag = pNF->GetMessageBufferStructName(nType, sFunctionName, sClassName);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::AddStruct(%p, %d, %s, %s) create struct with name %s\n",
+	CCompiler::Verbose("CBEMsgBufferType::AddStruct(%p, %d, %s, %s) create struct with name %s\n",
 		pStruct, (int)nType, sFunctionName.c_str(), sClassName.c_str(), sTag.c_str());
 	// create union case
 	pCase->CreateBackEnd(pType, sTag, 0, false);
@@ -960,8 +911,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	assert(pStruct);
 	// if the parameter is not a string or one of the attributes is set, then
 	// we depart
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s(%s,%s,struct,stack) (%s,%s) called\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s(%s,%s,struct,stack) (%s,%s) called\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str(),
 		pFunction ? pFunction->GetName().c_str() : "",
 		pParameter->IsString() ? "STRING" : "",
@@ -977,27 +927,25 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetLocalSizeVariableName(pStack);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s size name should be %s\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s size name should be %s\n",
 		__func__, sName.c_str());
 
 	CBEAttribute *pSizeAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS);
 	if (pSizeAttr)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s param has size attr\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s param has size attr\n",
 			__func__);
 		// if size_is attribute is not our local variable, return
 		if (!pSizeAttr->m_Parameters.Find(sName))
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBEMsgBufferType::%s %s is not the param's size attr -> returning\n",
+			CCompiler::Verbose("CBEMsgBufferType::%s %s is not the param's size attr -> returning\n",
 				__func__, sName.c_str());
 			return;
 		}
 		// if local variable is already a member, return
 		if (pStruct->m_Members.Find(sName))
 		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBEMsgBufferType::%s %s is already member -> returning\n",
+			CCompiler::Verbose("CBEMsgBufferType::%s %s is already member -> returning\n",
 				__func__, sName.c_str());
 			return;
 		}
@@ -1008,8 +956,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	if (pFunction)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s has function %s\n", __func__,
+		CCompiler::Verbose("CBEMsgBufferType::%s has function %s\n", __func__,
 			pFunction->GetName().c_str());
 		// because the declarator really has to be the parameter's
 		// declarator, we first get the parameter from the
@@ -1061,8 +1008,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 			pSizeVar = pFunction->m_LocalVariables.Find(sName);
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s size var %s added to func %s\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s size var %s added to func %s\n",
 			__func__, sName.c_str(), pFunction->GetName().c_str());
 
 		// add direction attributes to size variable
@@ -1085,27 +1031,25 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 		// declarator has to be cloned, otherwise it will be destroyed twice
 		CBEDeclarator *pNew = pSizeVar->m_Declarators.First()->Clone();
 		pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBufferType::%s: size_is attribute %s added to %s\n", __func__,
+		CCompiler::Verbose("CBEMsgBufferType::%s: size_is attribute %s added to %s\n", __func__,
 			pNew->GetName().c_str(),
 			pParameter->m_Declarators.First()->GetName().c_str());
 		pParameter->m_Attributes.Add(pAttr);
 		pAttr = pAttr->Clone();
 		pTrueParameter->m_Attributes.Add(pAttr);
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBEMsgBufferType::%s size_is attribute added to member and true param\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s size_is attribute added to member and true param\n",
 			__func__);
 		// clone member
 		pMember = pSizeVar->Clone();
 		// add member
 		pStruct->m_Members.Add(pMember);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s size var (%s) added to struct\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s size var (%s) added to struct\n",
 			__func__, pMember->m_Declarators.First()->GetName().c_str());
 	}
 	else
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s no function\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s no function\n",
 			__func__);
 
 		pSizeVar = pCF->GetNewTypedDeclarator();
@@ -1132,7 +1076,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 		}
 		// add member
 		pStruct->m_Members.Add(pSizeVar);
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s size var (%s) added to struct\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s size var (%s) added to struct\n",
 			__func__, pSizeVar->m_Declarators.First()->GetName().c_str());
 		// set local variable as size attribute
 		pAttr = pCF->GetNewAttribute();
@@ -1140,16 +1084,15 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 		// declarator has to be cloned, otherwise it would be destroyed twice
 		CBEDeclarator *pNew = pSizeVar->m_Declarators.First()->Clone();
 		pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s: size_is attributbute %s added to %s\n", __func__,
+		CCompiler::Verbose("CBEMsgBufferType::%s: size_is attributbute %s added to %s\n", __func__,
 			pNew->GetName().c_str(),
 			pParameter->m_Declarators.First()->GetName().c_str());
 		pParameter->m_Attributes.Add(pAttr);
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s added size attr to %s\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s added size attr to %s\n",
 			__func__, pParameter->m_Declarators.First()->GetName().c_str());
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s returns\n", __func__);
+	CCompiler::Verbose("CBEMsgBufferType::%s returns\n", __func__);
 }
 
 /** \brief creates the init string for a string parameter
@@ -1316,7 +1259,7 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 	CBEStructType *pStruct,
 	CDeclStack* pStack)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s(%s,%s,struct,stack) called\n",
+	CCompiler::Verbose("CBEMsgBufferType::%s(%s,%s,struct,stack) called\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str(),
 		pFunction ? pFunction->GetName().c_str() : "");
 
@@ -1333,7 +1276,7 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 
 	if (dynamic_cast<CBEStructType*>(pType))
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s type is struct\n",
+		CCompiler::Verbose("CBEMsgBufferType::%s type is struct\n",
 			__func__);
 
 		CBEStructType *pStructType = static_cast<CBEStructType*>(pType);
@@ -1357,15 +1300,13 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 			pStack->pop_back();
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s returns\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s returns\n", __func__);
 		return;
 	}
 
 	if (dynamic_cast<CBEUnionType*>(pType))
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s type is union\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s type is union\n", __func__);
 
 		CBEUnionType *pUnion = static_cast<CBEUnionType*>(pType);
 		// check each union case
@@ -1388,13 +1329,11 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 			pStack->pop_back();
 		}
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s returns\n", __func__);
+		CCompiler::Verbose("CBEMsgBufferType::%s returns\n", __func__);
 		return;
 	}
 
 	// ignore enums
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBufferType::%s nothing done, return\n", __func__);
+	CCompiler::Verbose("CBEMsgBufferType::%s nothing done, return\n", __func__);
 }
 

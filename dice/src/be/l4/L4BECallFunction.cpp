@@ -77,7 +77,7 @@ void CL4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponen
  */
 void CL4BECallFunction::WriteInvocation(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BECallFunction::WriteInvocation(%s) called\n",
+	CCompiler::Verbose("CL4BECallFunction::WriteInvocation(%s) called\n",
 		GetName().c_str());
 
 	// set dopes
@@ -108,7 +108,7 @@ void CL4BECallFunction::WriteInvocation(CBEFile& pFile)
 	// check for errors
 	WriteIPCErrorCheck(pFile);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BECallFunction::WriteInvocation(%s) finished\n",
+	CCompiler::Verbose("CL4BECallFunction::WriteInvocation(%s) finished\n",
 		GetName().c_str());
 }
 
@@ -174,7 +174,7 @@ void CL4BECallFunction::WriteVariableInitialization(CBEFile& pFile)
  */
 void CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+	CCompiler::Verbose("CL4BECallFunction::%s for %s called\n", __func__,
 		GetName().c_str());
 
 	bool bLocalTrace = false;
@@ -208,7 +208,7 @@ void CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 		m_bTraceOn = false;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
+	CCompiler::Verbose("CL4BECallFunction::%s for %s finished\n", __func__,
 		GetName().c_str());
 }
 

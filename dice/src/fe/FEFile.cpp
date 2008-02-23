@@ -64,7 +64,7 @@ CFEFile::CFEFile(std::string sFileName,
 	// m_sFileWithPath = "../../include/l4/sys/types.h"
 	assert(!sFileName.empty());
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s, %s, %d, %d) called\n",
+	CCompiler::Verbose("CFEFile::%s(%s, %s, %d, %d) called\n",
 		__func__, sFileName.c_str(), sPath.c_str(), nIncludedOnLine,
 		nStdInclude);
 
@@ -97,13 +97,13 @@ CFEFile::CFEFile(std::string sFileName,
 	transform(m_sFileExtension.begin(), m_sFileExtension.end(),
 		m_sFileExtension.begin(), tolower);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilename: %s\n", __func__,
+	CCompiler::Verbose("CFEFile::%s has m_sFilename: %s\n", __func__,
 		m_sFilename.c_str());
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilenameWithoutExtension: %s\n",
+	CCompiler::Verbose("CFEFile::%s has m_sFilenameWithoutExtension: %s\n",
 		__func__, m_sFilenameWithoutExtension.c_str());
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFileExtension: %s\n",
+	CCompiler::Verbose("CFEFile::%s has m_sFileExtension: %s\n",
 		__func__, m_sFileExtension.c_str());
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFileWithPath: %s\n",
+	CCompiler::Verbose("CFEFile::%s has m_sFileWithPath: %s\n",
 		__func__, m_sFileWithPath.c_str());
 }
 
@@ -267,8 +267,7 @@ CFEInterface *CFEFile::FindInterface(std::string sName)
 	if (sName.empty())
 		return 0;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s(%s) called\n", __func__, sName.c_str());
+	CCompiler::Verbose("CFEFile::%s(%s) called\n", __func__, sName.c_str());
 
 	// if scoped name
 	string::size_type nScopePos;
@@ -276,8 +275,7 @@ CFEInterface *CFEFile::FindInterface(std::string sName)
 	{
 		string sRest = sName.substr(nScopePos+2);
 		string sScope = sName.substr(0, nScopePos);
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s: bisected name into \"%s\"::\"%s\"\n", __func__,
+		CCompiler::Verbose("CFEFile::%s: bisected name into \"%s\"::\"%s\"\n", __func__,
 			sScope.c_str(), sRest.c_str());
 		if (sScope.empty())
 		{
@@ -287,20 +285,17 @@ CFEInterface *CFEFile::FindInterface(std::string sName)
 		else
 		{
 			CFELibrary *pFELibrary = FindLibrary(sScope);
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"%s: search for interface in lib (%p)\n", __func__,
+			CCompiler::Verbose("CFEFile::%s: search for interface in lib (%p)\n", __func__,
 				pFELibrary);
 			if (pFELibrary == 0)
 				return 0;
-			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-				"%s: search for interface \"%s\" in lib \"%s\"\n", __func__,
+			CCompiler::Verbose("CFEFile::%s: search for interface \"%s\" in lib \"%s\"\n", __func__,
 				sRest.c_str(), sScope.c_str());
 			return pFELibrary->FindInterface(sRest);
 		}
 	}
 	// first search the interfaces in this file
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s: search in interface of file %s\n", __func__,
+	CCompiler::Verbose("CFEFile::%s: search in interface of file %s\n", __func__,
 		GetFileName().c_str());
 	CFEInterface *pInterface = m_Interfaces.Find(sName);
 	if (pInterface)
@@ -312,15 +307,13 @@ CFEInterface *CFEFile::FindInterface(std::string sName)
 		iterF != m_ChildFiles.end();
 		iterF++)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"%s: search in included file %s\n", __func__,
+		CCompiler::Verbose("CFEFile::%s: search in included file %s\n", __func__,
 			(*iterF)->GetFileName().c_str());
 		if ((pInterface = (*iterF)->FindInterface(sName)))
 			return pInterface;
 	}
 	// none found
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s: returns NULL\n", __func__);
+	CCompiler::Verbose("CFEFile::%s: returns NULL\n", __func__);
 	return 0;
 }
 
@@ -459,7 +452,7 @@ string CFEFile::GetFileNameWithoutExtension()
  */
 void CFEFile::Accept(CVisitor &v)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CFEFile::%s called for file %s\n",
+	CCompiler::Verbose("CFEFile::%s called for file %s\n",
 		__func__, GetFileName().c_str());
 	// only check consistency if this is an IDL file!
 	if (!IsIDLFile())
@@ -519,7 +512,7 @@ bool CFEFile::IsStdIncludeFile()
  */
 string CFEFile::GetFullFileName()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s() called, return %s\n", __func__,
+	CCompiler::Verbose("CFEFile::%s() called, return %s\n", __func__,
 		m_sFileWithPath.c_str());
 	return m_sFileWithPath;
 }

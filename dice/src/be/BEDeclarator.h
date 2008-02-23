@@ -174,12 +174,12 @@ public:
  *  \brief dumps the declarator stack
  */
 #define DUMP_STACK(iter, stack, str) \
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s stack is:\n", str); \
+    CCompiler::Verbose("%s stack is:\n", str); \
     CDeclStack::iterator iter = stack->begin(); \
     for (; iter != stack->end(); iter++) \
-        CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s\n", \
+        CCompiler::Verbose("%s\n", \
 	    iter->pDeclarator->GetName().c_str()); \
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "--end--\n");
+    CCompiler::Verbose("--end--\n");
 
 /** \class CBEDeclarator
  *  \ingroup backend

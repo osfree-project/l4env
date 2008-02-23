@@ -139,8 +139,7 @@ bool CBEObject::IsTargetFile(CBEFile* pFile)
 	else
 		sTargetFile = m_sTargetHeader;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEObject::%s(%s) called; sTargetFile=%s\n",
+	CCompiler::Verbose("CBEObject::%s(%s) called; sTargetFile=%s\n",
 		__func__, pFile->GetFileName().c_str(), sTargetFile.c_str());
 
 	// first check if the target file was generated from an IDL file
@@ -164,8 +163,7 @@ bool CBEObject::IsTargetFile(CBEFile* pFile)
 	}
 	if (sTargetFile.substr(targetLength - sTargetSuffix.length()) != sTargetSuffix)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEObject::IsTargetFile: suffix mismatch of target, return false\n");
+		CCompiler::Verbose("CBEObject::IsTargetFile: suffix mismatch of target, return false\n");
 		return false;
 	}
 
@@ -202,8 +200,7 @@ bool CBEObject::IsTargetFile(CBEFile* pFile)
 	if (argLength > sArgSuffix.length() &&
 		sArgFile.substr(argLength - sArgSuffix.length()) != sArgSuffix)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEObject::IsTargetFile: suffix mismatch in argument, return false\n");
+		CCompiler::Verbose("CBEObject::IsTargetFile: suffix mismatch in argument, return false\n");
 		return false;
 	}
 
@@ -213,8 +210,7 @@ bool CBEObject::IsTargetFile(CBEFile* pFile)
 	sArgFile = sArgFile.substr(0, argLength - sArgSuffix.length());
 	sTargetFile = sTargetFile.substr(0, targetLength - sTargetSuffix.length());
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEObject::%s(%s) sTargetFile=%s, sArgFile=%s\n", __func__,
+	CCompiler::Verbose("CBEObject::%s(%s) sTargetFile=%s, sArgFile=%s\n", __func__,
 		pFile->GetFileName().c_str(), sTargetFile.c_str(), sArgFile.c_str());
 
 	return sTargetFile == sArgFile;
@@ -345,8 +341,7 @@ CBENameSpace* CBEObject::FindNameSpace(std::string sNameSpaceName)
 CBEClass* CBEObject::FindClass(std::string sClassName)
 {
 	CBEClass *pRet = 0;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CBEObject::FindClass(%s) called\n", sClassName.c_str());
+	CCompiler::Verbose("CBEObject::FindClass(%s) called\n", sClassName.c_str());
 	if (sClassName.find("::") != string::npos)
 	{
 		CBERoot *pRoot = GetSpecificParent<CBERoot>();
@@ -412,7 +407,7 @@ CBEType* CBEObject::FindTaggedType(unsigned int nType, std::string sTag)
 CBEFunction* CBEObject::FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType)
 {
 	CBEFunction *pRet = 0;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEObject::FindFunction(%s, %d) called\n",
+	CCompiler::Verbose("CBEObject::FindFunction(%s, %d) called\n",
 		sFunctionName.c_str(), nFunctionType);
 
 	CBEClass *pClass = GetSpecificParent<CBEClass>();

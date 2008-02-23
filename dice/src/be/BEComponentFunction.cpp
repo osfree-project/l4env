@@ -113,7 +113,7 @@ void CBEComponentFunction::AddAfterParameters()
 
 		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sReply = pNF->GetReplyCodeVariable();
-		CBETypedDeclarator *pReplyVar = new CBETypedDeclarator();
+		CBETypedDeclarator *pReplyVar = pCF->GetNewTypedDeclarator();
 		pReplyVar->CreateBackEnd(pReplyType, sReply);
 		// delete type: cloned by typed decl create function
 		delete pReplyType;
@@ -362,8 +362,7 @@ bool CBEComponentFunction::DoWriteFunction(CBEFile* pFile)
  */
 bool CBEComponentFunction::DoWriteParameter(CBETypedDeclarator *pParam)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s(%s) called, m_nSkipParameter = %d\n", __func__,
+	CCompiler::Verbose("CBEComponentFunction::%s(%s) called, m_nSkipParameter = %d\n", __func__,
 		pParam->m_Declarators.First()->GetName().c_str(), m_nSkipParameter);
 	if ((m_nSkipParameter & 1) &&
 		pParam == GetObject())

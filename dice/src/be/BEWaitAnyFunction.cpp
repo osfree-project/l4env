@@ -262,8 +262,7 @@ CBEWaitAnyFunction::WriteParameter(CBEFile& pFile,
 void
 CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEWaitAnyFunction::%s(%s) in %s called\n", __func__,
+	CCompiler::VerboseI("CBEWaitAnyFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
 	if (pFile.IsOfFileType(FILETYPE_COMPONENTIMPLEMENTATION) &&

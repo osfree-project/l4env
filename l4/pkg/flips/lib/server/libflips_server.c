@@ -1,7 +1,6 @@
 /*** L4-SPECIFIC INCLUDES ***/
 #include <l4/log/l4log.h>
 #include <l4/thread/thread.h>
-#include <l4/dde_linux/dde.h>
 #include <l4/util/macros.h>
 
 /*** GENERAL INCLUDES ***/
@@ -18,6 +17,7 @@
 /*** LOCAL INCLUDES ***/
 #include "flips-server.h"
 #include "flips-client.h"
+#include "local.h"
 
 #ifdef DEBUG
 static int _DEBUG = 1;
@@ -213,7 +213,7 @@ static void flips_recv_thread (void * _arg) {
   CORBA_Environment env = dice_default_environment;
 
   // register thread as worker
-  l4dde_process_add_worker();
+  REGISTER_PROCESS_WORKER();
   // notify that worker thread started
   l4thread_started(NULL);
 
@@ -248,7 +248,7 @@ static void flips_recv_thread (void * _arg) {
   free(arg);
 
   // deregister thread as worker
-  l4dde_process_remove_worker();
+  REMOVE_PROCESS_WORKER();
   // stop thread
   l4thread_exit();
 

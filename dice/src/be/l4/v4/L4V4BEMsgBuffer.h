@@ -74,6 +74,7 @@ protected:
 
 	virtual void PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
 	virtual void Sort(CBEStructType *pStruct);
+	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclarator *pSecond);
 };
 
 #endif
