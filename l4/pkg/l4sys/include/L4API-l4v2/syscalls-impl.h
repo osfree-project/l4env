@@ -132,6 +132,13 @@ l4_task_new_long(l4_taskid_t destination,
                         esp, eip, pager);
 }
 
+
+L4_INLINE l4_umword_t
+l4_fpage_unmap_taskid(unsigned taskid)
+{
+  return (taskid & ~((1 << 11) - 1)) << 8;
+}
+
 L4_INLINE void
 l4_yield(void)
 {

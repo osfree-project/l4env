@@ -110,6 +110,21 @@ enum {
  *****************************************************************************/
 
 /**
+ * Unmap task parameter
+ * \ingroup api_calls_other
+ *
+ * \param  taskid      Task ID of the task.
+ *
+ * \return Value for map_mask of l4_fpage_unmap
+ *
+ * Returns the proper value for the map_mask argument of l4_fpage_unmap to
+ * be or'ed with the other options.
+ *
+ */
+L4_INLINE l4_umword_t
+l4_fpage_unmap_taskid(unsigned taskid);
+
+/**
  * Unmap flexpage
  * \ingroup api_calls_other
  *
