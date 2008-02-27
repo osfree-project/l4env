@@ -9,7 +9,7 @@
 
 namespace L4 {
 
-  char *ipc_error_str[] = 
+  char const *ipc_error_str[] =
     { "ok",
       "timeout",
       "phase canceled",
@@ -17,6 +17,6 @@ namespace L4 {
       "send page fault timeout",
       "receive page fault timeout",
       "aborted",
-      "message cut" 
+      "message cut"
     };
 };

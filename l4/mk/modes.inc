@@ -135,7 +135,7 @@ LIBCLIBDIR_x86_l4linux          = -L$(DROPS_STDDIR)/lib
 LIBCLIBS_x86_l4linux            = -ldm_generic -ldm_mem -lnames             \
                                   $(ROOTLIB) -lloaderif -ll4env             \
                                   -ll4env_err -lslab                        \
-                                  -llogserver_capsule -ll4util -ll4sys
+                                  -llogserver_capsule -ll4util -ll4sys-l4x
 CRT0_x86_l4linux                =
 CRTN_x86_l4linux                =
 LDSCRIPT_x86_l4linux            =
@@ -427,7 +427,7 @@ LIBCLIBDIR_arm_l4linux          = -L$(DROPS_STDDIR)/lib
 LIBCLIBS_arm_l4linux            = -ldm_generic -ldm_mem -lnames             \
                                   $(ROOTLIB) -lloaderif -ll4env             \
                                   -ll4env_err -lslab                        \
-                                  -llogserver_capsule -ll4util -ll4sys
+                                  -llogserver_capsule -ll4util -ll4sys-l4x
 CRT0_arm_l4linux                =
 CRTN_arm_l4linux                =
 LDSCRIPT_arm_l4linux            =
