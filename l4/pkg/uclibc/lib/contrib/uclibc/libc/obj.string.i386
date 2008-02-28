@@ -1,1 +1,0 @@
-string/i386/strcpy.o string/i386/strncpy.o string/i386/strcat.o string/i386/strncat.o string/i386/strcmp.o string/i386/strncmp.o string/i386/strchr.o string/i386/strrchr.o string/i386/strlen.o string/i386/strnlen.o string/i386/memcpy.o string/i386/memmove.o string/i386/memchr.o string/i386/memset.o

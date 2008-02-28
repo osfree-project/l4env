@@ -1,1 +1,0 @@
-sysdeps/linux/i386/__longjmp.o sysdeps/linux/i386/vfork.o sysdeps/linux/i386/clone.o sysdeps/linux/i386/setjmp.o sysdeps/linux/i386/bsd-setjmp.o sysdeps/linux/i386/bsd-_setjmp.o sysdeps/linux/i386/syscall.o sysdeps/linux/i386/mmap.o sysdeps/linux/i386/mmap64.o sysdeps/linux/i386/brk.o sysdeps/linux/i386/sigaction.o sysdeps/linux/i386/__syscall_error.o
