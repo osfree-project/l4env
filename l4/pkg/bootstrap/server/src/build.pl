@@ -151,7 +151,7 @@ sub search_module($)
   my $file = shift;
 
   foreach my $p (split(/:+/, $module_path)) {
-    return "$p/$file" if -e "$p/$file";
+    return "$p/$file" if -e "$p/$file" and ! -d "$p/$file";
   }
 
   undef;

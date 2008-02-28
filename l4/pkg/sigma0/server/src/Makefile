@@ -12,7 +12,7 @@ CRT0		=
 MODE		= tiny
 DEFAULT_RELOC_x86   := 0x00100000
 DEFAULT_RELOC_amd64 := 0x00100000
-DEFAULT_RELOC_arm   := 0x00064000
+DEFAULT_RELOC_arm   := 0x00068000
 
 vpath %.c $(L4DIR)/pkg/crtx/lib/src
 
