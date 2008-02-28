@@ -32,6 +32,7 @@
 
 #include <ldso.h>
 #include <stdio.h>
+#include <string.h>
 
 
 #ifdef SHARED
@@ -51,6 +52,7 @@ extern struct elf_resolve *_dl_loaded_modules;
 extern struct r_debug *_dl_debug_addr;
 extern unsigned long _dl_error_number;
 extern void *(*_dl_malloc_function)(size_t);
+extern void (*_dl_free_function) (void *p);
 extern void _dl_run_init_array(struct elf_resolve *);
 extern void _dl_run_fini_array(struct elf_resolve *);
 #ifdef __LDSO_CACHE_SUPPORT__
@@ -67,20 +69,35 @@ extern char *_dl_debug;
 
 #else /* SHARED */
 
+#define _dl_malloc malloc
+#define _dl_free free
+
 /* When libdl is linked as a static library, we need to replace all
  * the symbols that otherwise would have been loaded in from ldso... */
 
 #ifdef __SUPPORT_LD_DEBUG__
+/* Needed for 'strstr' prototype' */
+#include <string.h>
 char *_dl_debug  = 0;
+char *_dl_debug_symbols   = 0;
+char *_dl_debug_move      = 0;
+char *_dl_debug_reloc     = 0;
+char *_dl_debug_detail    = 0;
+char *_dl_debug_nofixups  = 0;
+char *_dl_debug_bindings  = 0;
+int   _dl_debug_file      = 2;
 #endif
 const char *_dl_progname       = "";        /* Program name */
+void *(*_dl_malloc_function)(size_t);
+void (*_dl_free_function) (void *p);
 char *_dl_library_path         = 0;         /* Where we look for libraries */
 char *_dl_ldsopath             = 0;         /* Location of the shared lib loader */
 int _dl_errno                  = 0;         /* We can't use the real errno in ldso */
 size_t _dl_pagesize            = PAGE_SIZE; /* Store the page size for use later */
 /* This global variable is also to communicate with debuggers such as gdb. */
 struct r_debug *_dl_debug_addr = NULL;
-#define _dl_malloc malloc
+
+#include "../ldso/dl-array.c"
 #include "../ldso/dl-debug.c"
 #include LDSO_ELFINTERP
 #include "../ldso/dl-hash.c"
@@ -147,6 +164,7 @@ void *dlopen(const char *libname, int flag)
 	struct init_fini_list *tmp, *runp, *runp2, *dep_list;
 	unsigned int nlist, i;
 	struct elf_resolve **init_fini_list;
+	static int _dl_init = 0;
 
 	/* A bit of sanity checking... */
 	if (!(flag & (RTLD_LAZY|RTLD_NOW))) {
@@ -156,9 +174,33 @@ void *dlopen(const char *libname, int flag)
 
 	from = (ElfW(Addr)) __builtin_return_address(0);
 
+	if (!_dl_init) {
+		_dl_init++;
+		_dl_malloc_function = malloc;
+		_dl_free_function = free;
+	}
 	/* Cover the trivial case first */
 	if (!libname)
 		return _dl_symbol_tables;
+
+#ifndef SHARED
+# ifdef __SUPPORT_LD_DEBUG__
+	_dl_debug = getenv("LD_DEBUG");
+	if (_dl_debug) {
+		if (_dl_strstr(_dl_debug, "all")) {
+			_dl_debug_detail = _dl_debug_move = _dl_debug_symbols
+				= _dl_debug_reloc = _dl_debug_bindings = _dl_debug_nofixups = (void*)1;
+		} else {
+			_dl_debug_detail   = strstr(_dl_debug, "detail");
+			_dl_debug_move     = strstr(_dl_debug, "move");
+			_dl_debug_symbols  = strstr(_dl_debug, "sym");
+			_dl_debug_reloc    = strstr(_dl_debug, "reloc");
+			_dl_debug_nofixups = strstr(_dl_debug, "nofix");
+			_dl_debug_bindings = strstr(_dl_debug, "bind");
+		}
+	}
+# endif
+#endif
 
 	_dl_map_cache();
 
@@ -175,17 +217,21 @@ void *dlopen(const char *libname, int flag)
 		tfrom = NULL;
 		for (dpnt = _dl_symbol_tables; dpnt; dpnt = dpnt->next) {
 			tpnt = dpnt->dyn;
-			if (tpnt->loadaddr < from
-					&& (tfrom == NULL || tfrom->loadaddr < tpnt->loadaddr))
+			if (DL_ADDR_IN_LOADADDR(from, tpnt, tfrom))
 				tfrom = tpnt;
 		}
 	}
-	for(rpnt = _dl_symbol_tables; rpnt && rpnt->next; rpnt=rpnt->next);
+	for (rpnt = _dl_symbol_tables; rpnt && rpnt->next; rpnt=rpnt->next);
 
 	relro_ptr = rpnt;
 	now_flag = (flag & RTLD_NOW) ? RTLD_NOW : 0;
 	if (getenv("LD_BIND_NOW"))
 		now_flag = RTLD_NOW;
+
+#ifndef SHARED
+	/* When statically linked, the _dl_library_path is not yet initialized */
+	_dl_library_path = getenv("LD_LIBRARY_PATH");
+#endif
 
 	/* Try to load the specified library */
 	_dl_if_debug_print("Trying to dlopen '%s', RTLD_GLOBAL:%d RTLD_NOW:%d\n",
@@ -211,7 +257,7 @@ void *dlopen(const char *libname, int flag)
 			if (handle->dyn == tpnt) {
 				dyn_chain->init_fini.init_fini = handle->init_fini.init_fini;
 				dyn_chain->init_fini.nlist = handle->init_fini.nlist;
-				for(i=0; i < dyn_chain->init_fini.nlist; i++)
+				for (i = 0; i < dyn_chain->init_fini.nlist; i++)
 					dyn_chain->init_fini.init_fini[i]->rtld_flags |= (flag & RTLD_GLOBAL);
 				dyn_chain->next = handle->next;
 				break;
@@ -247,35 +293,30 @@ void *dlopen(const char *libname, int flag)
 
 				tpnt1->rtld_flags |= (flag & RTLD_GLOBAL);
 
-				if (tpnt1->usage_count == 1) {
-					tpnt1->init_flag |= DL_OPENED;
-					/* This list is for dlsym() and relocation */
-					dyn_ptr->next = (struct dyn_elf *) malloc(sizeof(struct dyn_elf));
-					_dl_memset (dyn_ptr->next, 0, sizeof (struct dyn_elf));
-					dyn_ptr = dyn_ptr->next;
-					dyn_ptr->dyn = tpnt1;
-				}
-				if (tpnt1->init_flag & DL_OPENED) {
-					/* Used to record RTLD_LOCAL scope */
-					tmp = alloca(sizeof(struct init_fini_list));
-					tmp->tpnt = tpnt1;
-					tmp->next = runp->tpnt->init_fini;
-					runp->tpnt->init_fini = tmp;
+				/* This list is for dlsym() and relocation */
+				dyn_ptr->next = (struct dyn_elf *) malloc(sizeof(struct dyn_elf));
+				_dl_memset (dyn_ptr->next, 0, sizeof (struct dyn_elf));
+				dyn_ptr = dyn_ptr->next;
+				dyn_ptr->dyn = tpnt1;
+				/* Used to record RTLD_LOCAL scope */
+				tmp = alloca(sizeof(struct init_fini_list));
+				tmp->tpnt = tpnt1;
+				tmp->next = runp->tpnt->init_fini;
+				runp->tpnt->init_fini = tmp;
 
-					for (tmp=dep_list; tmp; tmp = tmp->next) {
-						if (tpnt1 == tmp->tpnt) { /* if match => cirular dependency, drop it */
-							_dl_if_debug_print("Circular dependency, skipping '%s',\n",
-									tmp->tpnt->libname);
-							tpnt1->usage_count--;
-							break;
-						}
+				for (tmp=dep_list; tmp; tmp = tmp->next) {
+					if (tpnt1 == tmp->tpnt) { /* if match => cirular dependency, drop it */
+						_dl_if_debug_print("Circular dependency, skipping '%s',\n",
+								   tmp->tpnt->libname);
+						tpnt1->usage_count--;
+						break;
 					}
-					if (!tmp) { /* Don't add if circular dependency detected */
-						runp2->next = alloca(sizeof(*runp));
-						runp2 = runp2->next;
-						runp2->tpnt = tpnt1;
-						runp2->next = NULL;
-					}
+				}
+				if (!tmp) { /* Don't add if circular dependency detected */
+					runp2->next = alloca(sizeof(*runp));
+					runp2 = runp2->next;
+					runp2->tpnt = tpnt1;
+					runp2->next = NULL;
 				}
 			}
 		}
@@ -286,7 +327,7 @@ void *dlopen(const char *libname, int flag)
 	i = 0;
 	for (runp2 = dep_list; runp2; runp2 = runp2->next) {
 		init_fini_list[i++] = runp2->tpnt;
-		for(runp = runp2->tpnt->init_fini; runp; runp = runp->next){
+		for (runp = runp2->tpnt->init_fini; runp; runp = runp->next) {
 			if (!(runp->tpnt->rtld_flags & RTLD_GLOBAL)) {
 				tmp = malloc(sizeof(struct init_fini_list));
 				tmp->tpnt = runp->tpnt;
@@ -318,9 +359,9 @@ void *dlopen(const char *libname, int flag)
 		}
 	}
 #ifdef __SUPPORT_LD_DEBUG__
-	if(_dl_debug) {
+	if (_dl_debug) {
 		fprintf(stderr, "\nINIT/FINI order and dependencies:\n");
-		for (i=0;i < nlist;i++) {
+		for (i = 0; i < nlist; i++) {
 			fprintf(stderr, "lib: %s has deps:\n", init_fini_list[i]->libname);
 			runp = init_fini_list[i]->init_fini;
 			for (; runp; runp = runp->next)
@@ -368,7 +409,6 @@ void *dlopen(const char *libname, int flag)
 		}
 	}
 
-#ifdef SHARED
 	/* Run the ctors and setup the dtors */
 	for (i = nlist; i; --i) {
 		tpnt = init_fini_list[i-1];
@@ -378,17 +418,16 @@ void *dlopen(const char *libname, int flag)
 
 		if (tpnt->dynamic_info[DT_INIT]) {
 			void (*dl_elf_func) (void);
-			dl_elf_func = (void (*)(void)) (tpnt->loadaddr + tpnt->dynamic_info[DT_INIT]);
-			if (dl_elf_func && *dl_elf_func != NULL) {
+			dl_elf_func = (void (*)(void)) DL_RELOC_ADDR(tpnt->loadaddr, tpnt->dynamic_info[DT_INIT]);
+			if (dl_elf_func) {
 				_dl_if_debug_print("running ctors for library %s at '%p'\n",
 						tpnt->libname, dl_elf_func);
-				(*dl_elf_func) ();
+				DL_CALL_FUNC_AT_ADDR (dl_elf_func, tpnt->loadaddr, (void(*)(void)));
 			}
 		}
 
 		_dl_run_init_array(tpnt);
 	}
-#endif /* SHARED */
 
 	_dl_unmap_cache();
 	return (void *) dyn_chain;
@@ -407,7 +446,22 @@ void *dlsym(void *vhandle, const char *name)
 	ElfW(Addr) from;
 	struct dyn_elf *rpnt;
 	void *ret;
-
+	/* Nastiness to support underscore prefixes.  */
+#ifdef __UCLIBC_UNDERSCORES__
+	char tmp_buf[80];
+	char *name2 = tmp_buf;
+	size_t nlen = strlen (name) + 1;
+	if (nlen + 1 > sizeof (tmp_buf))
+	    name2 = malloc (nlen + 1);
+	if (name2 == 0) {
+	    _dl_error_number = LD_ERROR_MMAP_FAILED;
+	    return 0;
+	}
+	name2[0] = '_';
+	memcpy (name2 + 1, name, nlen);
+#else
+	const char *name2 = name;
+#endif
 	handle = (struct dyn_elf *) vhandle;
 
 	/* First of all verify that we have a real handle
@@ -421,7 +475,8 @@ void *dlsym(void *vhandle, const char *name)
 				break;
 		if (!rpnt) {
 			_dl_error_number = LD_BAD_HANDLE;
-			return NULL;
+			ret = NULL;
+			goto out;
 		}
 	} else if (handle == RTLD_NEXT) {
 		/*
@@ -436,21 +491,27 @@ void *dlsym(void *vhandle, const char *name)
 		tfrom = NULL;
 		for (rpnt = _dl_symbol_tables; rpnt; rpnt = rpnt->next) {
 			tpnt = rpnt->dyn;
-			if (tpnt->loadaddr < from
-					&& (tfrom == NULL || tfrom->loadaddr < tpnt->loadaddr)) {
+			if (DL_ADDR_IN_LOADADDR(from, tpnt, tfrom)) {
 				tfrom = tpnt;
 				handle = rpnt->next;
 			}
 		}
 	}
-
-	ret = _dl_find_hash((char*)name, handle, NULL, 0);
+	tpnt = NULL;
+	if (handle == _dl_symbol_tables)
+	   tpnt = handle->dyn; /* Only search RTLD_GLOBAL objs if global object */
+	ret = _dl_find_hash(name2, handle, tpnt, ELF_RTYPE_CLASS_DLSYM);
 
 	/*
 	 * Nothing found.
 	 */
 	if (!ret)
 		_dl_error_number = LD_NO_SYMBOL;
+out:
+#ifdef __UCLIBC_UNDERSCORES__
+	if (name2 != tmp_buf)
+		free (name2);
+#endif
 	return ret;
 }
 
@@ -507,15 +568,13 @@ static int do_dlclose(void *vhandle, int need_fini)
 			    && need_fini &&
 			    !(tpnt->init_flag & FINI_FUNCS_CALLED)) {
 				tpnt->init_flag |= FINI_FUNCS_CALLED;
-#ifdef SHARED
 				_dl_run_fini_array(tpnt);
-#endif
 
 				if (tpnt->dynamic_info[DT_FINI]) {
-					dl_elf_fini = (int (*)(void)) (tpnt->loadaddr + tpnt->dynamic_info[DT_FINI]);
+					dl_elf_fini = (int (*)(void)) DL_RELOC_ADDR(tpnt->loadaddr, tpnt->dynamic_info[DT_FINI]);
 					_dl_if_debug_print("running dtors for library %s at '%p'\n",
 							tpnt->libname, dl_elf_fini);
-					(*dl_elf_fini) ();
+					DL_CALL_FUNC_AT_ADDR (dl_elf_fini, tpnt->loadaddr, (int (*)(void)));
 				}
 			}
 
@@ -528,8 +587,8 @@ static int do_dlclose(void *vhandle, int need_fini)
 				if (end < ppnt->p_vaddr + ppnt->p_memsz)
 					end = ppnt->p_vaddr + ppnt->p_memsz;
 			}
-			_dl_munmap((void*)tpnt->loadaddr, end);
-			/* Free elements in RTLD_LOCAL scope list */ 
+			DL_LIB_UNMAP (tpnt, end);
+			/* Free elements in RTLD_LOCAL scope list */
 			for (runp = tpnt->rtld_local; runp; runp = tmp) {
 				tmp = runp->next;
 				free(runp);
@@ -608,7 +667,7 @@ char *dlerror(void)
 }
 
 /*
- * Dump information to stderrr about the current loaded modules
+ * Dump information to stderr about the current loaded modules
  */
 #ifdef __USE_GNU
 static char *type[] = { "Lib", "Exe", "Int", "Mod" };
@@ -622,7 +681,7 @@ int dlinfo(void)
 	/* First start with a complete list of all of the loaded files. */
 	for (tpnt = _dl_loaded_modules; tpnt; tpnt = tpnt->next) {
 		fprintf(stderr, "\t%p %p %p %s %d %s\n",
-		        tpnt->loadaddr, tpnt, tpnt->symbol_scope,
+		        DL_LOADADDR_BASE(tpnt->loadaddr), tpnt, tpnt->symbol_scope,
 		        type[tpnt->libtype],
 		        tpnt->usage_count, tpnt->libname);
 	}
@@ -652,22 +711,20 @@ int dladdr(const void *__address, Dl_info * __info)
 	 */
 	pelf = NULL;
 
-#if 0
-	fprintf(stderr, "dladdr( %p, %p )\n", __address, __info);
-#endif
+	_dl_if_debug_print("__address: %p  __info: %p\n", __address, __info);
+
+	__address = DL_LOOKUP_ADDRESS (__address);
 
 	for (rpnt = _dl_loaded_modules; rpnt; rpnt = rpnt->next) {
 		struct elf_resolve *tpnt;
 
 		tpnt = rpnt;
-#if 0
-		fprintf(stderr, "Module \"%s\" at %p\n",
-				tpnt->libname, tpnt->loadaddr);
-#endif
-		if (tpnt->loadaddr < (ElfW(Addr)) __address
-				&& (pelf == NULL || pelf->loadaddr < tpnt->loadaddr)) {
+
+		_dl_if_debug_print("Module \"%s\" at %p\n",
+		                   tpnt->libname, DL_LOADADDR_BASE(tpnt->loadaddr));
+
+		if (DL_ADDR_IN_LOADADDR((ElfW(Addr)) __address, tpnt, pelf))
 			pelf = tpnt;
-		}
 	}
 
 	if (!pelf) {
@@ -682,35 +739,65 @@ int dladdr(const void *__address, Dl_info * __info)
 		char *strtab;
 		ElfW(Sym) *symtab;
 		unsigned int hn, si, sn, sf;
-		ElfW(Addr) sa;
+		ElfW(Addr) sa = 0;
 
-		sa = 0;
+		/* Set the info for the object the address lies in */
+		__info->dli_fname = pelf->libname;
+		__info->dli_fbase = (void *) DL_LOADADDR_BASE(pelf->mapaddr);
+
 		symtab = (ElfW(Sym) *) (pelf->dynamic_info[DT_SYMTAB]);
 		strtab = (char *) (pelf->dynamic_info[DT_STRTAB]);
 
 		sf = sn = 0;
+
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+		if (pelf->l_gnu_bitmask) {
+			for (hn = 0; hn < pelf->nbucket; hn++) {
+				si = pelf->l_gnu_buckets[hn];
+				if (!si)
+					continue;
+
+				const Elf32_Word *hasharr = &pelf->l_gnu_chain_zero[si];
+				do {
+					ElfW(Addr) symbol_addr;
+
+					symbol_addr = (ElfW(Addr)) pelf->loadaddr + symtab[si].st_value;
+					if (symbol_addr <= (ElfW(Addr))__address && (!sf || sa < symbol_addr)) {
+						sa = symbol_addr;
+						sn = si;
+						sf = 1;
+					}
+					_dl_if_debug_print("Symbol \"%s\" at %p\n", strtab + symtab[si].st_name, symbol_addr);
+					++si;
+				} while ((*hasharr++ & 1u) == 0);
+			}
+		} else
+#endif
 		for (hn = 0; hn < pelf->nbucket; hn++) {
 			for (si = pelf->elf_buckets[hn]; si; si = pelf->chains[si]) {
 				ElfW(Addr) symbol_addr;
 
-				symbol_addr = pelf->loadaddr + symtab[si].st_value;
+				symbol_addr = (ElfW(Addr)) DL_RELOC_ADDR(pelf->loadaddr, symtab[si].st_value);
 				if (symbol_addr <= (ElfW(Addr))__address && (!sf || sa < symbol_addr)) {
 					sa = symbol_addr;
 					sn = si;
 					sf = 1;
 				}
-#if 0
-				fprintf(stderr, "Symbol \"%s\" at %p\n",
-						strtab + symtab[si].st_name, symbol_addr);
-#endif
+
+				_dl_if_debug_print("Symbol \"%s\" at %p\n",
+				                   strtab + symtab[si].st_name, symbol_addr);
 			}
 		}
 
 		if (sf) {
-			__info->dli_fname = pelf->libname;
-			__info->dli_fbase = (void *)pelf->loadaddr;
+			/* A nearest symbol has been found; fill the entries */
 			__info->dli_sname = strtab + symtab[sn].st_name;
 			__info->dli_saddr = (void *)sa;
+		} else {
+			/* No symbol found, fill entries with NULL value,
+			only the containing object will be returned. */
+			__info->dli_sname = NULL;
+			__info->dli_saddr = NULL;
 		}
 		return 1;
 	}

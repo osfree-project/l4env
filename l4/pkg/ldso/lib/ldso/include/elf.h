@@ -20,17 +20,13 @@
 #ifndef _ELF_H
 #define	_ELF_H 1
 
-#include <dl-features.h>
+#include <features.h>
 
 __BEGIN_DECLS
 
 /* Standard ELF types.  */
 
 #include <stdint.h>
-#ifndef USE_UCLIBC
-typedef unsigned short __kernel_uid_t;
-typedef unsigned short __kernel_gid_t;
-#endif
 
 /* Type for a 16-bit quantity.  */
 typedef uint16_t Elf32_Half;
@@ -146,6 +142,7 @@ typedef struct
 #define ELFOSABI_HPUX		1	/* HP-UX */
 #define ELFOSABI_NETBSD		2	/* NetBSD.  */
 #define ELFOSABI_LINUX		3	/* Linux.  */
+#define ELFOSABI_HURD		4	/* GNU/Hurd */
 #define ELFOSABI_SOLARIS	6	/* Sun Solaris.  */
 #define ELFOSABI_AIX		7	/* IBM AIX.  */
 #define ELFOSABI_IRIX		8	/* SGI Irix.  */
@@ -153,6 +150,9 @@ typedef struct
 #define ELFOSABI_TRU64		10	/* Compaq TRU64 UNIX.  */
 #define ELFOSABI_MODESTO	11	/* Novell Modesto.  */
 #define ELFOSABI_OPENBSD	12	/* OpenBSD.  */
+#define ELFOSABI_OPENVMS	13	/* OpenVMS */
+#define ELFOSABI_NSK		14	/* Hewlett-Packard Non-Stop Kernel */
+#define ELFOSABI_AROS		15	/* Amiga Research OS */
 #define ELFOSABI_ARM		97	/* ARM */
 #define ELFOSABI_STANDALONE	255	/* Standalone (embedded) application */
 
@@ -181,6 +181,7 @@ typedef struct
 #define EM_386		 3		/* Intel 80386 */
 #define EM_68K		 4		/* Motorola m68k family */
 #define EM_88K		 5		/* Motorola m88k family */
+#define EM_486		 6		/* Intel 80486 *//* Reserved for future use */
 #define EM_860		 7		/* Intel 80860 */
 #define EM_MIPS		 8		/* MIPS R3000 big-endian */
 #define EM_S370		 9		/* IBM System/370 */
@@ -197,7 +198,8 @@ typedef struct
 #define EM_V800		36		/* NEC V800 series */
 #define EM_FR20		37		/* Fujitsu FR20 */
 #define EM_RH32		38		/* TRW RH-32 */
-#define EM_RCE		39		/* Motorola RCE */
+#define EM_MCORE	39		/* Motorola M*Core */ /* May also be taken by Fujitsu MMA */
+#define EM_RCE		39		/* Old name for MCore */
 #define EM_ARM		40		/* ARM */
 #define EM_FAKE_ALPHA	41		/* Digital Alpha */
 #define EM_SH		42		/* Renesas SH */
@@ -252,18 +254,108 @@ typedef struct
 #define EM_OPENRISC	92		/* OpenRISC 32-bit embedded processor */
 #define EM_ARC_A5	93		/* ARC Cores Tangent-A5 */
 #define EM_XTENSA	94		/* Tensilica Xtensa Architecture */
+#define EM_IP2K		101		/* Ubicom IP2022 micro controller */
+#define EM_CR		103		/* National Semiconductor CompactRISC */
+#define EM_MSP430	105		/* TI msp430 micro controller */
+#define EM_BLACKFIN	106		/* Analog Devices Blackfin */
+#define EM_ALTERA_NIOS2	113	/* Altera Nios II soft-core processor */
+#define EM_CRX		114		/* National Semiconductor CRX */
 #define EM_NUM		95
 
-/* If it is necessary to assign new unofficial EM_* values, please
-   pick large random numbers (0x8523, 0xa7f2, etc.) to minimize the
-   chances of collision with official or non-GNU unofficial values.  */
+/* If it is necessary to assign new unofficial EM_* values, please pick large
+   random numbers (0x8523, 0xa7f2, etc.) to minimize the chances of collision
+   with official or non-GNU unofficial values.
 
-/* Fujitsu FR-V.  */
+   NOTE: Do not just increment the most recent number by one.
+   Somebody else somewhere will do exactly the same thing, and you
+   will have a collision.  Instead, pick a random number.
+
+   Normally, each entity or maintainer responsible for a machine with an
+   unofficial e_machine number should eventually ask registry@caldera.com for
+   an officially blessed number to be added to the list above.  */
+
+/* picoJava */
+#define EM_PJ_OLD	99
+
+/* Cygnus PowerPC ELF backend.  Written in the absence of an ABI.  */
+#define EM_CYGNUS_POWERPC 0x9025
+
+/* Old version of Sparc v9, from before the ABI; this should be
+   removed shortly.  */
+#define EM_OLD_SPARCV9	11
+
+/* Old version of PowerPC, this should be removed shortly. */
+#define EM_PPC_OLD	17
+
+/* (Deprecated) Temporary number for the OpenRISC processor.  */
+#define EM_OR32		0x8472
+
+/* Renesas M32C and M16C.  */
+#define EM_M32C			0xFEB0
+
+/* Cygnus M32R ELF backend.  Written in the absence of an ABI.  */
+#define EM_CYGNUS_M32R	0x9041
+
+/* old S/390 backend magic number. Written in the absence of an ABI.  */
+#define EM_S390_OLD	0xa390
+
+/* D10V backend magic number.  Written in the absence of an ABI.  */
+#define EM_CYGNUS_D10V	0x7650
+
+/* D30V backend magic number.  Written in the absence of an ABI.  */
+#define EM_CYGNUS_D30V	0x7676
+
+/* V850 backend magic number.  Written in the absense of an ABI.  */
+#define EM_CYGNUS_V850	0x9080
+
+/* mn10200 and mn10300 backend magic numbers.
+   Written in the absense of an ABI.  */
+#define EM_CYGNUS_MN10200	0xdead
+#define EM_CYGNUS_MN10300	0xbeef
+
+/* FR30 magic number - no EABI available.  */
+#define EM_CYGNUS_FR30		0x3330
+
+/* AVR magic number
+   Written in the absense of an ABI.  */
+#define EM_AVR_OLD		0x1057
+
+/* OpenRISC magic number
+   Written in the absense of an ABI.  */
+#define EM_OPENRISC_OLD		0x3426
+
+/* DLX magic number
+   Written in the absense of an ABI.  */
+#define EM_DLX			0x5aa5
+
+#define EM_XSTORMY16		0xad45
+
+/* FRV magic number - no EABI available??.  */
 #define EM_CYGNUS_FRV	0x5441
 
+/* Ubicom IP2xxx; no ABI */
+#define EM_IP2K_OLD		0x8217
+
+#define EM_MT                   0x2530  /* Morpho MT; no ABI */
+
+/* MSP430 magic number
+      Written in the absense everything.  */
+#define EM_MSP430_OLD		0x1059
+
+/* Vitesse IQ2000.  */
+#define EM_IQ2000		0xFEBA
+
+/* Old, unofficial value for Xtensa.  */
+#define EM_XTENSA_OLD		0xabc7
+
+/* Alpha backend magic number.  Written in the absence of an ABI.  */
 #define EM_ALPHA	0x9026
-#define EM_NIOS32	0xfebb		/* Altera Nios 32 */
-#define EM_ALTERA_NIOS2  0x9ee5	/* Altera Nios II */
+
+/* NIOS magic number - no EABI available.  */
+#define EM_NIOS32	0xFEBB
+
+/* AVR32 magic number from ATMEL */
+#define EM_AVR32       0x18ad
 
 /* V850 backend magic number.  Written in the absense of an ABI.  */
 #define EM_CYGNUS_V850 0x9080
@@ -342,6 +434,7 @@ typedef struct
 #define SHT_SYMTAB_SHNDX  18		/* Extended section indeces */
 #define	SHT_NUM		  19		/* Number of defined types.  */
 #define SHT_LOOS	  0x60000000	/* Start OS-specific */
+#define SHT_GNU_HASH	  0x6ffffff6	/* GNU-style hash table.  */
 #define SHT_GNU_LIBLIST	  0x6ffffff7	/* Prelink library list */
 #define SHT_CHECKSUM	  0x6ffffff8	/* Checksum for DSO content.  */
 #define SHT_LOSUNW	  0x6ffffffa	/* Sun-specific low bound.  */
@@ -724,6 +817,7 @@ typedef struct
    If any adjustment is made to the ELF object after it has been
    built these entries will need to be adjusted.  */
 #define DT_ADDRRNGLO	0x6ffffe00
+#define DT_GNU_HASH	0x6ffffef5	/* GNU-style hash table.  */
 #define DT_GNU_CONFLICT	0x6ffffef8	/* Start of conflict section */
 #define DT_GNU_LIBLIST	0x6ffffef9	/* Library list */
 #define DT_CONFIG	0x6ffffefa	/* Configuration information.  */
@@ -1163,6 +1257,48 @@ typedef struct
 #define R_386_TLS_TPOFF32  37		/* Negated offset in static TLS block */
 /* Keep this the last entry.  */
 #define R_386_NUM	   38
+
+/* Blackfin specific definitions.  */
+#define R_BFIN_unused0			0x00
+#define R_BFIN_pcrel5m2			0x01
+#define R_BFIN_unused1			0x02
+#define R_BFIN_pcrel10			0x03
+#define R_BFIN_pcrel12_jump		0x04
+#define R_BFIN_rimm16			0x05
+#define R_BFIN_luimm16			0x06
+#define R_BFIN_huimm16			0x07
+#define R_BFIN_pcrel12_jump_s		0x08
+#define R_BFIN_pcrel24_jump_x		0x09
+#define R_BFIN_pcrel24			0x0a
+#define R_BFIN_unusedb			0x0b
+#define R_BFIN_unusedc			0x0c
+#define R_BFIN_pcrel24_jump_l		0x0d
+#define R_BFIN_pcrel24_call_x		0x0e
+#define R_BFIN_var_eq_symb		0x0f
+#define R_BFIN_byte_data		0x10
+#define R_BFIN_byte2_data		0x11
+#define R_BFIN_byte4_data		0x12
+#define R_BFIN_pcrel11			0x13
+
+#define R_BFIN_GOT17M4			0x14
+#define R_BFIN_GOTHI			0x15
+#define R_BFIN_GOTLO			0x16
+#define R_BFIN_FUNCDESC			0x17
+#define R_BFIN_FUNCDESC_GOT17M4		0x18
+#define R_BFIN_FUNCDESC_GOTHI		0x19
+#define R_BFIN_FUNCDESC_GOTLO		0x1a
+#define R_BFIN_FUNCDESC_VALUE		0x1b
+#define R_BFIN_FUNCDESC_GOTOFF17M4	0x1c
+#define R_BFIN_FUNCDESC_GOTOFFHI	0x1d
+#define R_BFIN_FUNCDESC_GOTOFFLO	0x1e
+#define R_BFIN_GOTOFF17M4		0x1f
+#define R_BFIN_GOTOFFHI			0x20
+#define R_BFIN_GOTOFFLO			0x21
+
+#define EF_BFIN_PIC		0x00000001	/* -fpic */
+#define EF_BFIN_FDPIC		0x00000002      /* -mfdpic */
+#define EF_BFIN_CODE_IN_L1	0x00000010	/* --code-in-l1 */
+#define EF_BFIN_DATA_IN_L1	0x00000020	/* --data-in-l1 */
 
 /* FR-V specific definitions.  */
 #define R_FRV_NONE		0	/* No reloc.  */
@@ -1914,7 +2050,7 @@ typedef Elf32_Addr Elf32_Conflict;
 #define LITUSE_ALPHA_TLS_LDM	5
 
 /* Legal values for d_tag of Elf64_Dyn.  */
-#define DT_ALPHA_PLTRO		0x70000000
+#define DT_ALPHA_PLTRO		(DT_LOPROC + 0)
 #define DT_ALPHA_NUM		1
 
 /* PowerPC specific declarations */
@@ -2502,6 +2638,12 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_390_NUM		61
 
 
+/* CRIS flags.  */
+#define EF_CRIS_VARIANT_MASK           0x0000000e
+#define EF_CRIS_VARIANT_ANY_V0_V10     0x00000000
+#define EF_CRIS_VARIANT_V32            0x00000002
+#define EF_CRIS_VARIANT_COMMON_V10_V32 0x00000004
+
 /* CRIS relocations.  */
 #define R_CRIS_NONE		0
 #define R_CRIS_8		1
@@ -2691,7 +2833,57 @@ typedef Elf32_Addr Elf32_Conflict;
 /* Keep this the last entry.  */
 #define R_V850_NUM		25
 
+/* Atmel AVR32 relocations.  */
+#define R_AVR32_NONE           0
+#define R_AVR32_32             1
+#define R_AVR32_16             2
+#define R_AVR32_8              3
+#define R_AVR32_32_PCREL       4
+#define R_AVR32_16_PCREL       5
+#define R_AVR32_8_PCREL                6
+#define R_AVR32_DIFF32         7
+#define R_AVR32_DIFF16         8
+#define R_AVR32_DIFF8          9
+#define R_AVR32_GOT32          10
+#define R_AVR32_GOT16          11
+#define R_AVR32_GOT8           12
+#define R_AVR32_21S            13
+#define R_AVR32_16U            14
+#define R_AVR32_16S            15
+#define R_AVR32_8S             16
+#define R_AVR32_8S_EXT         17
+#define R_AVR32_22H_PCREL      18
+#define R_AVR32_18W_PCREL      19
+#define R_AVR32_16B_PCREL      20
+#define R_AVR32_16N_PCREL      21
+#define R_AVR32_14UW_PCREL     22
+#define R_AVR32_11H_PCREL      23
+#define R_AVR32_10UW_PCREL     24
+#define R_AVR32_9H_PCREL       25
+#define R_AVR32_9UW_PCREL      26
+#define R_AVR32_HI16           27
+#define R_AVR32_LO16           28
+#define R_AVR32_GOTPC          29
+#define R_AVR32_GOTCALL                30
+#define R_AVR32_LDA_GOT                31
+#define R_AVR32_GOT21S         32
+#define R_AVR32_GOT18SW                33
+#define R_AVR32_GOT16S         34
+#define R_AVR32_GOT7UW         35
+#define R_AVR32_32_CPENT       36
+#define R_AVR32_CPCALL         37
+#define R_AVR32_16_CP          38
+#define R_AVR32_9W_CP          39
+#define R_AVR32_RELATIVE       40
+#define R_AVR32_GLOB_DAT       41
+#define R_AVR32_JMP_SLOT       42
+#define R_AVR32_ALIGN          43
+#define R_AVR32_NUM            44
 
+/* AVR32 dynamic tags */
+#define DT_AVR32_GOTSZ         0x70000001 /* Total size of GOT in bytes */
+
+/* Renesas H8/300 Relocations */
 #define R_H8_NONE       0
 #define R_H8_DIR32      1
 #define R_H8_DIR32_28   2
@@ -2735,8 +2927,7 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_H8_DIR32A16  63
 #define R_H8_ABS32     65
 #define R_H8_ABS32A16 127
-
-/* Altera NIOS specific definitions.  */
+#define R_H8_NUM      128
 
 /* NIOS relocations. */
 #define R_NIOS_NONE				0
@@ -2785,6 +2976,64 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_NIOS2_ALIGN			21
 /* Keep this the last entry.  */
 #define R_NIOS2_NUM				22
+
+/* Xtensa-specific declarations */
+
+/* Xtensa values for the Dyn d_tag field.  */
+#define DT_XTENSA_GOT_LOC_OFF	(DT_LOPROC + 0)
+#define DT_XTENSA_GOT_LOC_SZ	(DT_LOPROC + 1)
+#define DT_XTENSA_NUM		2
+
+/* Xtensa relocations.  */
+#define R_XTENSA_NONE		0
+#define R_XTENSA_32		1
+#define R_XTENSA_RTLD		2
+#define R_XTENSA_GLOB_DAT	3
+#define R_XTENSA_JMP_SLOT	4
+#define R_XTENSA_RELATIVE	5
+#define R_XTENSA_PLT		6
+#define R_XTENSA_OP0		8
+#define R_XTENSA_OP1		9
+#define R_XTENSA_OP2		10
+#define R_XTENSA_ASM_EXPAND	11
+#define R_XTENSA_ASM_SIMPLIFY	12
+#define R_XTENSA_GNU_VTINHERIT	15
+#define R_XTENSA_GNU_VTENTRY	16
+#define R_XTENSA_DIFF8		17
+#define R_XTENSA_DIFF16		18
+#define R_XTENSA_DIFF32		19
+#define R_XTENSA_SLOT0_OP	20
+#define R_XTENSA_SLOT1_OP	21
+#define R_XTENSA_SLOT2_OP	22
+#define R_XTENSA_SLOT3_OP	23
+#define R_XTENSA_SLOT4_OP	24
+#define R_XTENSA_SLOT5_OP	25
+#define R_XTENSA_SLOT6_OP	26
+#define R_XTENSA_SLOT7_OP	27
+#define R_XTENSA_SLOT8_OP	28
+#define R_XTENSA_SLOT9_OP	29
+#define R_XTENSA_SLOT10_OP	30
+#define R_XTENSA_SLOT11_OP	31
+#define R_XTENSA_SLOT12_OP	32
+#define R_XTENSA_SLOT13_OP	33
+#define R_XTENSA_SLOT14_OP	34
+#define R_XTENSA_SLOT0_ALT	35
+#define R_XTENSA_SLOT1_ALT	36
+#define R_XTENSA_SLOT2_ALT	37
+#define R_XTENSA_SLOT3_ALT	38
+#define R_XTENSA_SLOT4_ALT	39
+#define R_XTENSA_SLOT5_ALT	40
+#define R_XTENSA_SLOT6_ALT	41
+#define R_XTENSA_SLOT7_ALT	42
+#define R_XTENSA_SLOT8_ALT	43
+#define R_XTENSA_SLOT9_ALT	44
+#define R_XTENSA_SLOT10_ALT	45
+#define R_XTENSA_SLOT11_ALT	46
+#define R_XTENSA_SLOT12_ALT	47
+#define R_XTENSA_SLOT13_ALT	48
+#define R_XTENSA_SLOT14_ALT	49
+/* Keep this the last entry.  */
+#define R_XTENSA_NUM		50
 
 __END_DECLS
 

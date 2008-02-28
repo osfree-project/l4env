@@ -256,7 +256,6 @@ __END_DECLS
 extern struct __res_state _res;
 #endif
 
-#ifndef __BIND_NOSTATIC
 #define fp_nquery		__fp_nquery
 #define fp_query		__fp_query
 #define hostalias		__hostalias
@@ -275,7 +274,9 @@ void		fp_nquery (const u_char *, int, FILE *) __THROW;
 void		fp_query (const u_char *, FILE *) __THROW;
 const char *	hostalias (const char *) __THROW;
 void		p_query (const u_char *) __THROW;
+#ifdef __UCLIBC_HAS_BSD_RES_CLOSE__
 void		res_close (void) __THROW;
+#endif
 int		res_init (void) __THROW;
 int		res_isourserver (const struct sockaddr_in *) __THROW;
 int		res_mkquery (int, const char *, int, int, const u_char *,
@@ -286,7 +287,6 @@ int		res_querydomain (const char *, const char *, int, int,
 int		res_search (const char *, int, int, u_char *, int) __THROW;
 int		res_send (const u_char *, int, u_char *, int) __THROW;
 __END_DECLS
-#endif
 
 #define b64_ntop		__b64_ntop
 #define b64_pton		__b64_pton

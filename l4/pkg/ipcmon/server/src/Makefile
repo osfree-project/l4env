@@ -23,7 +23,7 @@ CPPFLAGS 	+= -DLOG_TAG=\"ipcmon\"
 include $(L4DIR)/mk/prog.mk
 
 LIBS		+= -lparsecmdline
-LIBCLIBS	+= -ll4util 
+LIBCLIBS	+= -ll4util -luc_be_minimal_io
 L4LIBS		+= -luc_c++ -lc++start.o $(CXXLIB) -lmain -lcxx_base
 
 CFLAGS		+= -g

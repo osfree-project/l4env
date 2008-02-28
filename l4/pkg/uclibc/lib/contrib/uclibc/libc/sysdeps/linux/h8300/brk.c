@@ -9,14 +9,10 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-libc_hidden_proto(brk)
-
 /* This must be initialized data because commons can't have aliases.  */
-extern void *__curbrk;
-libc_hidden_proto(__curbrk)
-void *__curbrk = 0;
-libc_hidden_data_def(__curbrk)
+void *__curbrk attribute_hidden = 0;
 
+libc_hidden_proto(brk)
 int brk (void *addr)
 {
     void *newbrk;

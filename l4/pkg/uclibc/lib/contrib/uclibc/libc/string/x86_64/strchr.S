@@ -20,6 +20,7 @@
 
 #include "_glibc_inc.h"
 
+/* Seems to be unrolled too much */
 
 	.text
 ENTRY (BP_SYM (strchr))
@@ -285,4 +286,6 @@ ENTRY (BP_SYM (strchr))
 END (BP_SYM (strchr))
 
 libc_hidden_def(strchr)
+#ifdef __UCLIBC_SUSV3_LEGACY__
 strong_alias (BP_SYM (strchr), BP_SYM (index))
+#endif

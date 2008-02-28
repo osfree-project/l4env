@@ -21,11 +21,14 @@
 #ifndef __HEADER_STD_STACK
 #define __HEADER_STD_STACK 1
 
+#pragma GCC visibility push(default)
+
 namespace std{
 
 	template <class T, class Container = deque<T> > class _UCXXEXPORT stack{
 	protected:
 		Container c;
+
 	public:
 		typedef typename Container::value_type	value_type;
 		typedef typename Container::size_type	size_type;
@@ -38,16 +41,14 @@ namespace std{
 		const value_type& top() const { return c.back(); }
 		void push(const value_type& x) { c.push_back(x); }
 		void pop() { c.pop_back(); }
+
+		bool operator==(const stack<T, Container> &x) const{
+			return  x.c == c;
+		}
+
 	};
 
 
-
-
-	template <class T, class Container> _UCXXEXPORT bool
-		operator==(const stack<T, Container>& x, const stack<T, Container>& y)
-	{
-		return (x.c == y.c);
-	}
 	template <class T, class Container> _UCXXEXPORT bool
 		operator< (const stack<T, Container>& x, const stack<T, Container>& y)
 	{
@@ -76,6 +77,7 @@ namespace std{
 
 }
 
+#pragma GCC visibility pop
 
 #endif
 

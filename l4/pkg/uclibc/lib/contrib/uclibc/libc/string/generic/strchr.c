@@ -41,8 +41,8 @@ char *strchr (const char *s, int c_in)
 
   /* Handle the first few characters by reading one character at a time.
      Do this until CHAR_PTR is aligned on a longword boundary.  */
-  for (char_ptr = s; ((unsigned long int) char_ptr
-		      & (sizeof (longword) - 1)) != 0;
+  for (char_ptr = (const unsigned char *) s;
+       ((unsigned long int) char_ptr & (sizeof (longword) - 1)) != 0;
        ++char_ptr)
     if (*char_ptr == c)
       return (void *) char_ptr;
@@ -181,5 +181,7 @@ char *strchr (const char *s, int c_in)
 
   return NULL;
 }
-libc_hidden_def(strchr)
-strong_alias(strchr,index)
+libc_hidden_weak(strchr)
+#ifdef __UCLIBC_SUSV3_LEGACY__
+weak_alias(strchr,index)
+#endif

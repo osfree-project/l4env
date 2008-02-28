@@ -163,13 +163,8 @@ int munmap_anon(ds2server_t *current, void *start, size_t length)
     return 0;
 }
 
-#ifdef USE_DIETLIBC
-void * mremap(void * old_address, size_t old_size, size_t new_size,
-              unsigned long flags)
-#else
-void * mremap(void * old_address, size_t old_size, size_t new_size,
-              int may_move)
-#endif
+void *mremap(void * old_address, size_t old_size, size_t new_size,
+             int may_move, ...)
 {
     int ret;
     l4dm_dataspace_t ds;

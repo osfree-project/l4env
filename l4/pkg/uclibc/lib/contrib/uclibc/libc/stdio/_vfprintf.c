@@ -512,10 +512,6 @@ size_t parse_printf_format(register const char *template,
 /**********************************************************************/
 #ifdef L__ppfs_init
 
-#ifdef __UCLIBC_HAS_LOCALE__
-libc_hidden_proto(__global_locale)
-#endif
-
 int attribute_hidden _ppfs_init(register ppfs_t *ppfs, const char *fmt0)
 {
 	int r;
@@ -736,7 +732,7 @@ void attribute_hidden _ppfs_setargs(register ppfs_t *ppfs)
 
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_b_loc)
-#else
+#elif __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 #endif
 
@@ -1238,7 +1234,7 @@ static size_t _fp_out_narrow(FILE *fp, intptr_t type, intptr_t len, intptr_t buf
 		}
 		len = buflen;
 	}
-	return r + OUTNSTR(fp, (const char *) buf, len);
+	return r + OUTNSTR(fp, (const unsigned char *) buf, len);
 }
 
 #endif /* __STDIO_PRINTF_FLOAT */
@@ -1253,10 +1249,6 @@ static size_t _fp_out_narrow(FILE *fp, intptr_t type, intptr_t len, intptr_t buf
 #define OUTPUT(F,S)			fputws(S,F)
 #define _outnwcs(stream, wstring, len)	_wstdio_fwrite(wstring, len, stream)
 #define FP_OUT _fp_out_wide
-
-#ifdef __UCLIBC_HAS_LOCALE__
-libc_hidden_proto(__global_locale)
-#endif
 
 static size_t _outnstr(FILE *stream, const char *s, size_t wclen)
 {
@@ -1435,7 +1427,7 @@ static size_t _charpad(FILE * __restrict stream, int padchar, size_t numpad)
 	FMT_TYPE pad[1];
 
 	*pad = padchar;
-	while (todo && (OUTNSTR(stream, pad, 1) == 1)) {
+	while (todo && (OUTNSTR(stream, (const unsigned char *) pad, 1) == 1)) {
 		--todo;
 	}
 
@@ -1574,7 +1566,7 @@ static int _do_one_spec(FILE * __restrict stream,
 #endif /* __UCLIBC_MJN3_ONLY__ */
 			s = _uintmaxtostr(buf + sizeof(buf) - 1,
 							  (uintmax_t)
-							  _load_inttype(*argtype & __PA_INTMASK,
+							  _load_inttype(ppfs->conv_num == CONV_p ? PA_FLAG_LONG : *argtype & __PA_INTMASK,
 											*argptr, base), base, alphacase);
 			if (ppfs->conv_num > CONV_u) { /* signed int */
 				if (*s == '-') {
@@ -1839,7 +1831,7 @@ static int _do_one_spec(FILE * __restrict stream,
 			}
 		}
 #else  /* __UCLIBC_HAS_WCHAR__ */
-		if (_outnstr(stream, s, slen) != slen) {
+		if (_outnstr(stream, (const unsigned char *) s, slen) != slen) {
 			return -1;
 		}
 #endif /* __UCLIBC_HAS_WCHAR__ */
@@ -1894,7 +1886,7 @@ int VFPRINTF (FILE * __restrict stream,
 	{
 		count = -1;
 	} else if (_PPFS_init(&ppfs, format) < 0) {	/* Bad format string. */
-		OUTNSTR(stream, (const FMT_TYPE *) ppfs.fmtpos,
+		OUTNSTR(stream, (const unsigned char *) ppfs.fmtpos,
 				STRLEN((const FMT_TYPE *)(ppfs.fmtpos)));
 #if defined(L_vfprintf) && !defined(NDEBUG)
 		fprintf(stderr,"\nIMbS: \"%s\"\n\n", format);
@@ -1909,7 +1901,7 @@ int VFPRINTF (FILE * __restrict stream,
 			}
 
 			if (format-s) {		/* output any literal text in format string */
-				if ( (r = OUTNSTR(stream, s, format-s)) != (format-s)) {
+				if ( (r = OUTNSTR(stream, (const unsigned char *) s, format-s)) != (format-s)) {
 					count = -1;
 					break;
 				}

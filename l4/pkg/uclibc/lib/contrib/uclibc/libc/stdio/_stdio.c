@@ -125,19 +125,12 @@ static FILE _stdio_streams[] = {
 							 0 )
 };
 
-/* psm: moved to _stdio.h: libc_hidden_proto(stdin/stdout) */
 FILE *stdin  = _stdio_streams;
-libc_hidden_data_def(stdin)
 FILE *stdout = _stdio_streams + 1;
-libc_hidden_data_def(stdout)
-libc_hidden_proto(stderr)
 FILE *stderr = _stdio_streams + 2;
-libc_hidden_data_def(stderr)
 
 #ifdef __STDIO_GETC_MACRO
-libc_hidden_proto(__stdin)
 FILE *__stdin = _stdio_streams;		 /* For getchar() macro. */
-libc_hidden_data_def(__stdin)
 #endif
 #ifdef __STDIO_PUTC_MACRO
 FILE *__stdout = _stdio_streams + 1; /* For putchar() macro. */
@@ -159,12 +152,14 @@ FILE *__stdout = _stdio_streams + 1; /* For putchar() macro. */
  */
 
 FILE *_stdio_openlist = _stdio_streams;
-libc_hidden_data_def(_stdio_openlist)
 
 # ifdef __UCLIBC_HAS_THREADS__
-pthread_mutex_t _stdio_openlist_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-libc_hidden_data_def(_stdio_openlist_lock)
-int _stdio_openlist_delflag = 0;
+__UCLIBC_MUTEX_INIT(_stdio_openlist_add_lock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
+#ifdef __STDIO_BUFFERS
+__UCLIBC_MUTEX_INIT(_stdio_openlist_del_lock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
+volatile int _stdio_openlist_use_count = 0;
+int _stdio_openlist_del_count = 0;
+#endif
 # endif
 
 #endif
@@ -172,14 +167,12 @@ int _stdio_openlist_delflag = 0;
 #ifdef __UCLIBC_HAS_THREADS__
 
 /* 2 if threading not initialized and 0 otherwise; */
-libc_hidden_proto(_stdio_user_locking)
 int _stdio_user_locking = 2;
-libc_hidden_data_def(_stdio_user_locking)
 
-void attribute_hidden __stdio_init_mutex(pthread_mutex_t *m)
+void attribute_hidden __stdio_init_mutex(__UCLIBC_MUTEX_TYPE *m)
 {
-	static const pthread_mutex_t __stdio_mutex_initializer
-		= PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+	const __UCLIBC_MUTEX_STATIC(__stdio_mutex_initializer,
+		PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
 
 	memcpy(m, &__stdio_mutex_initializer, sizeof(__stdio_mutex_initializer));
 }
@@ -197,8 +190,12 @@ void attribute_hidden _stdio_term(void)
 	/* First, make sure the open file list is unlocked.  If it was
 	 * locked, then I suppose there is a chance that a pointer in the
 	 * chain might be corrupt due to a partial store.
-	 */ 
-	__stdio_init_mutex(&_stdio_openlist_lock);
+	 */
+	__stdio_init_mutex(&_stdio_openlist_add_lock);
+#warning check
+#ifdef __STDIO_BUFFERS
+	__stdio_init_mutex(&_stdio_openlist_del_lock);
+#endif
 
 	/* Next we need to worry about the streams themselves.  If a stream
 	 * is currently locked, then it may be in an invalid state.  So we
@@ -206,7 +203,7 @@ void attribute_hidden _stdio_term(void)
 	 * Then we reinitialize the locks.
 	 */
 	for (ptr = _stdio_openlist ; ptr ; ptr = ptr->__nextopen ) {
-		if (__STDIO_ALWAYS_THREADTRYLOCK(ptr)) {
+		if (__STDIO_ALWAYS_THREADTRYLOCK_CANCEL_UNSAFE(ptr)) {
 			/* The stream is already locked, so we don't want to touch it.
 			 * However, if we have custom streams, we can't just close it
 			 * or leave it locked since a custom stream may be stacked
@@ -217,7 +214,7 @@ void attribute_hidden _stdio_term(void)
 			__STDIO_STREAM_DISABLE_PUTC(ptr);
 			__STDIO_STREAM_INIT_BUFREAD_BUFPOS(ptr);
 		}
-		
+
 		ptr->__user_locking = 1; /* Set locking mode to "by caller". */
 		__stdio_init_mutex(&ptr->__lock); /* Shouldn't be necessary, but... */
 	}

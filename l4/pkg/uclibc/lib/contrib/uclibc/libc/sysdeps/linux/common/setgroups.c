@@ -7,10 +7,12 @@
  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
 
-#include "syscalls.h"
+#include <sys/syscall.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <grp.h>
+
+#ifdef __USE_BSD
 
 libc_hidden_proto(setgroups)
 
@@ -62,3 +64,4 @@ ret_error:
 #endif
 
 libc_hidden_def(setgroups)
+#endif

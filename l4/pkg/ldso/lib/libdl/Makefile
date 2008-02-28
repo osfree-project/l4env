@@ -9,12 +9,15 @@ PRIVATE_INCDIR	 = $(PKGDIR)/lib/libdl \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/$(LDSO_ARCH_NAME) \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/common \
 		   $(PKGDIR)/lib/ldso/include/ldso/$(LDSO_ARCH_NAME) \
+		   $(PKGDIR)/lib/ldso/ARCH-$(ARCH) \
 		   $(PKGDIR)/lib/ldso/include/ldso
 LDSO_ARCH_NAME_x86   = i386
 LDSO_ARCH_NAME_amd64 = x86_64
 LDSO_ARCH_NAME_arm   = arm
 LDSO_ARCH_NAME	= $(LDSO_ARCH_NAME_$(ARCH))
-DEFINES		 = -D__LIBDL_SHARED__ -DUCLIBC_RUNTIME_PREFIX=\"/\"
+DEFINES		 = -DSHARED -DUCLIBC_RUNTIME_PREFIX=\"/\"
+CFLAGS		+= -include $(PKGDIR)/../uclibc/lib/contrib/uclibc/include/libc-symbols.h \
+		   -DLDSO_ELFINTERP=\"ARCH-$(ARCH)/elfinterp.c\"
 SRC_C		 = libdl.c
 LDFLAGS		 = -Bsymbolic --warn-common --export-dynamic --sort-common \
 		   --discard-locals --discard-all -soname=$(TARGET)

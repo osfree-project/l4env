@@ -17,8 +17,8 @@
    02111-1307 USA.  */
 
 #include <features.h>
-#include <asm/asm.h>
-#include <asm/regdef.h>
+#include <sys/asm.h>
+#include <sys/regdef.h>
 
 #ifdef __PIC__
 	.option pic2
@@ -29,6 +29,10 @@
 .type   syscall,@function
 .ent    syscall
 syscall:
+#ifdef __PIC__
+	SETUP_GP
+#endif
+	.set noreorder
 	move	v0, a0		/* Load system call number from first arg.  */
 	move	a0, a1		/* Move the next three args up a register.  */
 	move	a1, a2
@@ -55,11 +59,23 @@ syscall:
 	lw	v0,7*4(sp)	/* for system call restarts */
 #endif
 	syscall			/* Do the system call.  */
+	bnez	a3, 1f
 #ifdef __mips64
 	daddiu	sp,sp,16
 #else
 	addiu	sp,sp,32
 #endif
      	j ra			/* Return to caller.  */
+1:
+	move	a0,v0		/* Pass return val to C function. */
+
+#ifdef __PIC__
+	SETUP_GP64(v0, syscall)
+	PTR_LA	t9, __syscall_error
+	RESTORE_GP64
+	jr	t9
+#else
+	j	__syscall_error
+#endif
 .end    syscall
 .size   syscall,.-syscall

@@ -2,6 +2,7 @@
 #include <iostream>
 
 unsigned char correctValue(unsigned long int pos);
+bool testIFStreamUnderflowOnUnopened();
 
 
 int main()
@@ -11,6 +12,10 @@ int main()
 	for(unsigned char a = 0; a < 255 ; ++a){
 		outFile << a;
 	}
+	outFile.close();
+	outFile.open("fstreamtest.out", std::ios::app | std::ios::out);
+	outFile.seekp(0);
+	outFile << "This should be at the end";
 	outFile.close();
 
 	std::ifstream inFile;
@@ -81,6 +86,12 @@ int main()
 	std::cout << "Now reading other input file to see what wonderful goodness we can discover" << std::endl;
 
 	inFile.open("fstreamtest.input", std::ios::in | std::ios::binary );
+	if( !inFile.is_open()){
+		std::cout << "Could not open fstreamtest.input" << std::endl;
+		std::cout << "Are you in the correct directory?" << std::endl;
+		std::cout << "This test wasn't designed to run without the uClibc++ driver behind it" << std::endl;
+		return 1;
+	}
 	inFile.seekg(27);
 	inFile.read(&a, 1);
 	b = a;
@@ -107,6 +118,15 @@ int main()
 	std::cout << "Current position: 30\n";
 	std::cout << "Current position: " << inFile.tellg() << std::endl;
 
+	std::cout << "Checking input on an unopened fstream: " << std::endl;
+
+	if( testIFStreamUnderflowOnUnopened() ){
+		std::cout << "OK\n";
+	}else{
+		std::cout << "ERROR\n";
+	}
+	
+
 
 	return 0;
 }
@@ -118,4 +138,13 @@ unsigned char correctValue(unsigned long int pos){
 	}
 	return (pos - 16);
 
+}
+
+
+bool testIFStreamUnderflowOnUnopened(){
+	std::ifstream test;
+	if(test.get() == std::char_traits<char>::eof() ){
+		return true;
+	}
+	return false;
 }

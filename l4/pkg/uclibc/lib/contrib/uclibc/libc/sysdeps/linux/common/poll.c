@@ -17,15 +17,37 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-#include "syscalls.h"
+#include <sys/syscall.h>
 #include <sys/poll.h>
 
-libc_hidden_proto(poll)
+extern __typeof(poll) __libc_poll;
 
 #ifdef __NR_poll
-_syscall3(int, poll, struct pollfd *, fds,
+
+# define __NR___libc_poll __NR_poll
+_syscall3(int, __libc_poll, struct pollfd *, fds,
 	unsigned long int, nfds, int, timeout);
+
+#elif defined(__NR_ppoll)
+
+libc_hidden_proto(ppoll)
+int __libc_poll(struct pollfd *fds, nfds_t nfds, int timeout)
+{
+	struct timespec *ts = NULL, tval;
+	if (timeout > 0) {
+		tval.tv_sec = timeout / 1000;
+		tval.tv_nsec = (timeout % 1000) * 1000000;
+		ts = &tval;
+	} else if (timeout == 0) {
+		tval.tv_sec = 0;
+		tval.tv_nsec = 0;
+		ts = &tval;
+	}
+	return ppoll(fds, nfds, ts, NULL);
+}
+
 #else
+/* ugh, this arch lacks poll, so we need to emulate this crap ... */
 
 #include <alloca.h>
 #include <sys/types.h>
@@ -48,7 +70,7 @@ libc_hidden_proto(select)
    Returns the number of file descriptors with events, zero if timed out,
    or -1 for errors.  */
 
-int poll(struct pollfd *fds, nfds_t nfds, int timeout)
+int __libc_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
     static int max_fd_size;
     struct timeval tv;
@@ -207,4 +229,6 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 }
 
 #endif
-libc_hidden_def(poll)
+libc_hidden_proto(poll)
+weak_alias(__libc_poll,poll)
+libc_hidden_weak(poll)

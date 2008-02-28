@@ -1,23 +1,27 @@
 # Rules.make for uClibc
 #
-# Copyright (C) 2000 by Lineo, inc.
 # Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
 #
 # Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
 #
 
+# check for proper make version
+ifneq ($(findstring 3.7,$(MAKE_VERSION)),)
+$(error Your make is too old $(MAKE_VERSION). Go get at least 3.80)
+endif
+
 #-----------------------------------------------------------
 # This file contains rules which are shared between multiple
-# Makefiles.  All normal configuration options live in the 
-# file named ".config".  Don't mess with this file unless 
+# Makefiles.  All normal configuration options live in the
+# file named ".config".  Don't mess with this file unless
 # you know what you are doing.
 
 
 #-----------------------------------------------------------
-# If you are running a cross compiler, you will want to set 
-# 'CROSS' to something more interesting ...  Target 
-# architecture is determined by asking the CC compiler what 
-# arch it compiles things for, so unless your compiler is 
+# If you are running a cross compiler, you will want to set
+# 'CROSS' to something more interesting ...  Target
+# architecture is determined by asking the CC compiler what
+# arch it compiles things for, so unless your compiler is
 # broken, you should not need to specify TARGET_ARCH.
 #
 # Most people will set this stuff on the command line, i.e.
@@ -43,6 +47,11 @@ STRIP_FLAGS ?= -x -R .note -R .comment
 # Select the compiler needed to build binaries for your development system
 HOSTCC     = gcc
 BUILD_CFLAGS = -O2 -Wall
+export ARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun.*/sparc/ -e s/sparc.*/sparc/ \
+				  -e s/arm.*/arm/ -e s/sa110/arm/ -e s/sh.*/sh/ \
+				  -e s/s390x/s390/ -e s/parisc.*/hppa/ \
+				  -e s/ppc.*/powerpc/ -e s/mips.*/mips/ \
+				  -e s/xtensa.*/xtensa/ )
 
 
 #---------------------------------------------------------
@@ -58,24 +67,30 @@ endif
 # Make certain these contain a final "/", but no "//"s.
 TARGET_ARCH:=$(shell grep -s '^TARGET_ARCH' $(top_builddir)/.config | sed -e 's/^TARGET_ARCH=//' -e 's/"//g')
 TARGET_ARCH:=$(strip $(subst ",, $(strip $(TARGET_ARCH))))
+TARGET_SUBARCH:=$(shell grep -s '^TARGET_SUBARCH' $(top_builddir)/.config | sed -e 's/^TARGET_SUBARCH=//' -e 's/"//g')
+TARGET_SUBARCH:=$(strip $(subst ",, $(strip $(TARGET_SUBARCH))))
 RUNTIME_PREFIX:=$(strip $(subst //,/, $(subst ,/, $(subst ",, $(strip $(RUNTIME_PREFIX))))))
 DEVEL_PREFIX:=$(strip $(subst //,/, $(subst ,/, $(subst ",, $(strip $(DEVEL_PREFIX))))))
-KERNEL_SOURCE:=$(strip $(subst //,/, $(subst ,/, $(subst ",, $(strip $(KERNEL_SOURCE))))))
-export RUNTIME_PREFIX DEVEL_PREFIX KERNEL_SOURCE
+KERNEL_HEADERS:=$(strip $(subst //,/, $(subst ,/, $(subst ",, $(strip $(KERNEL_HEADERS))))))
+export RUNTIME_PREFIX DEVEL_PREFIX KERNEL_HEADERS
 
 
 # Now config hard core
 MAJOR_VERSION := 0
 MINOR_VERSION := 9
-SUBLEVEL      := 28
+SUBLEVEL      := 29
+EXTRAVERSION  :=
 VERSION       := $(MAJOR_VERSION).$(MINOR_VERSION).$(SUBLEVEL)
+ifneq ($(EXTRAVERSION),)
+VERSION       := $(VERSION)$(EXTRAVERSION)
+endif
 # Ensure consistent sort order, 'gcc -print-search-dirs' behavior, etc.
 LC_ALL := C
 export MAJOR_VERSION MINOR_VERSION SUBLEVEL VERSION LC_ALL
 
 LIBC := libc
 SHARED_MAJORNAME := $(LIBC).so.$(MAJOR_VERSION)
-ifneq ($(findstring  $(TARGET_ARCH) , hppa64 ia64 mips64 powerpc64 s390x sh64 sparc64 x86_64 ),)
+ifneq ($(findstring  $(TARGET_ARCH) , hppa64 ia64 mips64 powerpc64 s390x sparc64 x86_64 ),)
 UCLIBC_LDSO_NAME := ld64-uClibc
 else
 UCLIBC_LDSO_NAME := ld-uClibc
@@ -103,6 +118,9 @@ interp :=
 ldso :=
 endif
 
+comma:=,
+space:= #
+
 ifndef CROSS
 CROSS=$(subst ",, $(strip $(CROSS_COMPILER_PREFIX)))
 endif
@@ -121,13 +139,38 @@ check_ld=$(shell \
 ARFLAGS:=cr
 
 OPTIMIZATION:=
-PICFLAG:=-fPIC
+# Use '-Os' optimization if available, else use -O2, allow Config to override
+OPTIMIZATION+=$(call check_gcc,-Os,-O2)
+# Use the gcc 3.4 -funit-at-a-time optimization when available
+OPTIMIZATION+=$(call check_gcc,-funit-at-a-time,)
+
+GCC_MAJOR_VER?=$(shell $(CC) -dumpversion | cut -d . -f 1)
+#GCC_MINOR_VER?=$(shell $(CC) -dumpversion | cut -d . -f 2)
+
+ifeq ($(GCC_MAJOR_VER),4)
+# shrinks code, results are from 4.0.2
+# 0.36%
+OPTIMIZATION+=$(call check_gcc,-fno-tree-loop-optimize,)
+# 0.34%
+OPTIMIZATION+=$(call check_gcc,-fno-tree-dominator-opts,)
+# 0.1%
+OPTIMIZATION+=$(call check_gcc,-fno-strength-reduce,)
+endif
+
+CPU_CFLAGS-$(UCLIBC_FORMAT_SHARED_FLAT) += -mid-shared-library
+CPU_CFLAGS-$(UCLIBC_FORMAT_FLAT_SEP_DATA) += -msep-data
+
+PICFLAG-y := -fPIC
+PICFLAG-$(UCLIBC_FORMAT_FDPIC_ELF) := -mfdpic
+PICFLAG := $(PICFLAG-y)
 PIEFLAG_NAME:=-fPIE
 
 # Some nice CPU specific optimizations
 ifeq ($(TARGET_ARCH),i386)
 	OPTIMIZATION+=$(call check_gcc,-mpreferred-stack-boundary=2,)
 	OPTIMIZATION+=$(call check_gcc,-falign-jumps=0 -falign-loops=0,-malign-jumps=0 -malign-loops=0)
+	CPU_LDFLAGS-y+=-m32
+	CPU_CFLAGS-y+=-m32
 	CPU_CFLAGS-$(CONFIG_386)+=-march=i386
 	CPU_CFLAGS-$(CONFIG_486)+=-march=i486
 	CPU_CFLAGS-$(CONFIG_ELAN)+=-march=i486
@@ -155,46 +198,61 @@ endif
 
 ifeq ($(TARGET_ARCH),arm)
 	OPTIMIZATION+=-fstrict-aliasing
-	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN)+=-EL
-	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN)+=-EB
+	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN)+=-Wl,-EL
+	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN)+=-Wl,-EB
 	CPU_CFLAGS-$(ARCH_LITTLE_ENDIAN)+=-mlittle-endian
 	CPU_CFLAGS-$(ARCH_BIG_ENDIAN)+=-mbig-endian
 	CPU_CFLAGS-$(CONFIG_GENERIC_ARM)+=
 	CPU_CFLAGS-$(CONFIG_ARM610)+=-mtune=arm610 -march=armv3
 	CPU_CFLAGS-$(CONFIG_ARM710)+=-mtune=arm710 -march=armv3
-	CPU_CFLAGS-$(CONFIG_ARM7TDMI)+=-mtune=arm7tdmi -march=armv4
-	CPU_CFLAGS-$(CONFIG_ARM720T)+=-mtune=arm7tdmi -march=armv4
-	CPU_CFLAGS-$(CONFIG_ARM920T)+=-mtune=arm9tdmi -march=armv4
-	CPU_CFLAGS-$(CONFIG_ARM922T)+=-mtune=arm9tdmi -march=armv4
-	CPU_CFLAGS-$(CONFIG_ARM926T)+=-mtune=arm9tdmi -march=armv5
+	CPU_CFLAGS-$(CONFIG_ARM7TDMI)+=-mtune=arm7tdmi -march=armv4t
+	CPU_CFLAGS-$(CONFIG_ARM720T)+=-mtune=arm7tdmi -march=armv4t
+	CPU_CFLAGS-$(CONFIG_ARM920T)+=-mtune=arm9tdmi -march=armv4t
+	CPU_CFLAGS-$(CONFIG_ARM922T)+=-mtune=arm9tdmi -march=armv4t
+	CPU_CFLAGS-$(CONFIG_ARM926T)+=-mtune=arm9tdmi -march=armv5t
+	CPU_CFLAGS-$(CONFIG_ARM10T)+=-mtune=arm10tdmi -march=armv5t
 	CPU_CFLAGS-$(CONFIG_ARM1136JF_S)+=-mtune=arm1136jf-s -march=armv6
+	CPU_CFLAGS-$(CONFIG_ARM1176JZ_S)+=-mtune=arm1176jz-s -march=armv6
+	CPU_CFLAGS-$(CONFIG_ARM1176JZF_S)+=-mtune=arm1176jzf-s -march=armv6
 	CPU_CFLAGS-$(CONFIG_ARM_SA110)+=-mtune=strongarm110 -march=armv4
 	CPU_CFLAGS-$(CONFIG_ARM_SA1100)+=-mtune=strongarm1100 -march=armv4
 	CPU_CFLAGS-$(CONFIG_ARM_XSCALE)+=$(call check_gcc,-mtune=xscale,-mtune=strongarm110)
-	CPU_CFLAGS-$(CONFIG_ARM_XSCALE)+=-march=armv4 -Wa,-mcpu=xscale
+	CPU_CFLAGS-$(CONFIG_ARM_XSCALE)+=-march=armv5te -Wa,-mcpu=xscale
+ 	CPU_CFLAGS-$(CONFIG_ARM_IWMMXT)+=-march=iwmmxt -Wa,-mcpu=iwmmxt -mabi=iwmmxt
 endif
 
 ifeq ($(TARGET_ARCH),mips)
-	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN)+=-EL
-	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN)+=-EB
+	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN)+=-Wl,-EL
+	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN)+=-Wl,-EB
 	CPU_CFLAGS-$(CONFIG_MIPS_ISA_1)+=-mips1
 	CPU_CFLAGS-$(CONFIG_MIPS_ISA_2)+=-mips2 -mtune=mips2
 	CPU_CFLAGS-$(CONFIG_MIPS_ISA_3)+=-mips3 -mtune=mips3
 	CPU_CFLAGS-$(CONFIG_MIPS_ISA_4)+=-mips4 -mtune=mips4
 	CPU_CFLAGS-$(CONFIG_MIPS_ISA_MIPS32)+=-mips32 -mtune=mips32
 	CPU_CFLAGS-$(CONFIG_MIPS_ISA_MIPS64)+=-mips64 -mtune=mips32
+	ifeq ($(strip $(ARCH_BIG_ENDIAN)),y)
+		CPU_LDFLAGS-$(CONFIG_MIPS_N64_ABI)+=-Wl,-melf64btsmip
+		CPU_LDFLAGS-$(CONFIG_MIPS_O32_ABI)+=-Wl,-melf32btsmip
+	endif
+	ifeq ($(strip $(ARCH_LITTLE_ENDIAN)),y)
+		CPU_LDFLAGS-$(CONFIG_MIPS_N64_ABI)+=-Wl,-melf64ltsmip
+		CPU_LDFLAGS-$(CONFIG_MIPS_O32_ABI)+=-Wl,-melf32ltsmip
+	endif
+	CPU_CFLAGS-$(CONFIG_MIPS_N64_ABI)+=-mabi=64
+	CPU_CFLAGS-$(CONFIG_MIPS_O32_ABI)+=-mabi=32
+	CPU_CFLAGS-$(CONFIG_MIPS_N32_ABI)+=-mabi=n32
 endif
 
 ifeq ($(TARGET_ARCH),nios)
-	CPU_LDFLAGS-y+=-m32
-	CPU_CFLAGS-y+=-m32
+	CPU_LDFLAGS-y+=-Wl,-m32
+	CPU_CFLAGS-y+=-Wl,-m32
 endif
 
 ifeq ($(TARGET_ARCH),sh)
 	OPTIMIZATION+=-fstrict-aliasing
 	OPTIMIZATION+= $(call check_gcc,-mprefergot,)
-	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN)+=-EL
-	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN)+=-EB
+	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN)+=-Wl,-EL
+	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN)+=-Wl,-EB
 	CPU_CFLAGS-$(ARCH_LITTLE_ENDIAN)+=-ml
 	CPU_CFLAGS-$(ARCH_BIG_ENDIAN)+=-mb
 	CPU_CFLAGS-$(CONFIG_SH2)+=-m2
@@ -210,23 +268,32 @@ endif
 
 ifeq ($(TARGET_ARCH),sh64)
 	OPTIMIZATION+=-fstrict-aliasing
-	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN):=-EL
-	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN):=-EB
+	CPU_LDFLAGS-$(ARCH_LITTLE_ENDIAN):=-Wl,-EL
+	CPU_LDFLAGS-$(ARCH_BIG_ENDIAN):=-Wl,-EB
 	CPU_CFLAGS-$(ARCH_LITTLE_ENDIAN):=-ml
 	CPU_CFLAGS-$(ARCH_BIG_ENDIAN):=-mb
 	CPU_CFLAGS-$(CONFIG_SH5)+=-m5-32media
 endif
 
 ifeq ($(TARGET_ARCH),h8300)
-	CPU_LDFLAGS-$(CONFIG_H8300H)+= -ms8300h
-	CPU_LDFLAGS-$(CONFIG_H8S)   += -ms8300s
+	SYMBOL_PREFIX=_
+	CPU_LDFLAGS-$(CONFIG_H8300H)+= -Wl,-ms8300h
+	CPU_LDFLAGS-$(CONFIG_H8S)   += -Wl,-ms8300s
 	CPU_CFLAGS-$(CONFIG_H8300H) += -mh -mint32
 	CPU_CFLAGS-$(CONFIG_H8S)    += -ms -mint32
 endif
 
 ifeq ($(TARGET_ARCH),cris)
-	CPU_LDFLAGS-$(CONFIG_CRIS)+=-mcrislinux
+	CPU_LDFLAGS-$(CONFIG_CRIS)+=-Wl,-mcrislinux
+	CPU_LDFLAGS-$(CONFIG_CRISV32)+=-Wl,-mcrislinux
 	CPU_CFLAGS-$(CONFIG_CRIS)+=-mlinux
+	PICFLAG:=-fpic
+	PIEFLAG_NAME:=-fpie
+endif
+
+ifeq ($(TARGET_ARCH),m68k)
+	# -fPIC is only supported for 68020 and above.  It is not supported
+	# for 68000, 68010, or Coldfire.
 	PICFLAG:=-fpic
 	PIEFLAG_NAME:=-fpie
 endif
@@ -237,24 +304,52 @@ ifeq ($(TARGET_ARCH),powerpc)
 # faster code.
 	PICFLAG:=-fpic
 	PIEFLAG_NAME:=-fpie
+	PPC_HAS_REL16:=$(shell echo -e "\t.text\n\taddis 11,30,_GLOBAL_OFFSET_TABLE_-.@ha" | $(CC) -c -x assembler -o /dev/null -  2> /dev/null && echo -n y || echo -n n)
+	CPU_CFLAGS-$(PPC_HAS_REL16)+= -DHAVE_ASM_PPC_REL16
+	CPU_CFLAGS-$(CONFIG_E500) += "-D__NO_MATH_INLINES -D__NO_LONG_DOUBLE_MATH"
+
 endif
 
 ifeq ($(TARGET_ARCH),bfin)
-	# This should also work, but why bother ? ;)
-	#PICFLAG:=-fPIC -mid-shared-library
+	SYMBOL_PREFIX=_
+ifeq ($(UCLIBC_FORMAT_FDPIC_ELF),y)
+	CPU_CFLAGS-y:=-mfdpic
+	CPU_LDFLAGS-y += -Wl,-melf32bfinfd
 	PICFLAG:=-fpic
+	PIEFLAG_NAME:=-fpie
+endif
+ifeq ($(UCLIBC_FORMAT_SHARED_FLAT),y)
+	PICFLAG := -mleaf-id-shared-library
+endif
 endif
 
 ifeq ($(TARGET_ARCH),frv)
-	CPU_LDFLAGS-$(CONFIG_FRV)+=-melf32frvfd
-	CPU_CFLAGS-$(CONFIG_FRV)+=-mfdpic
+	CPU_LDFLAGS-$(CONFIG_FRV)+=-Wl,-melf32frvfd
 	# Using -pie causes the program to have an interpreter, which is
 	# forbidden, so we must make do with -shared.  Unfortunately,
 	# -shared by itself would get us global function descriptors
 	# and calls through PLTs, dynamic resolution of symbols, etc,
 	# which would break as well, but -Bsymbolic comes to the rescue.
-	export LDPIEFLAG:=-shared -Bsymbolic
+	export LDPIEFLAG:=-Wl,-shared -Wl,-Bsymbolic
 	UCLIBC_LDSO=ld.so.1
+endif
+
+ifeq ($(strip $(TARGET_ARCH)),avr32)
+       CPU_CFLAGS-$(CONFIG_AVR32_AP7)  += -march=ap
+       CPU_CFLAGS-$(CONFIG_LINKRELAX)  += -mrelax
+       CPU_LDFLAGS-$(CONFIG_LINKRELAX) += --relax
+endif
+
+ifeq ($(TARGET_ARCH),i960)
+      SYMBOL_PREFIX=_
+endif
+
+ifeq ($(TARGET_ARCH),microblaze)
+      SYMBOL_PREFIX=_
+endif
+
+ifeq ($(TARGET_ARCH),v850)
+      SYMBOL_PREFIX=_
 endif
 
 # Keep the check_gcc from being needlessly executed
@@ -265,36 +360,28 @@ else
 export PIEFLAG:=$(call check_gcc,$(PIEFLAG_NAME),$(PICFLAG))
 endif
 endif
-# We need to keep track of both the CC PIE flag (above) as 
-# well as the LD PIE flag (below) because we can't rely on 
+# We need to keep track of both the CC PIE flag (above) as
+# well as the LD PIE flag (below) because we can't rely on
 # gcc passing -pie if we used -fPIE
 ifndef LDPIEFLAG
 ifneq ($(UCLIBC_BUILD_PIE),y)
 export LDPIEFLAG:=
 else
-export LDPIEFLAG:=$(shell $(LD) --help | grep -q pie && echo "-Wl,-pie")
+export LDPIEFLAG:=$(shell $(LD) --help 2>/dev/null | grep -q -- -pie && echo "-Wl,-pie")
 endif
 endif
 
 # Check for AS_NEEDED support in linker script (binutils>=2.16.1 has it)
 ifndef ASNEEDED
-ifneq ($(UCLIBC_HAS_SSP),y)
-export ASNEEDED:=
-else
-export ASNEEDED:=$(shell (LD_TMP=$(mktemp LD_XXXXXX) ; echo "GROUP ( AS_NEEDED ( /usr/lib/libc.so ) )" > $LD_TMP && if $(LD) -T $LD_TMP -o /dev/null > /dev/null 2>&1; then echo "AS_NEEDED ( $(UCLIBC_LDSO) )"; else echo "$(UCLIBC_LDSO)"; fi; rm -f $LD_TMP ) )
+export ASNEEDED:=$(shell $(LD) --help 2>/dev/null | grep -q -- --as-needed && echo "AS_NEEDED ( $(UCLIBC_LDSO) )" || echo "$(UCLIBC_LDSO)")
 endif
-endif
-
-# Use '-Os' optimization if available, else use -O2, allow Config to override
-OPTIMIZATION+=$(call check_gcc,-Os,-O2)
-# Use the gcc 3.4 -funit-at-a-time optimization when available
-OPTIMIZATION+=$(call check_gcc,-funit-at-a-time,)
 
 # Add a bunch of extra pedantic annoyingly strict checks
-XWARNINGS=$(subst ",, $(strip $(WARNINGS))) -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing
+XWARNINGS=$(subst ",, $(strip $(WARNINGS))) -Wstrict-prototypes -fno-strict-aliasing
 ifeq ($(EXTRA_WARNINGS),y)
 XWARNINGS+=-Wnested-externs -Wshadow -Wmissing-noreturn -Wmissing-format-attribute -Wformat=2
 XWARNINGS+=-Wmissing-prototypes -Wmissing-declarations
+XWARNINGS+=-Wnonnull -Wundef
 # works only w/ gcc-3.4 and up, can't be checked for gcc-3.x w/ check_gcc()
 #XWARNINGS+=-Wdeclaration-after-statement
 endif
@@ -310,10 +397,16 @@ else
 SSP_CFLAGS := $(SSP_DISABLE_FLAGS)
 endif
 
+NOSTDLIB_CFLAGS:=$(call check_gcc,-nostdlib,)
 # Some nice CFLAGS to work with
 CFLAGS := -include $(top_builddir)include/libc-symbols.h \
 	$(XWARNINGS) $(CPU_CFLAGS) $(SSP_CFLAGS) \
-	-fno-builtin -nostdinc -I$(top_builddir)include -I.
+	-fno-builtin -nostdinc -I$(top_builddir)include -I. \
+	-I$(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)
+
+ifneq ($(strip $(UCLIBC_EXTRA_CFLAGS)),"")
+CFLAGS += $(subst ",, $(UCLIBC_EXTRA_CFLAGS))
+endif
 
 LDADD_LIBFLOAT=
 ifeq ($(UCLIBC_HAS_SOFT_FLOAT),y)
@@ -332,38 +425,47 @@ ifeq ($(TARGET_ARCH),arm)
 endif
 endif
 
-# Make sure "char" behavior is the same everywhere
-CFLAGS += -fsigned-char
-
 # We need this to be checked within libc-symbols.h
 ifneq ($(HAVE_SHARED),y)
 CFLAGS += -DSTATIC
 endif
 
-# only i386 is known to work if compile.S gets -D__ASSEMBLER__
-#CFLAGS += $(call check_gcc,-std=c99,)
+CFLAGS += $(call check_gcc,-std=gnu99,)
 
-LDFLAGS_NOSTRIP:=$(CPU_LDFLAGS-y) -shared --warn-common --warn-once -z combreloc
+LDFLAGS_NOSTRIP:=$(CPU_LDFLAGS-y) -Wl,-shared \
+	-Wl,--warn-common -Wl,--warn-once -Wl,-z,combreloc
+# binutils-2.16.1 warns about ignored sections, 2.16.91.0.3 and newer are ok
+#LDFLAGS_NOSTRIP+=$(call check_ld,--gc-sections)
 
 ifeq ($(UCLIBC_BUILD_RELRO),y)
-LDFLAGS_NOSTRIP+=-z relro
+LDFLAGS_NOSTRIP+=-Wl,-z,relro
 endif
 
 ifeq ($(UCLIBC_BUILD_NOW),y)
-LDFLAGS_NOSTRIP+=-z now
+LDFLAGS_NOSTRIP+=-Wl,-z,now
 endif
 
-LDFLAGS:=$(LDFLAGS_NOSTRIP) -z defs
+ifeq ($(LDSO_GNU_HASH_SUPPORT),y)
+# Be sure that binutils support it
+LDFLAGS_GNUHASH:=$(call check_ld,--hash-style=gnu)
+ifeq ($(LDFLAGS_GNUHASH),)
+$(error Your binutils don't support --hash-style option, while you want to use it)
+else
+LDFLAGS_NOSTRIP += -Wl,$(LDFLAGS_GNUHASH)
+endif
+endif
+
+LDFLAGS:=$(LDFLAGS_NOSTRIP) -Wl,-z,defs
 ifeq ($(DODEBUG),y)
 #CFLAGS += -g3
 CFLAGS += -O0 -g3
 else
 CFLAGS += $(OPTIMIZATION) $(XARCH_CFLAGS)
 endif
-ifeq ($(NOSTRIP),y)
-STRIPTOOL := true -Stripping_disabled
+ifeq ($(DOSTRIP),y)
+LDFLAGS += -Wl,-s
 else
-LDFLAGS += -s
+STRIPTOOL := true -Stripping_disabled
 endif
 
 ifeq ($(DOMULTI),y)
@@ -372,14 +474,17 @@ ifeq ($(DOMULTI),y)
 # gcc-3.4.x supports it, but does not need and support --combine. though fails on many sources
 # gcc-4.0.x supports it, supports the --combine flag, but does not need it
 # gcc-4.1(200506xx) supports it, but needs the --combine flag, else libs are useless
-GCC_VER?=$(shell $(CC) -dumpversion | cut -d . -f 1)
-ifeq ($(GCC_VER),3)
+ifeq ($(GCC_MAJOR_VER),3)
 DOMULTI:=n
 else
 CFLAGS+=$(call check_gcc,--combine,)
 endif
 else
 DOMULTI:=n
+endif
+
+ifneq ($(strip $(UCLIBC_EXTRA_LDFLAGS)),"")
+LDFLAGS += $(subst ",, $(UCLIBC_EXTRA_LDFLAGS))
 endif
 
 ifeq ($(UCLIBC_HAS_THREADS),y)
@@ -396,7 +501,6 @@ PTDIR := $(top_builddir)libpthread/$(PTNAME)
 # set up system dependencies include dirs (NOTE: order matters!)
 ifeq ($(UCLIBC_HAS_THREADS_NATIVE),y)
 PTINC:=	-I$(PTDIR)						\
-	-I$(PTDIR)/compat					\
 	-I$(PTDIR)/sysdeps/unix/sysv/linux/$(TARGET_ARCH)	\
 	-I$(PTDIR)/sysdeps/$(TARGET_ARCH)			\
 	-I$(PTDIR)/sysdeps/unix/sysv/linux			\
@@ -404,8 +508,7 @@ PTINC:=	-I$(PTDIR)						\
 	-I$(PTDIR)/sysdeps/pthread/bits				\
 	-I$(PTDIR)/sysdeps/generic				\
 	-I$(top_srcdir)ldso/ldso/$(TARGET_ARCH)			\
-	-I$(top_srcdir)ldso/include				\
-	-include $(PTDIR)/compat/libc-symbols.h
+	-I$(top_srcdir)ldso/include
 #
 # Test for TLS if NPTL support was selected.
 #
@@ -434,22 +537,19 @@ PTINC := \
 endif
 CFLAGS+=$(PTINC)
 else
-	PTNAME := 
-	PTINC  := 
+	PTNAME :=
+	PTINC  :=
 endif
+CFLAGS += -I$(KERNEL_HEADERS)
 
-# Sigh, some stupid versions of gcc can't seem to cope with '-iwithprefix include'
-#CFLAGS+=-iwithprefix include
-CFLAGS+=-isystem $(shell $(CC) -print-file-name=include)
+CFLAGS += -iwithprefix include-fixed -iwithprefix include
 
 ifneq ($(DOASSERTS),y)
 CFLAGS+=-DNDEBUG
 endif
 
-# moved from ldso/{ldso,libdl}
-# BEWARE!!! At least mips* will die if -O0 is used!!!
-ifeq ($(TARGET_ARCH),mips)
-CFLAGS:=$(CFLAGS:-O0=-O1)
+ifeq ($(SYMBOL_PREFIX),_)
+CFLAGS+=-D__UCLIBC_UNDERSCORES__
 endif
 
 # Keep the check_as from being needlessly executed
@@ -470,17 +570,4 @@ LIBGCC_DIR:=$(dir $(LIBGCC))
 ifeq ($(UCLIBC_CTOR_DTOR),y)
 SHARED_START_FILES:=$(top_builddir)lib/crti.o $(LIBGCC_DIR)crtbeginS.o
 SHARED_END_FILES:=$(LIBGCC_DIR)crtendS.o $(top_builddir)lib/crtn.o
-endif
-
-########################################
-#
-# uClinux shared lib support
-#
-
-ifeq ($(CONFIG_BINFMT_SHARED_FLAT),y)
-  # For the shared version of this, we specify no stack and its library ID
-  FLTFLAGS += -s 0
-  LIBID=1
-  export LIBID FLTFLAGS
-  SHARED_TARGET = lib/libc
 endif

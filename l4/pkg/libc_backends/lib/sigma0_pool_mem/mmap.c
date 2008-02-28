@@ -146,12 +146,7 @@ int munmap(void *start, size_t length)
 }
 
 void *mremap(void * old_address, size_t old_size, size_t new_size,
-#ifdef USE_DIETLIBC
-             unsigned long flags
-#else /* UCLIBC */
-	     int may_move
-#endif
-	     )
+	     int __flags, ...)
 {
   printf("mremap() called: unimplemented!\n");
   errno = EINVAL;

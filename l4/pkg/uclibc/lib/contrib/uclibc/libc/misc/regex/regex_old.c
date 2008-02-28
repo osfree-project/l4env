@@ -26,13 +26,16 @@
 #ifdef __UCLIBC__
 # undef _LIBC
 # define _REGEX_RE_COMP
-# define HAVE_MEMPCPY
+# ifdef __USE_GNU
+#  define HAVE_MEMPCPY
+# endif
 # define STDC_HEADERS
 # define RE_TRANSLATE_TYPE char *
 #endif
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <malloc.h>
 #include <stdio.h>
 
 libc_hidden_proto(memset)
@@ -41,8 +44,10 @@ libc_hidden_proto(memcpy)
 libc_hidden_proto(strcmp)
 libc_hidden_proto(strlen)
 libc_hidden_proto(printf)
-libc_hidden_proto(mempcpy)
 libc_hidden_proto(abort)
+#ifdef __USE_GNU
+libc_hidden_proto(mempcpy)
+#endif
 
 /* AIX requires this to be the first thing in the file. */
 #if defined _AIX && !defined REGEX_MALLOC
@@ -302,7 +307,7 @@ extern char *re_syntax_table;
 
 #  else /* not SYNTAX_TABLE */
 
-static char re_syntax_table[CHAR_SET_SIZE];
+static char *re_syntax_table; /* [CHAR_SET_SIZE] */
 
 static void init_syntax_once PARAMS ((void));
 
@@ -310,11 +315,13 @@ static void
 init_syntax_once ()
 {
    register int c;
-   static int done = 0;
+   static char done;
 
    if (done)
      return;
-   bzero (re_syntax_table, sizeof re_syntax_table);
+
+   re_syntax_table = __uc_malloc(CHAR_SET_SIZE);
+   bzero (re_syntax_table, CHAR_SET_SIZE);
 
    for (c = 0; c < CHAR_SET_SIZE; ++c)
      if (ISALNUM (c))
@@ -8281,7 +8288,7 @@ regerror (errcode, preg, errbuf, errbuf_size)
     {
       if (msg_size > errbuf_size)
         {
-#if defined HAVE_MEMPCPY || defined _LIBC
+#if (defined HAVE_MEMPCPY || defined _LIBC) && defined __USE_GNU
 	  *((char *) mempcpy (errbuf, msg, errbuf_size - 1)) = '\0';
 #else
           memcpy (errbuf, msg, errbuf_size - 1);

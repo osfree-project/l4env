@@ -24,7 +24,19 @@
 #include <sys/syscall.h>
 
 #ifdef __NR_brk
-	.comm	__curbrk,4,4
+
+#ifdef __PIC__
+.section .bss
+	.align 4
+	.globl __curbrk
+	.hidden __curbrk
+__curbrk: .skip 4
+	.type __curbrk,@object
+	.size __curbrk,4
+#else
+.comm __curbrk, 4,4
+#endif
+
 	.text
 	.globl	brk
 	.type	brk,@function
@@ -38,8 +50,15 @@ brk:
 	lwz     r6,8(r1)
 #ifdef __PIC__
 	mflr    r4
+# ifdef HAVE_ASM_PPC_REL16
+	bcl	20,31,1f
+1:	mflr	r5
+	addis	r5,r5,_GLOBAL_OFFSET_TABLE_-1b@ha
+	addi	r5,r5,_GLOBAL_OFFSET_TABLE_-1b@l
+# else	
 	bl      _GLOBAL_OFFSET_TABLE_@local-4
 	mflr    r5
+# endif
 	lwz     r5,__curbrk@got(r5)
 	mtlr    r4
 	stw     r3,0(r5)
@@ -58,6 +77,4 @@ brk:
 	.size brk,.-brk
 
 libc_hidden_def(brk)
-/* won't help too much, HIDDEN_JUMPTARGET should be used here as well, now the reloc remains */
-libc_hidden_data_def(__curbrk)
-#endif	
+#endif

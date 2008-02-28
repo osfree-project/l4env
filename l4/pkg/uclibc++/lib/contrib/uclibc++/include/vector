@@ -29,6 +29,8 @@
 #ifndef __STD_HEADER_VECTOR
 #define __STD_HEADER_VECTOR
 
+#pragma GCC visibility push(default)
+
 namespace std{
 
 	template <class T, class Allocator = allocator<T> > class vector;
@@ -338,7 +340,7 @@ namespace std{
 		}
 
 		_UCXXEXPORT void clear(){
-			elements = 0;
+			downsize(0);
 		}
 
 	protected:
@@ -357,9 +359,6 @@ namespace std{
 			a.destroy(data + i);
 		}
 		a.deallocate(data, data_size);
-		data = 0;
-		elements = 0;
-		data_size=0;
 	}
 
 
@@ -512,6 +511,7 @@ namespace std{
 
 }
 
+#pragma GCC visibility pop
 
 #endif
 

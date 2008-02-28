@@ -77,8 +77,11 @@ extern void _dl_protect_relro (struct elf_resolve *l);
 #endif
 
 /* OS and/or GNU dynamic extensions */
-#define OS_NUM 1
-#define DT_RELCONT_IDX DT_NUM
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+# define OS_NUM 2 /* for DT_RELOCCOUNT and DT_GNU_HASH entries */
+#else
+# define OS_NUM 1 /* for DT_RELOCCOUNT entry */
+#endif
 
 #ifndef ARCH_DYNAMIC_INFO
   /* define in arch specific code, if needed */
@@ -86,16 +89,29 @@ extern void _dl_protect_relro (struct elf_resolve *l);
 #endif
 
 #define DYNAMIC_SIZE (DT_NUM+OS_NUM+ARCH_NUM)
+/* Keep ARCH specific entries into dynamic section at the end of the array */
+#define DT_RELCONT_IDX (DYNAMIC_SIZE - OS_NUM - ARCH_NUM)
 
-extern void _dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[], void *debug_addr, ElfW(Addr) load_off);
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+/* GNU hash comes just after the relocation count */
+# define DT_GNU_HASH_IDX (DT_RELCONT_IDX + 1)
+#endif
+
+extern void _dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
+                                   void *debug_addr, DL_LOADADDR_TYPE load_off);
 
 static __always_inline
-void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[], void *debug_addr, ElfW(Addr) load_off)
+void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
+                             void *debug_addr, DL_LOADADDR_TYPE load_off)
 {
 	for (; dpnt->d_tag; dpnt++) {
 		if (dpnt->d_tag < DT_NUM) {
 			dynamic_info[dpnt->d_tag] = dpnt->d_un.d_val;
 #ifndef __mips__
+			/* we disable for mips because normally this page is readonly
+			 * and modifying the value here needlessly dirties a page.
+			 * see this post for more info:
+			 * http://uclibc.org/lists/uclibc/2006-April/015224.html */
 			if (dpnt->d_tag == DT_DEBUG)
 				dpnt->d_un.d_val = (unsigned long)debug_addr;
 #endif
@@ -118,6 +134,10 @@ void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[], void
 			if (dpnt->d_tag == DT_FLAGS_1 &&
 			    (dpnt->d_un.d_val & DF_1_NOW))
 				dynamic_info[DT_BIND_NOW] = 1;
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+			if (dpnt->d_tag == DT_GNU_HASH)
+				dynamic_info[DT_GNU_HASH_IDX] = dpnt->d_un.d_ptr;
+#endif
 		}
 #ifdef ARCH_DYNAMIC_INFO
 		else {
@@ -128,14 +148,17 @@ void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[], void
 #define ADJUST_DYN_INFO(tag, load_off) \
 	do { \
 		if (dynamic_info[tag]) \
-			dynamic_info[tag] += load_off; \
-	} while(0)
+			dynamic_info[tag] = (unsigned long) DL_RELOC_ADDR(load_off, dynamic_info[tag]); \
+	} while (0)
 	ADJUST_DYN_INFO(DT_HASH, load_off);
 	ADJUST_DYN_INFO(DT_PLTGOT, load_off);
 	ADJUST_DYN_INFO(DT_STRTAB, load_off);
 	ADJUST_DYN_INFO(DT_SYMTAB, load_off);
 	ADJUST_DYN_INFO(DT_RELOC_TABLE_ADDR, load_off);
 	ADJUST_DYN_INFO(DT_JMPREL, load_off);
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+	ADJUST_DYN_INFO(DT_GNU_HASH_IDX, load_off);
+#endif
 #undef ADJUST_DYN_INFO
 }
 
@@ -152,6 +175,11 @@ void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[], void
 # define ELF_RTYPE_CLASS_COPY	(0x2)
 #endif
 #define ELF_RTYPE_CLASS_PLT	(0x1)
+
+/* dlsym() calls _dl_find_hash with this value, that enables
+   DL_FIND_HASH_VALUE to return something different than the symbol
+   itself, e.g., a function descriptor.  */
+#define ELF_RTYPE_CLASS_DLSYM 0x80000000
 
 
 /* Convert between the Linux flags for page protections and the

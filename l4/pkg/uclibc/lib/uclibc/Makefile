@@ -36,6 +36,7 @@ SRC_S		:= $(foreach arch,all $(ARCH),\
 IDL_PATH	=
 PRIVATE_INCDIR	= $(SRC_DIR)/ARCH-$(ARCH)/include $(SRC_DIR)/ARCH-all/include \
 		  $(OBJ_DIR)/ARCH-$(ARCH)/include $(OBJ_DIR)/ARCH-all/include \
+		  $(SRC_DIR)/../contrib/uclibc/libc/misc/internals \
 		  $(OBJ_BASE)/include/$(ARCH) $(OBJ_BASE)/include
 MODE		= libc
 LIBCINCDIR	= $(addprefix -I,$(GCCINCDIR))
@@ -51,6 +52,7 @@ DEFINES		+= -DL4_THREAD_SAFE
 TARGET		= libuc_c_r.a
 PRIVATE_INCDIR	= $(SRC_DIR)/ARCH-$(ARCH)/include $(SRC_DIR)/ARCH-all/include \
 		  $(OBJ_DIR)/ARCH-$(ARCH)/include $(OBJ_DIR)/ARCH-all/include \
+		  $(SRC_DIR)/../contrib/uclibc/libc/misc/internals \
 		  $(OBJ_BASE)/include/$(ARCH)/$(L4API) \
 		  $(OBJ_BASE)/include/$(ARCH) $(OBJ_BASE)/include
 endif

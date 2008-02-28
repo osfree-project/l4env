@@ -1,3 +1,4 @@
+include/_lfs_64.h
 include/alloca.h
 include/assert.h
 include/atomic.h
@@ -186,6 +187,7 @@ libc/stdlib/malloc/malloc.c
 libc/stdlib/malloc/malloc.h
 libc/stdlib/malloc/memalign.c
 libc/stdlib/malloc/realloc.c
+libc/stdlib/__uc_malloc.c
 libc/stdlib/mblen.c
 libc/stdlib/mbstowcs.c
 libc/stdlib/posix_memalign.c
@@ -416,10 +418,20 @@ libc/sysdeps/linux/common/longjmp.c
 libc/sysdeps/linux/common/getcwd.c
 libc/sysdeps/linux/common/bits/cmathcalls.h
 libc/sysdeps/linux/common/bits/dlfcn.h
+libc/sysdeps/linux/common/bits/huge_vall.h
+libc/sysdeps/linux/common/bits/huge_valf.h
+libc/sysdeps/linux/common/bits/huge_val.h
+libc/sysdeps/linux/common/bits/inf.h
 libc/sysdeps/linux/common/bits/ipc.h
+libc/sysdeps/linux/common/bits/resource.h
 libc/sysdeps/linux/common/bits/shm.h
 libc/sysdeps/linux/common/bits/statfs.h
+libc/sysdeps/linux/common/bits/typesizes.h
 libc/sysdeps/linux/common/bits/wchar.h
+libc/sysdeps/linux/common/bits/uClibc_errno.h
+libc/sysdeps/linux/common/bits/uClibc_local_lim.h
+libc/sysdeps/linux/common/bits/uClibc_mutex.h
+libc/sysdeps/linux/common/bits/uClibc_pthread.h
 libc/sysdeps/linux/common/bits/uClibc_stdio.h
 libc/sysdeps/linux/common/bits/uClibc_uwchar.h
 libc/termios/isatty.c
@@ -472,8 +484,11 @@ libm/s_frexp.c
 libm/s_ilogb.c
 libm/s_ldexp.c
 libm/s_lib_version.c
+libm/s_llrint.c
 libm/s_log1p.c
 libm/s_logb.c
+libm/s_lrint.c
+libm/s_lround.c
 libm/s_matherr.c
 libm/s_modf.c
 libm/s_nextafter.c

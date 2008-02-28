@@ -81,6 +81,8 @@ extern int munmap (void *__addr, size_t __len) __THROW;
    (and sets errno).  */
 extern int mprotect (void *__addr, size_t __len, int __prot) __THROW;
 
+#ifdef __ARCH_USE_MMU__
+
 /* Synchronize the region starting at ADDR and extending LEN bytes with the
    file it maps.  Filesystem operations on a file being mapped are
    unpredictable before this is done.  Flags are from the MS_* set.
@@ -88,6 +90,13 @@ extern int mprotect (void *__addr, size_t __len, int __prot) __THROW;
    This function is a cancellation point and therefore not marked with
    __THROW.  */
 extern int msync (void *__addr, size_t __len, int __flags);
+
+#else
+
+/* On no-mmu systems you can't have real private mappings.  */
+static inline int msync (void *__addr, size_t __len, int __flags) { return 0; }
+
+#endif
 
 #ifdef __USE_BSD
 /* Advise the system about particular usage patterns the program follows
@@ -100,6 +109,7 @@ extern int posix_madvise (void *__addr, size_t __len, int __advice) __THROW;
 #endif
 
 #ifdef __ARCH_USE_MMU__
+
 /* Guarantee all whole pages mapped by the range [ADDR,ADDR+LEN) to
    be memory resident.  */
 extern int mlock (__const void *__addr, size_t __len) __THROW;
@@ -115,14 +125,26 @@ extern int mlockall (int __flags) __THROW;
 /* All currently mapped pages of the process' address space become
    unlocked.  */
 extern int munlockall (void) __THROW;
+
+#else
+
+/* On no-mmu systems, memory cannot be swapped out, so
+ * these functions will always succeed.  */
+static inline int mlock (__const void *__addr, size_t __len) { return 0; }
+static inline int munlock (__const void *__addr, size_t __len) { return 0; }
+static inline int mlockall (int __flags) { return 0; }
+static inline int munlockall (void) { return 0; }
+
 #endif
 
 #ifdef __USE_MISC
 /* Remap pages mapped by the range [ADDR,ADDR+OLD_LEN) to new length
-   NEW_LEN.  If MAY_MOVE is MREMAP_MAYMOVE the returned address may
-   differ from ADDR.  */
+   NEW_LEN.  If MREMAP_MAYMOVE is set in FLAGS the returned address
+   may differ from ADDR.  If MREMAP_FIXED is set in FLAGS the function
+   takes another paramter which is a fixed address at which the block
+   resides after a successful call.  */
 extern void *mremap (void *__addr, size_t __old_len, size_t __new_len,
-		     int __may_move) __THROW;
+		     int __flags, ...) __THROW;
 
 /* mincore returns the memory residency status of the pages in the
    current process's address space specified by [start, start + len).

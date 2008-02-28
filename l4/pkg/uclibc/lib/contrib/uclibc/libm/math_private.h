@@ -35,13 +35,14 @@
    ints.  */
 
 /*
- * Math on arm is special:
+ * Math on arm is special (read: stupid):
  * For FPA, float words are always big-endian.
- * For VFP, floats words follow the memory system mode.
+ * For VFP, float words follow the memory system mode.
+ * For Maverick, float words are always little-endian.
  */
 
-#if (__BYTE_ORDER == __BIG_ENDIAN) || \
-    (!defined(__VFP_FP__) && (defined(__arm__) || defined(__thumb__)))
+#if !defined(__MAVERICK__) && ((__BYTE_ORDER == __BIG_ENDIAN) || \
+    (!defined(__VFP_FP__) && (defined(__arm__) || defined(__thumb__))))
 
 typedef union
 {
@@ -186,7 +187,9 @@ extern double __ieee754_scalb (double,double) attribute_hidden;
 #endif
 
 /* fdlibm kernel function */
+#ifndef _IEEE_LIBM
 extern double __kernel_standard (double,double,int) attribute_hidden;
+#endif
 extern double __kernel_sin (double,double,int) attribute_hidden;
 extern double __kernel_cos (double,double) attribute_hidden;
 extern double __kernel_tan (double,double,int) attribute_hidden;

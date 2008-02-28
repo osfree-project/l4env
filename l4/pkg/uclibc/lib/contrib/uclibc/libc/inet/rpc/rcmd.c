@@ -94,7 +94,6 @@ libc_hidden_proto(strcmp)
 libc_hidden_proto(strcpy)
 libc_hidden_proto(strlen)
 libc_hidden_proto(strncmp)
-libc_hidden_proto(strnlen)
 libc_hidden_proto(memmove)
 libc_hidden_proto(getpid)
 libc_hidden_proto(socket)
@@ -132,11 +131,10 @@ libc_hidden_proto(fopen)
 libc_hidden_proto(fclose)
 libc_hidden_proto(fprintf)
 libc_hidden_proto(__h_errno_location)
-libc_hidden_proto(stderr)
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_b_loc)
 libc_hidden_proto(__ctype_tolower_loc)
-#else
+#elif __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 libc_hidden_proto(__ctype_tolower)
 #endif
@@ -370,7 +368,11 @@ int rresvport(int *alport)
 }
 libc_hidden_def(rresvport)
 
-static int  __check_rhosts_file = 1;
+/* This needs to be exported ... while it is not a documented interface
+ * for rcp related apps, it's a required one that is used to control the
+ * rhost behavior.  Legacy sucks.
+ */
+int  __check_rhosts_file = 1;
 
 int ruserok(rhost, superuser, ruser, luser)
 	const char *rhost, *ruser, *luser;

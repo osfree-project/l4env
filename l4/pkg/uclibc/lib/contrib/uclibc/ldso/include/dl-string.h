@@ -11,6 +11,14 @@
 #include <dl-sysdep.h> /* for do_rem */
 #include <features.h>
 
+/* provide some sane defaults */
+#ifndef do_rem
+# define do_rem(result, n, base) ((result) = (n) % (base))
+#endif
+#ifndef do_div_10
+# define do_div_10(result, remain) ((result) /= 10)
+#endif
+
 static size_t _dl_strlen(const char * str);
 static char *_dl_strcat(char *dst, const char *src);
 static char * _dl_strcpy(char * dst,const char *src);
@@ -234,7 +242,7 @@ static __always_inline char * _dl_simple_ltoa(char * local, unsigned long i)
 		char temp;
 		do_rem(temp, i, 10);
 		*--p = '0' + temp;
-		i /= 10;
+		do_div_10(i, temp);
 	} while (i > 0);
 	return p;
 }
@@ -277,7 +285,8 @@ static __always_inline char * _dl_simple_ltoahex(char * local, unsigned long i)
 /* On some arches constant strings are referenced through the GOT.
  * This requires that load_addr must already be defined... */
 #if defined(mc68000)  || defined(__arm__) || defined(__thumb__) || \
-    defined(__mips__) || defined(__sh__)  || defined(__powerpc__)
+    defined(__mips__) || defined(__sh__)  || defined(__powerpc__) || \
+    defined(__avr32__) || defined(__xtensa__)
 # define CONSTANT_STRING_GOT_FIXUP(X) \
 	if ((X) < (const char *) load_addr) (X) += load_addr
 # define NO_EARLY_SEND_STDERR
@@ -324,18 +333,31 @@ static __always_inline char * _dl_simple_ltoahex(char * local, unsigned long i)
 	do { \
 		do_rem(v, (X), 10); \
 		*--tmp2 = '0' + v; \
-		(X) /= 10; \
+		do_div_10((X), v); \
 	} while ((X) > 0); \
 	_dl_write(2, tmp2, tmp1 - tmp2 + sizeof(tmp) - 1); \
 }
 #endif
 
+/* Some targets may have to override this to something that doesn't
+ * reference constant strings through the GOT.  This macro should be
+ * preferred over SEND_STDERR for constant strings before we complete
+ * bootstrap.
+ */
+#ifndef SEND_EARLY_STDERR
+# define SEND_EARLY_STDERR(S) SEND_STDERR(S)
+#else
+# define EARLY_STDERR_SPECIAL
+#endif
+
 #ifdef __SUPPORT_LD_DEBUG_EARLY__
 # define SEND_STDERR_DEBUG(X) SEND_STDERR(X)
+# define SEND_EARLY_STDERR_DEBUG(X) SEND_EARLY_STDERR(X)
 # define SEND_NUMBER_STDERR_DEBUG(X, add_a_newline) SEND_NUMBER_STDERR(X, add_a_newline)
 # define SEND_ADDRESS_STDERR_DEBUG(X, add_a_newline) SEND_ADDRESS_STDERR(X, add_a_newline)
 #else
 # define SEND_STDERR_DEBUG(X)
+# define SEND_EARLY_STDERR_DEBUG(X)
 # define SEND_NUMBER_STDERR_DEBUG(X, add_a_newline)
 # define SEND_ADDRESS_STDERR_DEBUG(X, add_a_newline)
 #endif

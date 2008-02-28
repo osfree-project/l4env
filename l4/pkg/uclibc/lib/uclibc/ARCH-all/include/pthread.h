@@ -1,21 +1,45 @@
 #ifndef _PTHREAD_H
-#define _PTHREAD_H
+#define _PTHREAD_H	1
 
 #include <l4/sys/compiler.h>
 #include <bits/pthreadtypes.h>
 
+
+
+__BEGIN_DECLS
+
+/* Cleanup buffers */
+
+struct _pthread_cleanup_buffer
+{
+  void (*__routine) (void *);		  /* Function to call.  */
+  void *__arg;				  /* Its argument.  */
+  int __canceltype;			  /* Saved cancellation type. */
+  struct _pthread_cleanup_buffer *__prev; /* Chaining of cleanup functions.  */
+};
+
+
 /* Emulation of pthread_mutex functions necessary for making uClibc functions
  * thread-safe. */
 
-#define __pthread_mutex_lock(x)		l4uclibc_mutex_lock(x)
-#define __pthread_mutex_unlock(x)	l4uclibc_mutex_unlock(x)
-#define __pthread_mutex_trylock(x)	l4uclibc_mutex_trylock(x)
-#define __pthread_mutex_init(x,y)	l4uclibc_mutex_init(x,y)
+#define __pthread_mutex_lock	l4uclibc_mutex_lock
+#define __pthread_mutex_unlock	l4uclibc_mutex_unlock
+#define __pthread_mutex_trylock	l4uclibc_mutex_trylock
+#define __pthread_mutex_init	l4uclibc_mutex_init
 
 fastcall int l4uclibc_mutex_lock(pthread_mutex_t *mutex);
 fastcall int l4uclibc_mutex_unlock(pthread_mutex_t *mutex);
 fastcall int l4uclibc_mutex_trylock(pthread_mutex_t *mutex);
 fastcall int l4uclibc_mutex_init(pthread_mutex_t *mutex, const void *attr);
+
+static inline
+void _pthread_cleanup_pop_restore(struct _pthread_cleanup_buffer * buffer,
+                                  int execute) { }
+static inline
+void _pthread_cleanup_push_defer(struct _pthread_cleanup_buffer * buffer,
+                                 void (*routine)(void *), void * arg) { }
+
+
 
 /* Initializer for ``fast'' mutex. Behavior like pure L4env semaphore: If
  * a thread attempts to lock a mutex it already owns, the calling thread
@@ -37,4 +61,6 @@ fastcall int l4uclibc_mutex_init(pthread_mutex_t *mutex, const void *attr);
    (L4THREAD_INVALID_ID), 0,			\
    PTHREAD_MUTEX_RECURSIVE_NP}
 
-#endif
+__END_DECLS
+
+#endif	/* pthread.h */

@@ -38,6 +38,7 @@
 #include <cwctype>
 #endif //__UCLIBCXX_HAS_WCHAR__
 
+#pragma GCC visibility push(default)
 
 namespace std{
 
@@ -67,6 +68,7 @@ namespace std{
 
 		_UCXXEXPORT basic_filebuf()	: basic_streambuf<charT, traits>(), fp(0), pbuffer(0), gbuffer(0)
 		{
+			append=false;
 			pbuffer = new char_type[__UCLIBCXX_IOSTREAM_BUFSIZE__];
 			gbuffer = new char_type[__UCLIBCXX_IOSTREAM_BUFSIZE__];
 
@@ -101,27 +103,39 @@ namespace std{
 			if(is_open() !=false){	//Must call close() first
 				return 0;
 			}
+			basic_streambuf<charT,traits>::openedFor = mode;
 			mode = mode & ~ios_base::ate;
+
 			if(mode == ios_base::out || mode == (ios_base::out | ios_base::trunc)){
 				fp = fopen(s, "w" );
-			}else if(mode == (ios_base::out | ios_base::app)){
-				fp = fopen(s, "a");
+			}else if((mode & ios_base::app) && ! (mode & ios_base::trunc)){
+				if(mode & ios_base::binary){
+					if(mode & ios_base::in){
+						fp = fopen(s, "a+b");
+					}else{
+						fp = fopen(s, "ab");
+					}
+				}else{
+					if(mode & ios_base::in){
+						fp = fopen(s, "a+");
+					}else{
+						fp = fopen(s, "a");
+					}
+				}
 			}else if(mode == ios_base::in){
 				fp = fopen(s, "r");
 			}else if(mode == (ios_base::in | ios_base::out)){
 				fp = fopen(s, "r+");
 			}else if(mode == (ios_base::in | ios_base::out | ios_base::trunc)){
 				fp = fopen(s, "w+");
-			}else if(mode == (ios_base::binary | ios_base::out) 
-				|| mode==(ios_base::binary | ios_base::out | ios_base::trunc))
-			{
+			}else if(mode == (ios_base::binary | ios_base::out)){
 				fp = fopen(s, "wb");
-			}else if(mode == (ios_base::binary | ios_base::out | ios_base::app)){
-				fp = fopen(s, "ab");
 			}else if(mode == (ios_base::in | ios_base::binary)){
 				fp = fopen(s, "rb");
 			}else if(mode == (ios_base::in | ios_base::binary | ios_base::out)){
 				fp = fopen(s, "r+b");
+			}else if(mode==(ios_base::binary | ios_base::out | ios_base::trunc)){
+				fp = fopen(s, "w+b");
 			}else if(mode == (ios_base::in | ios_base::binary | ios_base::out | ios_base::trunc)){
 				fp = fopen(s, "w+b");
 			}
@@ -187,6 +201,10 @@ namespace std{
 			   gbump(int n) mgnext+=n
 
 			*/
+
+			if(!is_open()){
+				return traits::eof();
+			}
 
 			if(basic_streambuf<charT,traits>::eback() == 0){
 				//No buffer, so...
@@ -462,6 +480,7 @@ namespace std{
 		FILE * fp;
 		char_type * pbuffer;
 		char_type * gbuffer;
+		bool append;
 	};
 
 
@@ -531,7 +550,9 @@ template <> _UCXXEXPORT basic_filebuf<wchar_t, char_traits<wchar_t> >::int_type
 			return sb.is_open();
 		}
 		_UCXXEXPORT void open(const char* s, ios_base::openmode mode = ios_base::in){
-			sb.open(s, mode);
+			if(sb.open(s, mode) == 0){
+				basic_ios<charT,traits>::setstate(ios_base::failbit);
+			}
 		}
 		_UCXXEXPORT void close(){
 			sb.close();
@@ -572,7 +593,9 @@ template <> _UCXXEXPORT basic_filebuf<wchar_t, char_traits<wchar_t> >::int_type
 			return sb.is_open();
 		}
 		_UCXXEXPORT void open(const char* s, ios_base::openmode mode = ios_base::out | ios_base::trunc){
-			sb.open(s, mode);
+			if(sb.open(s, mode) == 0){
+				basic_ios<charT,traits>::setstate(ios_base::failbit);
+			}
 		}
 		_UCXXEXPORT void close(){
 			sb.close();
@@ -582,7 +605,7 @@ template <> _UCXXEXPORT basic_filebuf<wchar_t, char_traits<wchar_t> >::int_type
 	};
 
 	template <class charT, class traits> _UCXXEXPORT basic_ofstream<charT, traits>::~basic_ofstream(){
-	
+		basic_ostream<charT, traits>::flush();
 	}
 
 
@@ -600,7 +623,9 @@ template <> _UCXXEXPORT basic_filebuf<wchar_t, char_traits<wchar_t> >::int_type
 		explicit _UCXXEXPORT basic_fstream(const char* s, ios_base::openmode mode = ios_base::in|ios_base::out):
 			basic_ios<charT, traits>(&sb), basic_iostream<charT,traits>(&sb)
 		{
-			sb.open(s, mode);
+			if(sb.open(s, mode) == 0){
+				basic_ios<charT,traits>::setstate(ios_base::failbit);
+			}
 		}
 
 		_UCXXEXPORT basic_filebuf<charT,traits>* rdbuf() const{
@@ -610,7 +635,9 @@ template <> _UCXXEXPORT basic_filebuf<wchar_t, char_traits<wchar_t> >::int_type
 			return sb.is_open();
 		}
 		_UCXXEXPORT void open(const char* s, ios_base::openmode mode = ios_base::in|ios_base::out){
-			sb.open(s, mode);
+			if(sb.open(s, mode) == 0){
+				basic_ios<charT,traits>::setstate(ios_base::failbit);
+			}
 		}
 		_UCXXEXPORT void close(){
 			sb.close();
@@ -642,6 +669,8 @@ template <> _UCXXEXPORT basic_filebuf<wchar_t, char_traits<wchar_t> >::int_type
 
 
 }
+
+#pragma GCC visibility pop
 
 #endif
 

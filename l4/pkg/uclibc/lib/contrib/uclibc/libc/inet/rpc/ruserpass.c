@@ -40,6 +40,8 @@
 #include <stdio_ext.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
+#include <strings.h>
 #include <unistd.h>
 
 libc_hidden_proto(strcat)
@@ -78,7 +80,7 @@ static	FILE *cfile;
 #define	ID	10
 #define	MACHINE	11
 
-static char tokval[100];
+static char *tokval; /* [100] */
 
 static const char tokstr[] =
 {
@@ -151,6 +153,9 @@ int ruserpass(const char *host, const char **aname, const char **apass)
 	if (mydomain==NULL) {
 	    mydomain=myname + strlen(myname);
 	}
+
+	if (!tokval)
+		tokval = __uc_malloc(100);
 next:
 	while ((t = token())) switch(t) {
 

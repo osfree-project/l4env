@@ -1,19 +1,15 @@
-/*
- * Automatically generated C config: don't edit
- */
 #if !defined __FEATURES_H && !defined __need_uClibc_config_h
-#error Never include <bits/uClibc_config.h> directly; use <features.h> instead
+# error Never include <bits/uClibc_config.h> directly; use <features.h> instead
 #endif
-#define AUTOCONF_INCLUDED
 
-/*
- * Version Number
- */
 #define __UCLIBC_MAJOR__ 0
 #define __UCLIBC_MINOR__ 9
-#define __UCLIBC_SUBLEVEL__ 28
+#define __UCLIBC_SUBLEVEL__ 29
+/* Automatically generated make config: don't edit */
+/* Sun Feb 10 18:15:17 2008 */
 #undef __TARGET_alpha__
 #undef __TARGET_arm__
+#undef __TARGET_avr32__
 #undef __TARGET_bfin__
 #undef __TARGET_cris__
 #undef __TARGET_e1__
@@ -35,14 +31,12 @@
 #undef __TARGET_v850__
 #undef __TARGET_vax__
 #undef __TARGET_x86_64__
+#undef __TARGET_xtensa__
 
-/*
- * Target Architecture Features and Options
- */
+/* Target Architecture Features and Options */
 #define __TARGET_ARCH__ "i386"
-#undef __ARCH_SUPPORTS_BIG_ENDIAN__
-#define __ARCH_SUPPORTS_LITTLE_ENDIAN__ 1
-#undef __CONFIG_GENERIC_386__
+#define __FORCE_OPTIONS_FOR_ARCH__ 1
+#define __CONFIG_GENERIC_386__ 1
 #undef __CONFIG_386__
 #undef __CONFIG_486__
 #undef __CONFIG_586__
@@ -50,7 +44,7 @@
 #undef __CONFIG_686__
 #undef __CONFIG_PENTIUMII__
 #undef __CONFIG_PENTIUMIII__
-#define __CONFIG_PENTIUM4__ 1
+#undef __CONFIG_PENTIUM4__
 #undef __CONFIG_K6__
 #undef __CONFIG_K7__
 #undef __CONFIG_ELAN__
@@ -59,9 +53,12 @@
 #undef __CONFIG_WINCHIP2__
 #undef __CONFIG_CYRIXIII__
 #undef __CONFIG_NEHEMIAH__
+#define __TARGET_SUBARCH__ ""
+
+/* Using ELF file format */
 #define __ARCH_LITTLE_ENDIAN__ 1
-#undef __ARCH_BIG_ENDIAN__
-#undef __ARCH_HAS_NO_MMU__
+
+/* Using Little Endian */
 #define __ARCH_HAS_MMU__ 1
 #define __ARCH_USE_MMU__ 1
 #define __UCLIBC_HAS_FLOATS__ 1
@@ -87,6 +84,7 @@
 #undef __HAS_NO_THREADS__
 #ifdef L4_THREAD_SAFE
 #define __UCLIBC_HAS_THREADS__ 1
+#define __LINUXTHREADS_OLD__ 1
 #else
 #undef __UCLIBC_HAS_THREADS
 #endif
@@ -105,6 +103,10 @@
 #undef __UCLIBC_HAS_TZ_FILE__
 #undef __UCLIBC_HAS_TZ_FILE_READ_MANY__
 #undef __UCLIBC_TZ_FILE_PATH__
+
+/* Advanced Library Settings */
+#define __UCLIBC_PWD_BUFFER_SIZE__ 256
+#define __UCLIBC_GRP_BUFFER_SIZE__ 256
 
 /*
  * Networking Support
@@ -153,18 +155,19 @@
 #define __UCLIBC_HAS_SIGNUM_MESSAGES__ 1
 #undef __UCLIBC_HAS_SYS_SIGLIST__
 #define __UCLIBC_HAS_GNU_GETOPT__ 1
+#define __UCLIBC_HAS_GNU_GETSUBOPT__ 1
 
-/*
- * Big and Tall
- */
+/* Big and Tall */
 #define __UCLIBC_HAS_REGEX__ 1
+#define __UCLIBC_HAS_REGEX_OLD__ 1
+#define __UCLIBC_HAS_FNMATCH__ 1
+#define __UCLIBC_HAS_FNMATCH_OLD__ 1
 #undef __UCLIBC_HAS_WORDEXP__
 #undef __UCLIBC_HAS_FTW__
 #define __UCLIBC_HAS_GLOB__ 1
+#undef __UCLIBC_HAS_GNU_GLOB__
 
-/*
- * Library Installation Options
- */
+/* Library Installation Options */
 #define __SYSTEM_LDSO__ "/lib/ld-linux.so.2"
 #define __RUNTIME_PREFIX__ "/usr/$(TARGET_ARCH)-linux-uclibc/"
 #define __DEVEL_PREFIX__ "/usr/$(TARGET_ARCH)-linux-uclibc/usr/"
@@ -174,12 +177,18 @@
  */
 #undef __UCLIBC_SECURITY__
 
-/*
- * uClibc development/debugging options
- */
+
+/* uClibc development/debugging options */
 #define __CROSS_COMPILER_PREFIX__ ""
+#define __UCLIBC_EXTRA_CFLAGS__ ""
 #undef __DODEBUG__
+#undef __DODEBUG_PT__
+#define __DOSTRIP__ 1
 #undef __DOASSERTS__
+#undef __SUPPORT_LD_DEBUG__
+#undef __SUPPORT_LD_DEBUG_EARLY__
 #define __UCLIBC_MALLOC_DEBUGGING__ 1
 #define __WARNINGS__ "-Wall"
+#undef __EXTRA_WARNINGS__
+#undef __DOMULTI__
 #undef __UCLIBC_MJN3_ONLY__

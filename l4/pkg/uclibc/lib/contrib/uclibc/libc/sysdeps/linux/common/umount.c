@@ -7,12 +7,12 @@
  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
 
-#include "syscalls.h"
+#include <sys/syscall.h>
+#include <sys/mount.h>
 
 /* arch provides umount() syscall */
 #ifdef __NR_umount
 
-# include <sys/mount.h>
 _syscall1(int, umount, const char *, specialfile);
 
 /* arch provides umount2() syscall */

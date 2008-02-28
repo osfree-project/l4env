@@ -25,6 +25,7 @@
 #ifndef __STD_HEADER_ISTREAM_HELPERS
 #define __STD_HEADER_ISTREAM_HELPERS 1
 
+#pragma GCC visibility push(default)
 
 namespace std{
 
@@ -321,7 +322,7 @@ namespace std{
 		typename basic_istream<charT,traits>::int_type c;
 		//While the next character normally read doesn't equal eof
 		//and that character is a space, advance to the next read position
-		//Thus itterating through al whitespace until we get to the meaty stuff
+		//Thus itterating through all whitespace until we get to the meaty stuff
 		while (
 			!traits::eq_int_type((c = is.rdbuf()->sgetc()),	eof)
 			&& isspace(c)
@@ -335,6 +336,7 @@ namespace std{
 	}
 }
 
+#pragma GCC visibility pop
 
 #endif
 

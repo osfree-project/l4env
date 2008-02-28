@@ -7,7 +7,6 @@ mainmenu "uClibc C Library Configuration"
 
 choice
 	prompt "Target Architecture"
-	default TARGET_i386
 	help
 	  Stuff
 
@@ -17,8 +16,11 @@ config TARGET_alpha
 config TARGET_arm
 	bool "arm"
 
+config TARGET_avr32
+       bool "avr32"
+
 config TARGET_bfin
-	bool "bfin (BROKEN)"
+	bool "bfin"
 
 config TARGET_cris
 	bool "cris"
@@ -80,6 +82,9 @@ config TARGET_vax
 config TARGET_x86_64
 	bool "x86_64"
 
+config TARGET_xtensa
+	bool "xtensa"
+
 endchoice
 
 
@@ -91,6 +96,10 @@ endif
 
 if TARGET_arm
 source "extra/Configs/Config.arm"
+endif
+
+if TARGET_avr32
+source "extra/Configs/Config.avr32"
 endif
 
 if TARGET_bfin
@@ -177,6 +186,15 @@ if TARGET_x86_64
 source "extra/Configs/Config.x86_64"
 endif
 
+if TARGET_xtensa
+source "extra/Configs/Config.xtensa"
+endif
+
+config TARGET_SUBARCH
+	string
+	default "e500" if CONFIG_E500
+	default "classic" if CONFIG_CLASSIC
+	default ""
 
 source "extra/Configs/Config.in.arch"
 
@@ -217,7 +235,6 @@ config HAVE_SHARED
 config FORCE_SHAREABLE_TEXT_SEGMENTS
 	bool "Only load shared libraries which can share their text segment"
 	depends on HAVE_SHARED
-	select DOPIC
 	default n
 	help
 	  If you answer Y here, the uClibc native shared library loader will
@@ -304,7 +321,6 @@ config LDSO_RUNPATH
 
 config UCLIBC_CTOR_DTOR
 	bool "Support global constructors and destructors"
-	depends on !TARGET_bfin
 	default y
 	help
 	  If you wish to build uClibc with support for global constructor
@@ -319,6 +335,21 @@ config UCLIBC_CTOR_DTOR
 	  then you definitely want to answer Y here.  If you don't need ctors
 	  or dtors and want your binaries to be as small as possible, then
 	  answer N.
+
+config LDSO_GNU_HASH_SUPPORT
+	bool "Enable GNU hash style support"
+	depends on HAVE_SHARED
+	default n
+	help
+	  Newest binutils support a new hash style named GNU-hash. The dynamic
+	  linker will use the new GNU-hash section (.gnu.hash) for symbol lookup 
+	  if present into the ELF binaries, otherwise it will use the old SysV 
+	  hash style (.hash). This ensures that it is completely backward compatible.
+	  Further, being the hash table implementation self-contained into each
+	  executable and shared libraries, objects with mixed hash style can
+	  peacefully coexist in the same process.
+	  
+	  If you want to use this new feature, answer Y  
 
 config HAS_NO_THREADS
 	bool
@@ -421,7 +452,7 @@ config MALLOC_GLIBC_COMPAT
 	help
 	  The behavior of malloc(0) is listed as implementation-defined by
 	  SuSv3.  Glibc returns a valid pointer to something, while uClibc
-	  normally return a NULL.  I personally feel glibc's behavior is
+	  normally returns NULL.  I personally feel glibc's behavior is
 	  not particularly safe, and allows buggy applications to hide very
 	  serious problems.
 
@@ -429,7 +460,7 @@ config MALLOC_GLIBC_COMPAT
 	  return a live pointer when someone calls malloc(0).  This pointer
 	  provides a malloc'ed area with a size of 1 byte.  This feature is
 	  mostly useful when dealing with applications using autoconf's broken
-	  AC_FUNC_MALLOC macro (which  redefines malloc as rpl_malloc if it
+	  AC_FUNC_MALLOC macro (which redefines malloc as rpl_malloc if it
 	  does not detect glibc style returning-a-valid-pointer-for-malloc(0)
 	  behavior).  Most people can safely answer N.
 
@@ -455,7 +486,24 @@ config COMPAT_ATEXIT
 	  Enable this option if you want to update from 0.9.28 to svn/0.9.29, else
 	  you will be missing atexit() until you rebuild all apps.
 
-config HAS_SHADOW
+config UCLIBC_SUSV3_LEGACY
+	bool "Enable SuSv3 LEGACY functions"
+	default n
+	help
+	  Enable this option if you want to have SuSv3 LEGACY functions
+	  in the library, else they are replaced by SuSv3 proposed macros.
+	  Currently applies to bcopy/bzero/bcmp/index/rindex.
+	  WARNING! ABI incompatibility.
+
+config UCLIBC_SUSV3_LEGACY_MACROS
+	bool "Enable SuSv3 LEGACY macros"
+	default n
+	help
+	  Enable this option if you want to have SuSv3 LEGACY macros.
+	  Currently applies to bcopy/bzero/bcmp/index/rindex et al.
+	  WARNING! ABI incompatibility.
+
+config UCLIBC_HAS_SHADOW
 	bool "Shadow Password Support"
 	default y
 	help
@@ -479,6 +527,7 @@ config UCLIBC_HAS_PROGRAM_INVOCATION_NAME
 config UCLIBC_HAS___PROGNAME
 	bool "Support for __progname"
 	default y
+	depends on UCLIBC_HAS_PROGRAM_INVOCATION_NAME
 	help
 	  Some packages (like openssh) like to peek into internal libc
 	  symbols to make their output a bit more user friendly.
@@ -577,6 +626,30 @@ config UCLIBC_TZ_FILE_PATH
 
 endmenu
 
+menu "Advanced Library Settings"
+
+config UCLIBC_PWD_BUFFER_SIZE
+	int "Buffer size for getpwnam() and friends"
+	default 256
+	range 12 1024
+	help
+	  This sets the value of the buffer size for getpwnam() and friends.
+	  By default, this is 256. (For reference, glibc uses 1024).
+	  The value can be found using sysconf() with the _SC_GETPW_R_SIZE_MAX
+	  parameter.
+
+config UCLIBC_GRP_BUFFER_SIZE
+	int "Buffer size for getgrnam() and friends"
+	default 256
+	range 256 1024
+	help
+	  This sets the value of the buffer size for getgrnam() and friends.
+	  By default, this is 256. (For reference, glibc uses 1024).
+	  The value can be found using sysconf() with the _SC_GETGR_R_SIZE_MAX
+	  parameter.
+
+endmenu
+
 menu "Networking Support"
 
 config UCLIBC_HAS_IPV6
@@ -629,6 +702,15 @@ config UCLIBC_USE_NETLINK
 
 	  Most people can safely answer N.
 
+config UCLIBC_HAS_BSD_RES_CLOSE
+	bool "Support res_close() (bsd-compat)"
+	default n
+	help
+	  Answer Y if you desperately want to support BSD compatibility in
+	  the network code.
+
+	  Most people will say N.
+
 endmenu
 
 
@@ -660,7 +742,7 @@ config UCLIBC_HAS_CTYPE_TABLES
 	help
 	  Answer Y to use table versions of the 'ctype.h' functions.
 	  While the non-table versions are often smaller when building
-	  staticly linked apps, they work only in stub locale mode.
+	  statically linked apps, they work only in stub locale mode.
 
 	  Most people will answer Y.
 
@@ -930,7 +1012,7 @@ config UCLIBC_HAS_STDIO_BUILTIN_BUFFER_8
 endchoice
 
 config UCLIBC_HAS_STDIO_SHUTDOWN_ON_ABORT
-	bool "Attemt to shutdown stdio subsystem when abort() is called."
+	bool "Attempt to shutdown stdio subsystem when abort() is called."
 	default n
 	help
 	  ANSI/ISO C99 requires abort() to be asyn-signal-safe.  So there was a behavioral
@@ -1040,6 +1122,8 @@ config UCLIBC_HAS_SYS_ERRLIST
 
 	  Most people will answer N.
 
+	  Application writers: use the strerror(3) function.
+
 config UCLIBC_HAS_SIGNUM_MESSAGES
 	bool "Include the signum message text in the library"
 	default y
@@ -1086,6 +1170,24 @@ config UCLIBC_HAS_GNU_GETOPT
 
 	  Most people will answer Y.
 
+config UCLIBC_HAS_GETOPT_LONG
+	bool "Support getopt_long/getopt_long_only"
+	depends !UCLIBC_HAS_GNU_GETOPT
+	default y
+	help
+	  Answer Y if you want to include getopt_long[_only() used by many
+	  apps, even busybox.
+
+	  Most people will answer Y.
+
+config UCLIBC_HAS_GNU_GETSUBOPT
+	bool "Support glibc getsubopt"
+	default y
+	help
+	  Answer Y if you want to include glibc getsubopt() instead of a
+	  smaller SUSv3 compatible getsubopt().
+
+	  Most people will answer Y.
 endmenu
 
 
@@ -1097,7 +1199,7 @@ config UCLIBC_HAS_REGEX
 	help
 	  POSIX regular expression code is really big -- 53k all by itself.
 	  If you don't use regular expressions, turn this off and save space.
-	  Of course, if you only staticly link, leave this on, since it will
+	  Of course, if you only statically link, leave this on, since it will
 	  only be included in your apps if you use regular expressions.
 
 config UCLIBC_HAS_REGEX_OLD
@@ -1139,7 +1241,6 @@ config UCLIBC_HAS_FNMATCH_OLD
 config UCLIBC_HAS_WORDEXP
 	bool "Support the wordexp() interface"
 	depends on UCLIBC_HAS_GLOB
-	depends on UCLIBC_HAS_FNMATCH
 	default n
 	help
 	  The SuSv3 wordexp() interface performs word expansions per the  Shell
@@ -1162,14 +1263,29 @@ config UCLIBC_HAS_FTW
 
 config UCLIBC_HAS_GLOB
 	bool "Support the glob() interface"
+	depends on UCLIBC_HAS_FNMATCH
 	default y
 	help
 
-	  The glob interface is somewhat large (weighing in at about 4k).  It
+	  The glob interface is somewhat large (weighing in at about 2,5k).  It
 	  is used fairly often, but is an option since people wanting to go for
 	  absolute minimum size may wish to omit it.
 
 	  Most people will answer Y.
+
+config UCLIBC_HAS_GNU_GLOB
+	bool "Support gnu glob() interface"
+	depends on UCLIBC_HAS_GLOB
+	default n
+	help
+	  The gnu glob interface is somewhat larger (weighing in at about 4,2k) than
+	  it's SuSv3 counterpart (and is out of date). It is an old copy from glibc and
+	  does not support all the GNU specific options.
+
+	  Answer Y if you want to include full gnu glob() instead of the smaller SUSv3
+	  compatible glob().
+
+	  Most people will answer N.
 
 endmenu
 
@@ -1271,11 +1387,21 @@ config UCLIBC_HAS_SSP
 	default n
 	help
 	  Add propolice smashing stack protector to the library.
-	  This requires a patched version of GCC or GCC 4.1, supporting the
+	  This requires GCC 4.1, supporting the -fstack-protector[-all]
+	  options. GCC does not have to provide libssp, the needed
+	  functions are added to ldso/libc instead.
+	  Most people will answer N.
+
+config UCLIBC_HAS_SSP_COMPAT
+	bool "Support for gcc-3.x propolice smashing stack protector"
+	depends on UCLIBC_HAS_SSP
+	default n
+	help
+	  Add gcc-3.x propolice smashing stack protector to the library.
+	  This requires a patched version of GCC, supporting the
 	  -fstack-protector[-all] options, with the __guard and
-	  __stack_smash_handler, respectively __stack_chk_guard and
-	  __stack_chk_fail functions removed from libgcc.
-	  These functions are added to libc instead.
+	  __stack_smash_handler functions removed from libgcc.
+	  These functions are added to ldso/libc instead.
 	  More information at:
 	  <http://www.research.ibm.com/trl/projects/security/ssp/>
 	  Most people will answer N.
@@ -1354,10 +1480,16 @@ config CROSS_COMPILER_PREFIX
 	  example, if you run 'arm-linux-uclibc-gcc' to compile something, 
 	  then enter 'arm-linux-uclibc-' here.
 
+config UCLIBC_EXTRA_CFLAGS
+	string "Enter any extra CFLAGS to use to build uClibc"
+	default ""
+	help
+	  Add any additional CFLAGS to be used to build uClibc.
+
 config DODEBUG
 	bool "Build uClibc with debugging symbols"
 	default n
-	select NOSTRIP
+	select EXTRA_WARNINGS
 	help
 	  Say Y here if you wish to compile uClibc with debugging symbols.
 	  This will allow you to use a debugger to examine uClibc internals
@@ -1369,7 +1501,7 @@ config DODEBUG
 
 config DODEBUG_PT
 	bool "Build pthread with debugging output"
-	depends on UCLIBC_HAS_THREADS
+	depends on UCLIBC_HAS_THREADS && LINUXTHREADS_OLD
 	default n
 	help
 	  Enable debug output in libpthread.  This is only useful when doing 
@@ -1377,13 +1509,15 @@ config DODEBUG_PT
 
 	  Otherwise, answer N.
 
-config NOSTRIP
-	bool "Do not build stripped libraries and executables"
-	default n
+config DOSTRIP
+	bool "Strip libraries and executables"
+	default y
+	depends on !DODEBUG
 	help
-	  Say Y here if you do not wish to strip all uClibc libraries and
-	  executables.  This increases the size of the binaries considerably.
-	  Most people will answer N.
+	  Say Y here if you do wish to strip all uClibc libraries and
+	  executables.  No stripping increases the size of the binaries
+	  considerably, but makes it possible to debug uClibc libraries.
+	  Most people will answer Y.
 
 config DOASSERTS
 	bool "Build uClibc with run-time assertion testing"
@@ -1444,7 +1578,7 @@ config SUPPORT_LD_DEBUG_EARLY
 
 config UCLIBC_MALLOC_DEBUGGING
 	bool "Build malloc with debugging support"
-	depends MALLOC
+	depends MALLOC || MALLOC_STANDARD
 	default n
 	help
 	  Answer Y here to compile extra debugging support code into malloc.

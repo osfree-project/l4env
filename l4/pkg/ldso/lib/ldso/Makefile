@@ -13,6 +13,7 @@ PRIVATE_INCDIR	 = $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/$(LDSO_ARCH_NAME) \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/common \
 		   $(PKGDIR)/lib/ldso/include/ldso/$(LDSO_ARCH_NAME) \
+		   $(PKGDIR)/lib/ldso/ARCH-$(ARCH) \
 		   $(PKGDIR)/lib/ldso/include/ldso
 LDSO_ARCH_NAME_x86 = i386
 LDSO_ARCH_NAME_amd64 = x86_64
@@ -20,6 +21,9 @@ LDSO_ARCH_NAME_arm = arm
 LDSO_ARCH_NAME	= $(LDSO_ARCH_NAME_$(ARCH))
 DEFINES		 += -D__LIBDL_SHARED__ \
 		    -DUCLIBC_RUNTIME_PREFIX=\"/\"
+CFLAGS 		+= -include $(PKGDIR)/../uclibc/lib/contrib/uclibc/include/libc-symbols.h \
+		  -DLDSO_ELFINTERP=\"ARCH-$(ARCH)/elfinterp.c\" \
+		  -DUCLIBC_LDSO=\"libld-l4.s.so\"
 CRT0		 =
 
 # for debugging don't edit this file buf create ./Makeconf.local with DEBUG=1
@@ -27,7 +31,7 @@ DEBUG		 ?= 0
 ifeq (,$(filter 0 n N, $(DEBUG)))
 ifeq (2,$(DEBUG))
 DEFINES		+= -D__SUPPORT_LD_DEBUG_EARLY__ -D__SUPPORT_LD_DEBUG__ \
-		   -DDEBUG_LEVEL=2
+		   -DDEBUG_LEVEL=2 -D__LDSO_GNU_HASH_SUPPORT__
 else
 DEFINES		+= -DDEBUG_LEVEL=1
 endif
@@ -41,10 +45,10 @@ LIBS-$(WITH_INTEGRITY) += -lcrypto_sha1_linux.p -llyon-client.p
 vpath %.c $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
 vpath %.S $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
 SRC_C_libld-l4.s.so = ldso.c emul_linux.c infopage.c helper.c log_init.c \
-		      binary_name.c
+		      binary_name.c malloc.c
 SRC_S_libld-l4.s.so = resolve.S
 ifneq ($(filter x86 amd64,$(ARCH)),)
-SRC_C_libld-l4.s.so += debug_info.c malloc.c 
+SRC_C_libld-l4.s.so += debug_info.c
 endif
 ifeq ($(ARCH),x86)
 SRC_C_libld-l4.s.so += syscall.c

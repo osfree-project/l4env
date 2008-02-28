@@ -21,8 +21,7 @@ libc_hidden_proto(__rpc_thread_svc_max_pollfd)
 
 /* Variable used in non-threaded applications or for the first thread.  */
 static struct rpc_thread_variables __libc_tsd_RPC_VARS_mem;
-static struct rpc_thread_variables *__libc_tsd_RPC_VARS_data =
-     &__libc_tsd_RPC_VARS_mem;
+__libc_tsd_define (, RPC_VARS)
 
 /*
  * Task-variable destructor
@@ -30,7 +29,7 @@ static struct rpc_thread_variables *__libc_tsd_RPC_VARS_data =
 void
 __rpc_thread_destroy (void)
 {
-	struct rpc_thread_variables *tvp = __rpc_thread_variables();
+	struct rpc_thread_variables *tvp = __libc_tsd_get (RPC_VARS);
 
 	if (tvp != NULL && tvp != &__libc_tsd_RPC_VARS_mem) {
 		__rpc_thread_svc_cleanup ();
@@ -43,6 +42,7 @@ __rpc_thread_destroy (void)
 		free (tvp->authdes_cache_s);
 		free (tvp->authdes_lru_s);
 		free (tvp);
+		__libc_tsd_set (RPC_VARS, NULL);
 	}
 }
 
@@ -71,7 +71,7 @@ __rpc_thread_variables (void)
 			if (tvp != NULL)
 				__libc_tsd_set (RPC_VARS, tvp);
 			else
-				tvp = __libc_tsd_RPC_VARS_data;
+				tvp = __libc_tsd_get (RPC_VARS);
 		}
 	}
 	return tvp;
@@ -137,27 +137,27 @@ __rpc_thread_svc_max_pollfd (void)
 #undef svc_pollfd
 #undef svc_max_pollfd
 
+extern fd_set svc_fdset;
 fd_set * __rpc_thread_svc_fdset (void)
 {
-    extern fd_set svc_fdset;
     return &(svc_fdset);
 }
 
+extern struct rpc_createerr rpc_createerr;
 struct rpc_createerr * __rpc_thread_createerr (void)
 {
-    extern struct rpc_createerr rpc_createerr;
     return &(rpc_createerr);
 }
 
+extern struct pollfd *svc_pollfd;
 struct pollfd ** __rpc_thread_svc_pollfd (void)
 {
-    extern struct pollfd *svc_pollfd;
     return &(svc_pollfd);
 }
 
+extern int svc_max_pollfd;
 int * __rpc_thread_svc_max_pollfd (void)
 {
-    extern int svc_max_pollfd;
     return &(svc_max_pollfd);
 }
 

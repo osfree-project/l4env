@@ -27,6 +27,8 @@
 #include <cstdio>
 #include <ostream_helpers>
 
+#pragma GCC visibility push(default)
+
 namespace std {
 	template <class charT, class traits > class basic_ostream;
 	typedef basic_ostream<char> ostream;
@@ -134,8 +136,7 @@ namespace std {
 
 	//Implementations of template functions.  To allow for partial specialization
 
-	template <class charT, class traits> _UCXXEXPORT basic_ostream<charT,traits>::~basic_ostream(){
-	}
+	template <class charT, class traits> _UCXXEXPORT basic_ostream<charT,traits>::~basic_ostream(){ }
 	
 	template <class charT, class traits> _UCXXEXPORT basic_ostream<charT,traits>& basic_ostream<charT, traits>::operator<<(bool n){
 		sentry s(*this);
@@ -476,6 +477,7 @@ template<class Ch, class Tr> _UCXXEXPORT basic_ostream<Ch, Tr>&
 
 }
 
+#pragma GCC visibility pop
 
 #endif
 

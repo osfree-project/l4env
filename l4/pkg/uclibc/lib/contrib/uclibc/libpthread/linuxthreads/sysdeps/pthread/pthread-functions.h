@@ -33,7 +33,7 @@ struct pthread_functions
 {
   pid_t (*ptr_pthread_fork) (struct fork_block *);
   int (*ptr_pthread_attr_destroy) (pthread_attr_t *);
-  int (*ptr___pthread_attr_init) (pthread_attr_t *);
+  int (*ptr_pthread_attr_init) (pthread_attr_t *);
   int (*ptr_pthread_attr_getdetachstate) (const pthread_attr_t *, int *);
   int (*ptr_pthread_attr_setdetachstate) (pthread_attr_t *, int);
   int (*ptr_pthread_attr_getinheritsched) (const pthread_attr_t *, int *);
@@ -84,9 +84,12 @@ struct pthread_functions
 				       const struct timespec *);
   void (*ptr__pthread_cleanup_push) (struct _pthread_cleanup_buffer * buffer,
 				     void (*routine)(void *), void * arg);
-
+  void (*ptr__pthread_cleanup_push_defer) (struct _pthread_cleanup_buffer * buffer,
+					   void (*routine)(void *), void * arg);
   void (*ptr__pthread_cleanup_pop) (struct _pthread_cleanup_buffer * buffer,
 				    int execute);
+  void (*ptr__pthread_cleanup_pop_restore) (struct _pthread_cleanup_buffer * buffer,
+					    int execute);
 };
 
 /* Variable in libc.so.  */

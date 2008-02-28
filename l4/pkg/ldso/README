@@ -1,5 +1,5 @@
-This package contains a ported ldso of the uClibc 0.9.27 which is
-equivalent to ldso 1.9.11.
+This version is against svn://uclibc.org/trunk/uClibc, rev 20945
+
 
 The L4 loader loads both the interpreter and the binary into the
 application's address space and passes the control to the interpreter.

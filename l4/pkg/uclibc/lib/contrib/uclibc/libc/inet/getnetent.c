@@ -19,6 +19,7 @@
 #include <features.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 
@@ -29,34 +30,25 @@ libc_hidden_proto(rewind)
 libc_hidden_proto(fgets)
 libc_hidden_proto(abort)
 
-#ifdef __UCLIBC_HAS_THREADS__
-# include <pthread.h>
-static pthread_mutex_t mylock = PTHREAD_MUTEX_INITIALIZER;
-#endif
-#define LOCK	__pthread_mutex_lock(&mylock)
-#define UNLOCK	__pthread_mutex_unlock(&mylock)
+#include <bits/uClibc_mutex.h>
+__UCLIBC_MUTEX_STATIC(mylock, PTHREAD_MUTEX_INITIALIZER);
 
-
-
-#define	MAXALIASES	35
 static const char NETDB[] = _PATH_NETWORKS;
+
 static FILE *netf = NULL;
-static char *line = NULL;
-static struct netent net;
-static char *net_aliases[MAXALIASES];
 
 int _net_stayopen attribute_hidden;
 
 libc_hidden_proto(setnetent)
 void setnetent(int f)
 {
-    LOCK;
+    __UCLIBC_MUTEX_LOCK(mylock);
     if (netf == NULL)
 	netf = fopen(NETDB, "r" );
     else
 	rewind(netf);
     _net_stayopen |= f;
-    UNLOCK;
+    __UCLIBC_MUTEX_UNLOCK(mylock);
     return;
 }
 libc_hidden_def(setnetent)
@@ -64,13 +56,13 @@ libc_hidden_def(setnetent)
 libc_hidden_proto(endnetent)
 void endnetent(void)
 {
-    LOCK;
+    __UCLIBC_MUTEX_LOCK(mylock);
     if (netf) {
 	fclose(netf);
 	netf = NULL;
     }
     _net_stayopen = 0;
-    UNLOCK;
+    __UCLIBC_MUTEX_UNLOCK(mylock);
 }
 libc_hidden_def(endnetent)
 
@@ -87,29 +79,44 @@ static char * any(register char *cp, char *match)
     return ((char *)0);
 }
 
+#define	MAXALIASES	35
+static struct {
+	char *line;
+	struct netent net;
+	char *net_aliases[MAXALIASES];
+} *sp;
+#define line        (sp->line)
+#define net         (sp->net)
+#define net_aliases (sp->net_aliases)
+#define INIT_SP() { \
+    if (!sp) { \
+	sp = __uc_malloc(sizeof(*sp)); \
+	line = NULL; \
+    } \
+}
+
 libc_hidden_proto(getnetent)
 struct netent *getnetent(void)
 {
     char *p;
     register char *cp, **q;
+    struct netent *rv = NULL;
 
-    LOCK;
+    INIT_SP();
+
+    __UCLIBC_MUTEX_LOCK(mylock);
     if (netf == NULL && (netf = fopen(NETDB, "r" )) == NULL) {
-	UNLOCK;
-	return (NULL);
+	goto DONE;
     }
 again:
 
     if (!line) {
-	line = malloc(BUFSIZ + 1);
-	if (!line)
-	    abort();
+	line = __uc_malloc(BUFSIZ + 1);
     }
 
     p = fgets(line, BUFSIZ, netf);
     if (p == NULL) {
-	UNLOCK;
-	return (NULL);
+	goto DONE;
     }
     if (*p == '#')
 	goto again;
@@ -144,7 +151,9 @@ again:
 	    *cp++ = '\0';
     }
     *q = NULL;
-    UNLOCK;
-    return (&net);
+    rv = &net;
+DONE:
+    __UCLIBC_MUTEX_UNLOCK(mylock);
+    return rv;
 }
 libc_hidden_def(getnetent)

@@ -7,7 +7,7 @@
  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
 
-#include "syscalls.h"
+#include <sys/syscall.h>
 #include <signal.h>
 
 #undef sigprocmask
@@ -26,6 +26,8 @@ int sigprocmask(int how, const sigset_t * set, sigset_t * oldset)
 	if (set &&
 # if (SIG_BLOCK == 0) && (SIG_UNBLOCK == 1) && (SIG_SETMASK == 2)
 		(((unsigned int) how) > 2)
+#elif (SIG_BLOCK == 1) && (SIG_UNBLOCK == 2) && (SIG_SETMASK == 3)
+		(((unsigned int)(how-1)) > 2)
 # else
 #  warning "compile time assumption violated.. slow path..."
 		((how != SIG_BLOCK) && (how != SIG_UNBLOCK)
@@ -51,6 +53,8 @@ int sigprocmask(int how, const sigset_t * set, sigset_t * oldset)
 	if (set &&
 # if (SIG_BLOCK == 0) && (SIG_UNBLOCK == 1) && (SIG_SETMASK == 2)
 		(((unsigned int) how) > 2)
+#elif (SIG_BLOCK == 1) && (SIG_UNBLOCK == 2) && (SIG_SETMASK == 3)
+		(((unsigned int)(how-1)) > 2)
 # else
 #  warning "compile time assumption violated.. slow path..."
 		((how != SIG_BLOCK) && (how != SIG_UNBLOCK)

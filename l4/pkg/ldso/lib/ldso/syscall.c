@@ -1,3 +1,4 @@
+#include "dl-syscall.h"
 #include "dl-string.h"
 #include "syscall.h"
 #include <l4/sys/syscalls.h>

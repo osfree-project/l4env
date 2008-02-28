@@ -3,7 +3,7 @@ include $(TOPDIR)Rules.mak
 
 WR_CXX := WRAPPER_INCLUDEDIR=-I$(TOPDIR)include $(TOPDIR)bin/g++-uc
 
-LDFLAGS += -nodefaultlibs -shared -Wl,-soname,$(SHARED_MAJORNAME)
+LDFLAGS += -nodefaultlibs -shared -Wl,-soname,$(SHARED_MAJORNAME) `echo $(BUILD_EXTRA_LIBRARIES)`
 ifneq ($(DODEBUG),y)
 LDFLAGS += -Wl,-s
 endif
@@ -39,11 +39,11 @@ endif
 libgcc_eh:
 ifeq ($(IMPORT_LIBGCC_EH),y)
 	$(MAKE) -C abi/libgcc_eh all
-ifeq ($(GCC_MAJOR_VER),3)
+#ifeq ($(GCC_MAJOR_VER),3)
 GCCOBJS = $(wildcard abi/libgcc_eh/*.o)
-else
-GCCOBJS =
-endif
+#else
+#GCCOBJS =
+#endif
 else
 GCCOBJS =
 endif

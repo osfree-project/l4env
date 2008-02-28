@@ -16,7 +16,8 @@
 
 /* Just a dummy seek function, to make it compile
  */
-off_t lseek(int fd, off_t offset, int whence)
+off_t __l4_minimal_log_io_lseek(int fd, off_t offset, int whence);
+off_t __l4_minimal_log_io_lseek(int fd, off_t offset, int whence)
 {
     // just accept lseek to stdin, stdout and stderr
     if ((fd != STDIN_FILENO) &&
@@ -47,6 +48,11 @@ off_t lseek(int fd, off_t offset, int whence)
         errno = EINVAL;
         return -1;
     }
+}
+ __attribute__((weak))
+off_t lseek(int fd, off_t offset, int whence)
+{
+  return __l4_minimal_log_io_lseek(fd, offset, whence);
 }
 
 off64_t lseek64(int fd, off64_t offset, int whence)

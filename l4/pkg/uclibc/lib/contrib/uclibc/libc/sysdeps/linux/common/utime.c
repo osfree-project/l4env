@@ -7,13 +7,13 @@
  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
 
-#include "syscalls.h"
+#include <sys/syscall.h>
 #include <utime.h>
 
 libc_hidden_proto(utime)
 
 #ifdef __NR_utime
-attribute_hidden _syscall2(int, utime, const char *, file, const struct utimbuf *, times);
+_syscall2(int, utime, const char *, file, const struct utimbuf *, times);
 #else
 #include <stdlib.h>
 #include <sys/time.h>
@@ -30,13 +30,8 @@ int utime(const char *file, const struct utimbuf *times)
 		timevals[1].tv_usec = 0L;
 		timevals[0].tv_sec = (long int) times->actime;
 		timevals[1].tv_sec = (long int) times->modtime;
-	} else {
-		if (gettimeofday(&timevals[0], NULL) < 0) {
-			return -1;
-		}
-		timevals[1] = timevals[0];
 	}
-	return utimes(file, timevals);
+	return utimes(file, times ? timevals : NULL);
 }
 #endif
 libc_hidden_def(utime)

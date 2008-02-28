@@ -4,7 +4,7 @@
  * after resolving ELF shared library symbols
  *
  * Copyright (C) 2005 by Joakim Tjernlund
- * Copyright (C) 2000-2004 by Erik Andersen <andersen@codepoet.org>
+ * Copyright (C) 2000-2006 by Erik Andersen <andersen@codepoet.org>
  * Copyright (c) 1994-2000 Eric Youngdale, Peter MacDonald,
  *				David Engel, Hongjiu Lu and Mitch D'Souza
  *
@@ -108,7 +108,7 @@
 int (*_dl_elf_main) (int, char **, char **);
 
 static void* __rtld_stack_end; /* Points to argc on stack, e.g *((long *)__rtld_stackend) == argc */
-strong_alias(__rtld_stack_end, __libc_stack_end); /* Exported version of __rtld_stack_end */
+strong_alias(__rtld_stack_end, __libc_stack_end) /* Exported version of __rtld_stack_end */
 
 /* When we enter this piece of code, the program stack looks like this:
 	argc            argument counter (integer)
@@ -125,7 +125,7 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 {
 //	unsigned int argc; /* fm3 */
 	char **argv, **envp;
-	unsigned long load_addr;
+	DL_LOADADDR_TYPE load_addr;
 	ElfW(Addr) got;
 //	unsigned long *aux_dat; /* fm3 */
 	ElfW(Ehdr) *header;
@@ -151,6 +151,14 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	aux_dat += argc;			/* Skip over the argv pointers */
 	aux_dat++;					/* Skip over NULL at end of argv */
 	envp = (char **) aux_dat;
+#ifndef NO_EARLY_SEND_STDERR
+	SEND_EARLY_STDERR_DEBUG("argc=");
+	SEND_NUMBER_STDERR_DEBUG(argc, 0);
+	SEND_EARLY_STDERR_DEBUG(" argv=");
+	SEND_ADDRESS_STDERR_DEBUG(argv, 0);
+	SEND_EARLY_STDERR_DEBUG(" envp=");
+	SEND_ADDRESS_STDERR_DEBUG(envp, 1);
+#endif
 	while (*aux_dat)
 		aux_dat++;				/* Skip over the envp pointers */
 	aux_dat++;					/* Skip over NULL at end of envp */
@@ -185,7 +193,7 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	 * (esp since SEND_STDERR() needs this on some platforms... */
 	if (!auxvt[AT_BASE].a_un.a_val)
 		auxvt[AT_BASE].a_un.a_val = elf_machine_load_address();
-	load_addr = auxvt[AT_BASE].a_un.a_val;
+	DL_INIT_LOADADDR_BOOT(load_addr, auxvt[AT_BASE].a_un.a_val);
 	header = (ElfW(Ehdr) *) auxvt[AT_BASE].a_un.a_val;
 
 	/* Check the ELF header to make sure everything looks ok.  */
@@ -199,25 +207,28 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 			|| header->e_ident[EI_MAG2] != ELFMAG2
 			|| header->e_ident[EI_MAG3] != ELFMAG3)
 	{
-		SEND_STDERR("Invalid ELF header\n");
+		SEND_EARLY_STDERR("Invalid ELF header\n");
 		_dl_exit(0);
 	}
-	SEND_STDERR_DEBUG("ELF header=");
-	SEND_ADDRESS_STDERR_DEBUG(load_addr, 1);
+	SEND_EARLY_STDERR_DEBUG("ELF header=");
+	SEND_ADDRESS_STDERR_DEBUG(DL_LOADADDR_BASE(load_addr), 1);
 
 	/* Locate the global offset table.  Since this code must be PIC
 	 * we can take advantage of the magic offset register, if we
 	 * happen to know what that is for this architecture.  If not,
 	 * we can always read stuff out of the ELF file to find it... */
-	got = elf_machine_dynamic();
-	dpnt = (ElfW(Dyn) *) (got + load_addr);
-	SEND_STDERR_DEBUG("First Dynamic section entry=");
+	DL_BOOT_COMPUTE_GOT(got);
+
+	/* Now, finally, fix up the location of the dynamic stuff */
+	DL_BOOT_COMPUTE_DYN (dpnt, got, load_addr);
+
+	SEND_EARLY_STDERR_DEBUG("First Dynamic section entry=");
 	SEND_ADDRESS_STDERR_DEBUG(dpnt, 1);
 	_dl_memset(tpnt, 0, sizeof(struct elf_resolve));
 	tpnt->loadaddr = load_addr;
 	/* OK, that was easy.  Next scan the DYNAMIC section of the image.
 	   We are only doing ourself right now - we will have to do the rest later */
-	SEND_STDERR_DEBUG("Scanning DYNAMIC section\n");
+	SEND_EARLY_STDERR_DEBUG("Scanning DYNAMIC section\n");
 	tpnt->dynamic_addr = dpnt;
 #if defined(NO_FUNCS_BEFORE_BOOTSTRAP)
 	/* Some architectures cannot call functions here, must inline */
@@ -226,19 +237,21 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	_dl_parse_dynamic_info(dpnt, tpnt->dynamic_info, NULL, load_addr);
 #endif
 
-	SEND_STDERR_DEBUG("Done scanning DYNAMIC section\n");
+	SEND_EARLY_STDERR_DEBUG("Done scanning DYNAMIC section\n");
 
 #if defined(PERFORM_BOOTSTRAP_GOT)
 
-	SEND_STDERR_DEBUG("About to do specific GOT bootstrap\n");
+	SEND_EARLY_STDERR_DEBUG("About to do specific GOT bootstrap\n");
 	/* some arches (like MIPS) we have to tweak the GOT before relocations */
 	PERFORM_BOOTSTRAP_GOT(tpnt);
 
-#else
+#endif
+
+#if !defined(PERFORM_BOOTSTRAP_GOT) || defined(__avr32__)
 
 	/* OK, now do the relocations.  We do not do a lazy binding here, so
 	   that once we are done, we have considerably more flexibility. */
-	SEND_STDERR_DEBUG("About to do library loader relocations\n");
+	SEND_EARLY_STDERR_DEBUG("About to do library loader relocations\n");
 
 	{
 		int goof, indx;
@@ -273,12 +286,12 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 			if (!indx && relative_count) {
 				rel_size -= relative_count * sizeof(ELF_RELOC);
 				elf_machine_relative(load_addr, rel_addr, relative_count);
-				rel_addr += relative_count * sizeof(ELF_RELOC);;
+				rel_addr += relative_count * sizeof(ELF_RELOC);
 			}
 
-			rpnt = (ELF_RELOC *) (rel_addr + load_addr);
+			rpnt = (ELF_RELOC *) rel_addr;
 			for (i = 0; i < rel_size; i += sizeof(ELF_RELOC), rpnt++) {
-				reloc_addr = (unsigned long *) (load_addr + (unsigned long) rpnt->r_offset);
+				reloc_addr = (unsigned long *) DL_RELOC_ADDR(load_addr, (unsigned long)rpnt->r_offset);
 				symtab_index = ELF_R_SYM(rpnt->r_info);
 				symbol_addr = 0;
 				sym = NULL;
@@ -289,11 +302,13 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 					symtab = (ElfW(Sym) *) tpnt->dynamic_info[DT_SYMTAB];
 					strtab = (char *) tpnt->dynamic_info[DT_STRTAB];
 					sym = &symtab[symtab_index];
-					symbol_addr = load_addr + sym->st_value;
+					symbol_addr = (unsigned long) DL_RELOC_ADDR(load_addr, sym->st_value);
 
+#ifndef EARLY_STDERR_SPECIAL
 					SEND_STDERR_DEBUG("relocating symbol: ");
 					SEND_STDERR_DEBUG(strtab + sym->st_name);
 					SEND_STDERR_DEBUG("\n");
+#endif
 				} else
 					SEND_STDERR_DEBUG("relocating unknown symbol\n");
 				/* Use this machine-specific macro to perform the actual relocation.  */
@@ -327,12 +342,12 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 
 	__rtld_stack_end = (void *)(argv - 1);
 
-	_dl_get_ready_to_run(tpnt, load_addr, auxvt, envp, argv);
+	_dl_get_ready_to_run(tpnt, load_addr, auxvt, envp, argv
+			     DL_GET_READY_TO_RUN_EXTRA_ARGS);
 
 
 	/* Transfer control to the application.  */
 	SEND_STDERR_DEBUG("transfering control to application @ ");
-
 	_dl_elf_main = (int (*)(int, char **, char **)) auxvt[AT_ENTRY].a_un.a_val;
 	SEND_ADDRESS_STDERR_DEBUG(_dl_elf_main, 1);
 
@@ -349,5 +364,9 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	infopage_show_sections();
 #endif
 
+#ifndef START
+	return _dl_elf_main;
+#else
 	START();
+#endif
 }

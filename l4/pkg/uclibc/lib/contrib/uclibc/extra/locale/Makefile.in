@@ -10,7 +10,9 @@ WGET := wget --passive-ftp
 
 LOCALE_DATA_FILENAME := uClibc-locale-030818.tgz
 
-BUILD_CFLAGS-locale-common := -D__UCLIBC_GEN_LOCALE
+BUILD_CFLAGS-locale-common := \
+	-D__UCLIBC_GEN_LOCALE \
+	-DUCLIBC_CTYPE_HEADER='"$(top_builddir)/include/bits/uClibc_ctype.h"'
 
 BUILD_CFLAGS-gen_wc8bit := $(BUILD_CFLAGS-locale-common) -DCTYPE_PACKED=1
 
@@ -21,6 +23,8 @@ ifeq ($(UCLIBC_HAS_WCHAR),y)
 BUILD_CFLAGS-gen_wc8bit += -DDO_WIDE_CHAR=1
 BUILD_CFLAGS-gen_ldc += -D__WCHAR_ENABLED=1
 endif
+
+BUILD_CFLAGS-gen_locale := -D_GNU_SOURCE
 
 DEPH-locale := $(top_builddir)include/bits/sysnum.h
 DEPH-gen_locale := c8tables.h
@@ -159,15 +163,9 @@ $(locale_SRC): $(locale_OUT)/gen_ldc
 
 $(locale_OUT)/uClibc_locale_data.h: $(locale_OUT)/lt_defines.h $(locale_OUT)/c8tables.h $(locale_OUT)/wctables.h $(locale_DIR)/locale_mmap.h | $(locale_SRC)
 	grep -v "define __LC" $< > $@
-	cat $(wordlist 2,3,4,$^) >> $@
+	cat $(wordlist 2,4,$^) >> $@
 
 endif
-
-$(locale_OBJ): $(locale_SRC) | $(headers_dep)
-	$(compile.c)
-
-$(locale_OBJ:.o=.os): $(locale_SRC) | $(headers_dep)
-	$(compile.c)
 
 $(top_builddir)include/bits/uClibc_locale_data.h: $(locale_OUT)/uClibc_locale_data.h | $(top_builddir)include/bits/uClibc_config.h
 	cat $< | awk 'BEGIN{i=1}{ if ( /WANT_/ ) i = /endif/ ; else if (i) print $0 }' > $@

@@ -35,7 +35,7 @@
 #include <sys/cdefs.h>
 
 /* --- this is added to integrate linuxthreads */
-#define __USE_UNIX98            1
+/*#define __USE_UNIX98            1*/
 
 #ifndef __ASSEMBLER__
 # ifdef IS_IN_libc
@@ -44,7 +44,11 @@
 #  include <stddef.h>
 
 /* sources are built w/ _GNU_SOURCE, this gets undefined */
+#ifdef __USE_GNU
 extern int __xpg_strerror_r (int __errnum, char *__buf, size_t __buflen);
+#else
+extern char *__glibc_strerror_r (int __errnum, char *__buf, size_t __buflen);
+#endif
 
 /* #include <pthread.h> */
 #  ifndef __UCLIBC_HAS_THREADS__
@@ -52,6 +56,8 @@ extern int __xpg_strerror_r (int __errnum, char *__buf, size_t __buflen);
 #   define __pthread_mutex_lock(mutex)                    ((void)0)
 #   define __pthread_mutex_trylock(mutex)                 ((void)0)
 #   define __pthread_mutex_unlock(mutex)                  ((void)0)
+#   define _pthread_cleanup_push_defer(mutex)             ((void)0)
+#   define _pthread_cleanup_pop_restore(mutex)            ((void)0)
 #  endif
 
 /* internal access to program name */
@@ -61,7 +67,7 @@ extern const char *__uclibc_progname attribute_hidden;
 
 /* #include <alloca.h> */
 #include <bits/stackinfo.h>
-#if _STACK_GROWS_DOWN
+#if defined(_STACK_GROWS_DOWN)
 # define extend_alloca(buf, len, newlen) \
   (__typeof (buf)) ({ size_t __newlen = (newlen);			      \
 		      char *__newbuf = alloca (__newlen);		      \
@@ -70,7 +76,7 @@ extern const char *__uclibc_progname attribute_hidden;
 		      else						      \
 			len = __newlen;					      \
 		      __newbuf; })
-#elif _STACK_GROWS_UP
+#elif defined(_STACK_GROWS_UP)
 # define extend_alloca(buf, len, newlen) \
   (__typeof (buf)) ({ size_t __newlen = (newlen);			      \
 		      char *__newbuf = alloca (__newlen);		      \

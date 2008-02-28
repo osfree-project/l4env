@@ -9,14 +9,10 @@
 #include <errno.h>
 #include "sysdep.h"
 
+extern void * __curbrk attribute_hidden;
+extern int __init_brk (void) attribute_hidden;
+
 libc_hidden_proto(brk)
-
-extern void * __curbrk;
-libc_hidden_proto(__curbrk)
-
-extern int __init_brk (void);
-libc_hidden_proto(__init_brk)
-
 int brk(void * end_data_seg)
 {
 	if (__init_brk () == 0) {

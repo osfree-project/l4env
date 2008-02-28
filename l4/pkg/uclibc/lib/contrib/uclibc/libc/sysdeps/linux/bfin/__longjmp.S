@@ -1,18 +1,11 @@
-/*
- * longjmp for the Blackfin project
+/* longjmp for the Blackfin project
  *
- * Copyright (C) 2004,
+ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
+ * Copyright (C) 2004 Metrowerks
  * Based on code from Analog Devices.
  *
- * This file is subject to the terms and conditions of the GNU Lesser
- * General Public License.  See the file COPYING.LIB in the main
- * directory of this archive for more details.
- *
+ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
-#include <features.h>
-#define _SETJMP_H
-#define _ASM
-#include <bits/setjmp.h>
 
 .text
 .global ___longjmp;
@@ -105,8 +98,10 @@ ___longjmp:
 	P0 = [SP++];
 
 	CC = R0 == 0;
-	IF !CC JUMP finished;
+	IF !CC JUMP .Lfinished;
 	R0 = 1;
-finished:
+.Lfinished:
 	RTS;
 .size ___longjmp,.-___longjmp
+
+libc_hidden_def(__longjmp)

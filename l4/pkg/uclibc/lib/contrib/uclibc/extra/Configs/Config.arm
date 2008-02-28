@@ -4,6 +4,7 @@
 #
 
 config TARGET_ARCH
+	string
 	default "arm"
 
 config FORCE_OPTIONS_FOR_ARCH
@@ -14,18 +15,23 @@ config FORCE_OPTIONS_FOR_ARCH
 config ARCH_CFLAGS
 	string
 
-config LIBGCC_CFLAGS
-	string
+choice
+	prompt "Target ABI"
+	default CONFIG_ARM_OABI
+	help
+	  If you choose "EABI" here, functions and constants required by the
+	  ARM EABI will be built into the library.  You should choose "EABI"
+	  if your compiler uses the ARM EABI, in which case you will also
+	  need a kernel supporting the EABI system call interface, or "OABI"
+	  for a compiler using the old Linux ABI.
+
+config CONFIG_ARM_OABI
+	bool "OABI"
 
 config CONFIG_ARM_EABI
-	bool "Use ARM EABI"
-	default n
-	help
-	  If you choose "Y" here, functions and constants required by the
-	  ARM EABI will be built into the library.  You should choose "Y"
-	  if your compiler uses the ARM EABI, in which case you will also
-	  need a kernel supporting the EABI system call interface, or "N"
-	  for a compiler using the old Linux ABI.
+	bool "EABI"
+
+endchoice
 
 config USE_BX
 	bool "Use BX in function return"
@@ -85,8 +91,20 @@ config CONFIG_ARM926T
 	bool "Arm 926T"
 	select ARCH_HAS_MMU
 
+config CONFIG_ARM10T
+	bool "Arm 10T"
+	select ARCH_HAS_MMU
+
 config CONFIG_ARM1136JF_S
 	bool "Arm 1136JF-S"
+	select ARCH_HAS_MMU
+
+config CONFIG_ARM1176JZ_S
+	bool "Arm 1176JZ-S"
+	select ARCH_HAS_MMU
+
+config CONFIG_ARM1176JZF_S
+	bool "Arm 1176JZF-S"
 	select ARCH_HAS_MMU
 
 config CONFIG_ARM_SA110
@@ -99,6 +117,10 @@ config CONFIG_ARM_SA1100
 
 config CONFIG_ARM_XSCALE
 	bool "Intel Xscale"
+	select ARCH_HAS_MMU
+
+config CONFIG_ARM_IWMMXT
+	bool "Intel Xscale With WMMX PXA27x"
 	select ARCH_HAS_MMU
 
 endchoice

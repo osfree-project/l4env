@@ -1,6 +1,5 @@
 # Makefile for uClibc
 #
-# Copyright (C) 2000 by Lineo, inc.
 # Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
 #
 # Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
@@ -13,10 +12,10 @@ include $(top_srcdir)libc/stdlib/malloc-standard/Makefile.in
 CSRC := \
 	abort.c getenv.c mkdtemp.c mktemp.c realpath.c mkstemp.c \
 	rand.c random.c random_r.c setenv.c system.c div.c ldiv.c lldiv.c \
-	getpt.c ptsname.c grantpt.c unlockpt.c gcvt.c drand48-iter.c jrand48.c \
+	getpt.c ptsname.c grantpt.c unlockpt.c drand48-iter.c jrand48.c \
 	jrand48_r.c lrand48.c lrand48_r.c mrand48.c mrand48_r.c nrand48.c \
 	nrand48_r.c rand_r.c srand48.c srand48_r.c seed48.c seed48_r.c \
-	valloc.c posix_memalign.c a64l.c l64a.c
+	valloc.c posix_memalign.c a64l.c l64a.c __uc_malloc.c
 ifeq ($(UCLIBC_HAS_ARC4RANDOM),y)
 CSRC += arc4random.c
 endif
@@ -25,6 +24,9 @@ CSRC += mkstemp64.c
 endif
 ifeq ($(UCLIBC_HAS_FLOATS),y)
 CSRC += drand48.c drand48_r.c erand48.c erand48_r.c
+ifeq ($(UCLIBC_SUSV3_LEGACY),y)
+CSRC += gcvt.c
+endif
 endif
 
 # multi source stdlib.c
@@ -83,6 +85,7 @@ libc-static-y += $(STDLIB_OUT)/atexit.o
 libc-nonshared-y += $(STDLIB_OUT)/atexit.os
 
 libc-nomulti-y += $(STDLIB_OUT)/labs.o $(STDLIB_OUT)/atol.o $(STDLIB_OUT)/_stdlib_strto_l.o $(STDLIB_OUT)/_stdlib_strto_ll.o
+libc-nomulti-$(UCLIBC_HAS_XLOCALE) += $(STDLIB_OUT)/_stdlib_strto_l_l.o $(STDLIB_OUT)/_stdlib_strto_ll_l.o
 
 objclean-y += stdlib_objclean
 

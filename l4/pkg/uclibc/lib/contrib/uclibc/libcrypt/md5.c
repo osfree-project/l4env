@@ -28,8 +28,8 @@
  * edited for clarity and style only.
  *
  * ----------------------------------------------------------------------------
- * The md5_crypt() function was taken from freeBSD's libcrypt and contains 
- * this license: 
+ * The md5_crypt() function was taken from freeBSD's libcrypt and contains
+ * this license:
  *    "THE BEER-WARE LICENSE" (Revision 42):
  *     <phk@login.dknet.dk> wrote this file.  As long as you retain this notice you
  *     can do whatever you want with this stuff. If we meet some day, and you think
@@ -38,7 +38,7 @@
  * $FreeBSD: src/lib/libcrypt/crypt.c,v 1.7.2.1 1999/08/29 14:56:33 peter Exp $
  *
  * ----------------------------------------------------------------------------
- * On April 19th, 2001 md5_crypt() was modified to make it reentrant 
+ * On April 19th, 2001 md5_crypt() was modified to make it reentrant
  * by Erik Andersen <andersen@uclibc.org>
  *
  *
@@ -76,10 +76,12 @@
 #include <sys/types.h>
 #include <string.h>
 #include <unistd.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <crypt.h>
 #include <sys/cdefs.h>
-	
+#include "libcrypt.h"
+
 /* MD5 context. */
 struct MD5Context {
   u_int32_t state[4];	/* state (ABCD) */
@@ -94,11 +96,13 @@ static void   __md5_Final (unsigned char [16], struct MD5Context *);
 static void __md5_Transform __P((u_int32_t [4], const unsigned char [64]));
 
 
-static const char __md5__magic[] = "$1$";	/* This string is magic for this algorithm.  Having 
+#define MD5_MAGIC_STR "$1$"
+#define MD5_MAGIC_LEN (sizeof(MD5_MAGIC_STR) - 1)
+static const unsigned char __md5__magic[] = MD5_MAGIC_STR;
+						/* This string is magic for this algorithm.  Having
 						   it this way, we can get better later on */
 static const unsigned char __md5_itoa64[] =		/* 0 ... 63 => ascii - 64 */
 	"./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
 
 
 #ifdef i386
@@ -329,7 +333,7 @@ __md5_Transform (state, block)
 
 	__md5_Decode (x, block, 64);
 
-	a = state[0]; b = state[1]; c = state[2]; d = state[3]; 
+	a = state[0]; b = state[1]; c = state[2]; d = state[3];
 
 #if MD5_SIZE_OVER_SPEED > 2
 	pc = C; pp = P; ps = S - 4;
@@ -531,25 +535,27 @@ static void __md5_to64( char *s, unsigned long v, int n)
  * Use MD5 for what it is best at...
  */
 
-char * __md5_crypt( const char *pw, const char *salt) attribute_hidden;
-char * __md5_crypt( const char *pw, const char *salt)
+char *__md5_crypt(const unsigned char *pw, const unsigned char *salt)
 {
 	/* Static stuff */
-	static const char *sp, *ep;
-	static char passwd[120], *p;
+	static char *passwd;
 
+	const unsigned char *sp, *ep;
+	char *p;
 	unsigned char	final[17];	/* final[16] exists only to aid in looping */
-	int sl,pl,i,__md5__magic_len,pw_len;
+	int sl,pl,i,pw_len;
 	struct MD5Context ctx,ctx1;
 	unsigned long l;
+
+	if (!passwd)
+		passwd = __uc_malloc(120);
 
 	/* Refine the Salt first */
 	sp = salt;
 
 	/* If it starts with the magic string, then skip that */
-	__md5__magic_len = strlen(__md5__magic);
-	if(!strncmp(sp,__md5__magic,__md5__magic_len))
-		sp += __md5__magic_len;
+	if(!strncmp(sp,__md5__magic,MD5_MAGIC_LEN))
+		sp += MD5_MAGIC_LEN;
 
 	/* It stops at the first '$', max 8 chars */
 	for(ep=sp;*ep && *ep != '$' && ep < (sp+8);ep++)
@@ -565,7 +571,7 @@ char * __md5_crypt( const char *pw, const char *salt)
 	__md5_Update(&ctx,pw,pw_len);
 
 	/* Then our magic string */
-	__md5_Update(&ctx,__md5__magic,__md5__magic_len);
+	__md5_Update(&ctx,__md5__magic,MD5_MAGIC_LEN);
 
 	/* Then the raw salt */
 	__md5_Update(&ctx,sp,sl);

@@ -17,9 +17,6 @@
 /* does your target have a broken create_module() ? */
 #undef __UCLIBC_BROKEN_CREATE_MODULE__
 
-/* does your target prefix all symbols with an _ ? */
-#define __UCLIBC_NO_UNDERSCORES__
-
 /* does your target have an asm .set ? */
 #define __UCLIBC_HAVE_ASM_SET_DIRECTIVE__
 
@@ -37,5 +34,8 @@
 
 /* define if target supports IEEE signed zero floats */
 #define __UCLIBC_HAVE_SIGNED_ZERO__
+
+/* the default ; is a comment on hppa */
+#define __UCLIBC_ASM_LINE_SEP__ !
 
 #endif /* _BITS_UCLIBC_ARCH_FEATURES_H */

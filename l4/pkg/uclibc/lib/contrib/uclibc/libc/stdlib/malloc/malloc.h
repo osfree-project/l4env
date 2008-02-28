@@ -11,12 +11,16 @@
  * Written by Miles Bader <miles@gnu.org>
  */
 
-/* The alignment we guarantee for malloc return values.  */
-#define MALLOC_ALIGNMENT	(sizeof (double))
+/* The alignment we guarantee for malloc return values.  We prefer this
+   to be at least sizeof (size_t) bytes because (a) we have to allocate
+   that many bytes for the header anyway and (b) guaranteeing word
+   alignment can be a significant win on targets like m68k and Coldfire,
+   where __alignof__(double) == 2.  */
+#define MALLOC_ALIGNMENT \
+  __alignof__ (double __attribute_aligned__ (sizeof (size_t)))
 
 /* The system pagesize... */
 extern size_t __pagesize;
-libc_hidden_proto(__pagesize)
 #define MALLOC_PAGE_SIZE	__pagesize
 
 /* The minimum size of block we request from the the system to extend the
@@ -80,7 +84,6 @@ extern struct heap __malloc_mmb_heap;
    to stderr, when the variable __malloc_mmb_debug is set to true. */
 #ifdef MALLOC_MMB_DEBUGGING
 # include <stdio.h>
-extern int __putc(int c, FILE *stream) attribute_hidden;
 
 extern int __malloc_mmb_debug;
 # define MALLOC_MMB_DEBUG(indent, fmt, args...)				      \
@@ -99,17 +102,20 @@ extern int __malloc_mmb_debug;
 
 
 /* The size of a malloc allocation is stored in a size_t word
-   MALLOC_ALIGNMENT bytes prior to the start address of the allocation:
+   MALLOC_HEADER_SIZE bytes prior to the start address of the allocation:
 
      +--------+---------+-------------------+
      | SIZE   |(unused) | allocation  ...   |
      +--------+---------+-------------------+
      ^ BASE             ^ ADDR
-     ^ ADDR - MALLOC_ALIGN
+     ^ ADDR - MALLOC_HEADER_SIZE
 */
 
 /* The amount of extra space used by the malloc header.  */
-#define MALLOC_HEADER_SIZE	MALLOC_ALIGNMENT
+#define MALLOC_HEADER_SIZE			\
+  (MALLOC_ALIGNMENT < sizeof (size_t)		\
+   ? sizeof (size_t)				\
+   : MALLOC_ALIGNMENT)
 
 /* Set up the malloc header, and return the user address of a malloc block. */
 #define MALLOC_SETUP(base, size)  \
@@ -127,6 +133,7 @@ extern int __malloc_mmb_debug;
 #ifdef __UCLIBC_HAS_THREADS__
 
 # include <pthread.h>
+# include <bits/uClibc_pthread.h>
 
 # define MALLOC_USE_LOCKING
 

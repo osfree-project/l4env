@@ -3,6 +3,61 @@
 # see extra/config/Kconfig-language.txt
 #
 
+
+#
+# Binary format
+#
+if !ARCH_USE_MMU
+choice
+	prompt "Target File Format"
+config UCLIBC_FORMAT_ELF
+	bool "ELF"
+	depends on ARCH_USE_MMU
+config UCLIBC_FORMAT_FDPIC_ELF
+	bool "FDPIC ELF"
+	depends on !ARCH_USE_MMU
+config UCLIBC_FORMAT_FLAT
+	bool "STATIC FLAT"
+	depends on !ARCH_USE_MMU
+	select ARCH_HAS_NO_LDSO
+config UCLIBC_FORMAT_FLAT_SEP_DATA
+	bool "STATIC FLAT (sep-data)"
+	depends on !ARCH_USE_MMU
+	select ARCH_HAS_NO_LDSO
+config UCLIBC_FORMAT_SHARED_FLAT
+	bool "SHARED FLAT"
+	depends on !ARCH_USE_MMU
+	select ARCH_HAS_NO_LDSO
+	help
+	  Pick this one if you are using uClinux and wish to build
+	  uClibc as a flat-format shared library.
+endchoice
+endif
+if ARCH_USE_MMU
+comment "Using ELF file format"
+endif
+
+config UCLIBC_SHARED_FLAT_ID
+	int "Shared library ID"
+	default 1
+	depends on UCLIBC_FORMAT_SHARED_FLAT
+	help
+	  When using flat shared libraries, every library has a unique
+	  system-wide identifier.  Identifier 0 is reserved for
+	  executables and true shared libraries have identifiers
+	  starting at 1.  The maximum shared library identifier is
+	  determined by the kernel and is usually 3.  Shared library
+	  N must be available on the target system as "/lib/libN.so".
+
+	  When a shared C library is used, it usually has identifier 1,
+	  but you can use this option to select a different identifier
+	  if you need to.
+
+
+
+#
+# Endian Format
+#
 config ARCH_ANY_ENDIAN
 	bool
 config ARCH_BIG_ENDIAN
@@ -68,8 +123,8 @@ config UCLIBC_HAS_FLOATS
 	  such as printf() and scanf() will still be included in the library, 
 	  but will not contain support for floating point numbers.
 
-	  Answering N to this option can reduce the size of uClibc.  Most people
-	  will answer Y.
+	  Answering N to this option can reduce the size of uClibc.
+	  Most people will answer Y.
 
 config UCLIBC_HAS_FPU
 	bool "Target CPU has a floating point unit (FPU)"
@@ -104,17 +159,27 @@ config DO_C99_MATH
 	  If your applications require the newer C99 math library functions, 
 	  then answer Y.
 
-config KERNEL_SOURCE
-	string "Linux kernel header location"
-	default "/usr/src/linux"
+config UCLIBC_HAS_FENV
+	bool "Enable C99 Floating-point environment"
+	depends on UCLIBC_HAS_FLOATS
+	default n
 	help
-	  The kernel source you use to compile with should be the same as the
-	  Linux kernel you run your apps on.  uClibc doesn't even try to achieve binary
-	  compatibility across kernel versions.  So don't expect, for example, uClibc
-	  compiled with Linux kernel 2.0.x to implement lchown properly, since 2.0.x
-	  can't do that. Similarly, if you compile uClibc vs Linux 2.4.x kernel headers,
-	  but then run on Linux 2.0.x, lchown will be compiled into uClibc, but won't
-	  work at all.  You have been warned.
+	  If you want the uClibc math library to contain the C99 floating
+	  point environment, rounding and exception handling functions then
+	  say Y here.
+
+config KERNEL_HEADERS
+	string "Linux kernel header location"
+	default "/usr/include"
+	help
+	  The kernel source you use to compile with should be the same
+	  as the Linux kernel you run your apps on.  uClibc doesn't even
+	  try to achieve binary compatibility across kernel versions.
+	  So don't expect, for example, uClibc compiled with Linux kernel
+	  2.0.x to implement lchown properly, since 2.0.x can't do that.
+	  Similarly, if you compile uClibc vs Linux 2.4.x kernel headers,
+	  but then run on Linux 2.0.x, lchown will be compiled into uClibc,
+	  but won't work at all.  You have been warned.
 
 config UCLIBC_UCLINUX_BROKEN_MUNMAP
 	bool

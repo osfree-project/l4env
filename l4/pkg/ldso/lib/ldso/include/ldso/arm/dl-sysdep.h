@@ -10,10 +10,10 @@
 #include <elf.h>
 /* Initialization sequence for the GOT.  */
 #define INIT_GOT(GOT_BASE,MODULE) \
-do {				\
+{				\
   GOT_BASE[2] = (unsigned long) _dl_linux_resolve; \
   GOT_BASE[1] = (unsigned long) MODULE; \
-} while (0)
+}
 
 static inline unsigned long arm_modulus(unsigned long m, unsigned long p)
 {
@@ -43,6 +43,7 @@ static inline unsigned long arm_modulus(unsigned long m, unsigned long p)
 	return m;
 }
 #define do_rem(result, n, base) ((result) = arm_modulus(n, base))
+#define do_div_10(result, remain) ((result) = (((result) - (remain)) / 2) * -(-1ul / 5ul))
 
 /* Here we define the magic numbers that this dynamic loader should accept */
 #define MAGIC1 EM_ARM

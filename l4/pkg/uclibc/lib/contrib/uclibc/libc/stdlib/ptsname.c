@@ -17,7 +17,6 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-#define _ISOC99_SOURCE
 #include <stdio.h>
 #include <errno.h>
 #include <paths.h>
@@ -130,7 +129,7 @@ int ptsname_r (int fd, char *buf, size_t buflen)
       return ENOTTY;
     }
 #else
-# if !defined TIOCGPTN
+# if defined TIOCGPTN
   else if (errno == EINVAL)
 # endif
     {

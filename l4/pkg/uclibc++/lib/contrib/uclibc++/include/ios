@@ -25,6 +25,8 @@
 #ifndef __HEADER_STD_IOS
 #define __HEADER_STD_IOS 1
 
+#pragma GCC visibility push(default)
+
 namespace std{
 	typedef signed long int streamoff;
 
@@ -33,6 +35,16 @@ namespace std{
 	class _UCXXEXPORT ios_base {
 	public:
 		class failure;
+#ifdef __UCLIBCXX_EXCEPTION_SUPPORT__
+		class failure : public exception {
+		public:
+			explicit failure(const std::string& msg) { }
+			explicit failure() { }
+			virtual const char* what() const throw() {
+				return "std::ios_base failure exception";
+			}
+		};
+#endif
 #ifdef __UCLIBCXX_SUPPORT_CDIR__
 		class _UCXXLOCAL Init{
 		public:
@@ -138,7 +150,7 @@ namespace std{
 		inline static bool sync_with_stdio(bool = true) { return true; }
 
 	protected:
-		_UCXXEXPORT ios_base() : mLocale(), mformat(dec | unitbuf ), mstate(goodbit), 
+		_UCXXEXPORT ios_base() : mLocale(), mformat(dec | skipws ), mstate(goodbit), 
 			mmode(), mdir(), mprecision(6), mwidth(0)
 #ifdef __UCLIBCXX_SUPPORT_CDIR__
 			,mInit()
@@ -291,6 +303,13 @@ namespace std{
 		}
 		_UCXXEXPORT void setstate(iostate state) {
 			clear(rdstate()  | state);
+#ifdef __L4__NOT_FOR_L4__
+#ifdef __UCLIBCXX_EXCEPTION_SUPPORT__
+			if(rdstate() & throw_mask){
+				throw failure();
+			}
+#endif
+#endif
 		}
 
 		_UCXXEXPORT bool good() const{
@@ -316,8 +335,12 @@ namespace std{
 			return false;
 		}
 
-		_UCXXEXPORT iostate exceptions() const;
-		_UCXXEXPORT void exceptions(iostate except);
+		_UCXXEXPORT iostate exceptions() const{
+			return throw_mask;
+		}
+		_UCXXEXPORT void exceptions(iostate except){
+			throw_mask = except;
+		}
 
 		explicit _UCXXEXPORT basic_ios(basic_streambuf<charT,traits>* sb) : fill_char(' '), mtied(0), mstreambuf(0){
 			init(sb);
@@ -364,11 +387,14 @@ namespace std{
 		char_type fill_char;
 		basic_ostream<charT,traits>* mtied;
 		basic_streambuf<charT,traits>* mstreambuf;
+		iostate throw_mask;
 		_UCXXEXPORT basic_ios(const basic_ios<charT,traits> &){ }
 		_UCXXEXPORT basic_ios<charT,traits> & operator=(const basic_ios<charT,traits> &){ return *this; }
 		_UCXXEXPORT void init(basic_streambuf<charT,traits>* sb){
+			ios_base::mformat = skipws|dec;
 			mstreambuf = sb;
 			mstate = goodbit;
+			throw_mask = goodbit;
 		}
 	};
 
@@ -376,6 +402,7 @@ namespace std{
 #ifndef __UCLIBCXX_COMPILE_IOS__
 	
 	template <> _UCXXEXPORT void basic_ios<char, char_traits<char> >::clear(iostate state);
+	template <> _UCXXEXPORT void basic_ios<char, char_traits<char> >::setstate(iostate state);
 
 #endif
 #endif
@@ -469,6 +496,8 @@ namespace std{
 
 
 }
+
+#pragma GCC visibility pop
 
 #endif
 

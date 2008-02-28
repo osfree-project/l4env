@@ -16,7 +16,7 @@ L4LIBS		= -Bstatic -luclibc_support -lgeneric_ts -ll4env -ll4rm \
 		  -ldm_mem -lthread -lslab -ll4sys -ll4util_root -ll4util \
 		  -lsigma0
 LIBCLIBS	= -nostdlib -luc_c $(GCCLIB) -lc_be_simple_mem \
-		  -lc_be_mmap -lc_be_mmap_util -ldm_mem \
+		  -lc_be_mmap -lc_be_mmap_util -lc_be_minimal_log_io -ldm_mem \
 		  -llogserver_capsule -ll4rm -luc_be_l4_start_stop
 
 SRC_C		= main.c

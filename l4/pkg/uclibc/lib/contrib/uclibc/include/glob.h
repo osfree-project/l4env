@@ -53,8 +53,9 @@ typedef __SIZE_TYPE__ size_t;
 #define	GLOB_NOESCAPE	(1 << 6)/* Backslashes don't quote metacharacters.  */
 #define	GLOB_PERIOD	(1 << 7)/* Leading `.' can be matched by metachars.  */
 
-#if !defined __USE_POSIX2 || defined __USE_BSD || defined __USE_GNU
+#if ( !defined __USE_POSIX2 || defined __USE_BSD || defined __USE_GNU ) && defined __UCLIBC_HAS_GNU_GLOB__
 # define GLOB_MAGCHAR	 (1 << 8)/* Set in gl_flags if any metachars seen.  */
+#if 1 /* uClibc gnu glob does not support these */
 # define GLOB_ALTDIRFUNC (1 << 9)/* Use gl_opendir et al functions.  */
 # define GLOB_BRACE	 (1 << 10)/* Expand "{a,b}" to "a" "b".  */
 # define GLOB_NOMAGIC	 (1 << 11)/* If no magic chars, return the pattern.  */
@@ -71,20 +72,25 @@ typedef __SIZE_TYPE__ size_t;
 			 GLOB_NOESCAPE|GLOB_NOCHECK|GLOB_APPEND|     \
 			 GLOB_PERIOD)
 #endif
+#else
+# define __GLOB_FLAGS	(GLOB_ERR|GLOB_MARK|GLOB_NOSORT|GLOB_DOOFFS| \
+			 GLOB_NOESCAPE|GLOB_NOCHECK|GLOB_APPEND|     \
+			 GLOB_PERIOD)
+#endif
 
 /* Error returns from `glob'.  */
 #define	GLOB_NOSPACE	1	/* Ran out of memory.  */
 #define	GLOB_ABORTED	2	/* Read error.  */
 #define	GLOB_NOMATCH	3	/* No matches found.  */
 #define GLOB_NOSYS	4	/* Not implemented.  */
-#ifdef __USE_GNU
+#if defined __USE_GNU && defined __UCLIBC_HAS_GNU_GLOB__
 /* Previous versions of this file defined GLOB_ABEND instead of
    GLOB_ABORTED.  Provide a compatibility definition here.  */
 # define GLOB_ABEND GLOB_ABORTED
 #endif
 
 /* Structure describing a globbing run.  */
-#ifdef __USE_GNU
+#if defined __USE_GNU && defined __UCLIBC_HAS_GNU_GLOB__
 struct stat;
 #endif
 typedef struct
@@ -92,8 +98,10 @@ typedef struct
     __size_t gl_pathc;		/* Count of paths matched by the pattern.  */
     char **gl_pathv;		/* List of matched pathnames.  */
     __size_t gl_offs;		/* Slots to reserve in `gl_pathv'.  */
+#ifdef __UCLIBC_HAS_GNU_GLOB__
     int gl_flags;		/* Set to FLAGS, maybe | GLOB_MAGCHAR.  */
 
+#if 1 /* uClibc gnu glob does not support these */
     /* If the GLOB_ALTDIRFUNC flag is set, the following functions
        are used instead of the normal file access functions.  */
     void (*gl_closedir) (void *);
@@ -110,10 +118,12 @@ typedef struct
     int (*gl_lstat) (__const char *__restrict, void *__restrict);
     int (*gl_stat) (__const char *__restrict, void *__restrict);
 #endif
+#endif
+#endif /* __UCLIBC_HAS_GNU_GLOB__ */
   } glob_t;
 
 #ifdef __USE_LARGEFILE64
-# ifdef __USE_GNU
+# if defined __USE_GNU && defined __UCLIBC_HAS_GNU_GLOB__
 struct stat64;
 # endif
 typedef struct
@@ -121,8 +131,10 @@ typedef struct
     __size_t gl_pathc;
     char **gl_pathv;
     __size_t gl_offs;
+#ifdef __UCLIBC_HAS_GNU_GLOB__
     int gl_flags;
 
+#if 1 /* uClibc gnu glob does not support these */
     /* If the GLOB_ALTDIRFUNC flag is set, the following functions
        are used instead of the normal file access functions.  */
     void (*gl_closedir) (void *);
@@ -139,10 +151,12 @@ typedef struct
     int (*gl_lstat) (__const char *__restrict, void *__restrict);
     int (*gl_stat) (__const char *__restrict, void *__restrict);
 # endif
+#endif
+#endif /* __UCLIBC_HAS_GNU_GLOB__ */
   } glob64_t;
 #endif
 
-#if __USE_FILE_OFFSET64 && __GNUC__ < 2
+#if defined(__USE_FILE_OFFSET64) && __GNUC__ < 2
 # define glob glob64
 # define globfree globfree64
 #endif
@@ -180,7 +194,7 @@ extern void globfree64 (glob64_t *__pglob) __THROW;
 #endif
 
 
-#ifdef __USE_GNU
+#if defined __USE_GNU && defined __UCLIBC_HAS_GNU_GLOB__
 /* Return nonzero if PATTERN contains any metacharacters.
    Metacharacters can be quoted with backslashes if QUOTE is nonzero.
 

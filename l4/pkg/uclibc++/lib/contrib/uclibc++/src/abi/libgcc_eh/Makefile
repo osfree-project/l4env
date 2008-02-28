@@ -1,5 +1,5 @@
-TOPDIR=../../../
-include $(TOPDIR)Rules.mak
+TOPDIR=../../..
+include $(TOPDIR)/Rules.mak
 
 all:	libgcc_eh
 
@@ -16,7 +16,7 @@ unwind-c.o:
 #
 #else
 #	echo Binary
-	$(AR) x $(shell $(CC) -print-file-name=libgcc_eh.a)
+	$(AR) x $(shell CC=$(CC) $(TOPDIR)/scripts/find_libgcc_eh.sh)
 #endif
 #endif
 

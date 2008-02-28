@@ -32,10 +32,17 @@ W:	http://www.arm.linux.org.uk/
 S:	Maintained
 
 
+AVR32
+N:	Hans-Christian Egtvedt
+E:	hcegtvedt@atmel.com
+W:	http://avr32linux.org/
+S:	Maintained
+
+
 BFIN
-N:	Erik Andersen
-E:	andersen@codepoet.org
-W:	http://blackfin.uclinux.org
+N:	Mike Frysinger
+E:	vapier.adi@gmail.com
+W:	http://blackfin.uclinux.org/
 S:	Maintained
 
 

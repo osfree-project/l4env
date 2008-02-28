@@ -26,6 +26,8 @@
 #ifndef __STD_HEADER_ISTREAM
 #define __STD_HEADER_ISTREAM 1
 
+#pragma GCC visibility push(default)
+
 namespace std{
 
 	typedef basic_istream<char> istream;
@@ -91,7 +93,7 @@ namespace std{
 			sentry(*this, true);
 			streamsize i = 0;
 			int_type c;
-			for(i=0;i<n;++i){
+			for(i=0;i<n-1;++i){
 				c = basic_ios<charT, traits>::mstreambuf->sgetc();
 				basic_ios<charT, traits>::mstreambuf->sbumpc();
 				if(c == traits::eof() ){
@@ -100,19 +102,19 @@ namespace std{
 					}else{
 						basic_ios<charT,traits>::setstate(ios_base::eofbit);
 					}
-					count_last_ufmt_input = i;
-					return *this;
+					break;
 				}
 				if(c == delim){
 					if(i==0){
 						basic_ios<charT,traits>::setstate(ios_base::failbit);
 					}
 					basic_ios<charT, traits>::mstreambuf->sputbackc(c);
-					count_last_ufmt_input = i;
-					return *this;
+					break;
 				}
 				s[i] = c;
 			}
+			s[i] = traits::eos();
+			count_last_ufmt_input = i;
 			return *this;
 		}
 		
@@ -181,7 +183,7 @@ namespace std{
 				}
 				s[i] = c;
 			}
-			s[n] = traits::eos();
+			s[n-1] = traits::eos();
 			return *this;
 		}
 		
@@ -349,7 +351,6 @@ namespace std{
 			if(os.tie() != 0){
 				os.tie()->flush();
 			}
-			// int_type c;
 			if(!noskipws){
 				__skipws(os);
 			}
@@ -585,16 +586,16 @@ namespace std{
 
 	template <> _UCXXEXPORT istream & operator>>(istream & is, char & c);
 
-
+	template <> _UCXXEXPORT void __skipws(basic_istream<char,char_traits<char> >& is);
 
 #endif
 #endif
 	
 
 
-
-
 }
+
+#pragma GCC visibility pop
 
 #endif
 

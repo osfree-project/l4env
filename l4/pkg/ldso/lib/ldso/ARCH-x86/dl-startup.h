@@ -3,17 +3,13 @@
  * Architecture specific code used by dl-startup.c
  * Copyright (C) 2000-2004 by Erik Andersen <andersen@codepoet.org>
  */
-asm(
+__asm__ (
     "	.text\n"
-    "	.align 16\n"
     "	.globl	_start\n"
     "	.type	_start,@function\n"
     "_start:\n"
 	"   push  %esi\n"	// fm3
     "	call _dl_start\n"
-
-	"   # This code is not called -- START jumps directly to the binary.\n"
-	"\n"
     "	# Save the user entry point address in %edi.\n"
     "	movl %eax, %edi\n"
     "	# Point %ebx at the GOT.\n"
@@ -45,9 +41,9 @@ asm(
 #define GET_ARGV(ARGVP, ARGS) ARGVP = (((unsigned long*) & ARGS)+1)
 
 /* Handle relocation of the symbols in the dynamic loader. */
-static inline
+static __always_inline
 void PERFORM_BOOTSTRAP_RELOC(ELF_RELOC *rpnt, unsigned long *reloc_addr,
-	unsigned long symbol_addr, unsigned long load_addr, Elf32_Sym *symtab)
+	unsigned long symbol_addr, unsigned long load_addr, attribute_unused Elf32_Sym *symtab)
 {
 	switch (ELF32_R_TYPE(rpnt->r_info))
 	{

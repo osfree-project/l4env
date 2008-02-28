@@ -8,7 +8,7 @@
 #--------------------------------------------------------------
 # You shouldn't need to mess with anything beyond this point...
 #--------------------------------------------------------------
-noconfig_targets := menuconfig config oldconfig randconfig \
+noconfig_targets := menuconfig config oldconfig silentoldconfig randconfig \
 	defconfig allyesconfig allnoconfig clean distclean \
 	release dist tags
 
@@ -37,31 +37,30 @@ include $(top_srcdir)extra/locale/Makefile.in
 include $(top_srcdir)libc/Makefile.in
 
 include/bits/uClibc_config.h: extra/config/conf .config
-	$(INSTALL) -d $(dir $@)
-	@$< -o $(top_srcdir)extra/Configs/Config.in
+	$(Q)$(INSTALL) -d $(dir $@)
+	$(Q)@$< -o $(top_srcdir)extra/Configs/Config.in
+	$(top_srcdir)extra/scripts/conf-header.sh .config > include/bits/uClibc_config.h
 
-# For the moment, we have to keep re-running this target 
-# because the fix includes scripts rely on pre-processers 
-# in order to generate the headers correctly :(.  That 
-# means we can't use the $(HOSTCC) in order to get the 
+
+# For the moment, we have to keep re-running this target
+# because the fix includes scripts rely on pre-processers
+# in order to generate the headers correctly :(.  That
+# means we can't use the $(HOSTCC) in order to get the
 # correct output.
 ifeq ($(ARCH_USE_MMU),y)
-export header_extra_args = 
+export header_extra_args =
 else
 export header_extra_args = -n
 endif
 HEADERS_BITS_COMMON := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/common/bits/*.h))
 HEADERS_BITS_ARCH   := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/bits/*.h))
-HEADERS_BITS_COMMON := $(filter-out $(HEADERS_BITS_ARCH),$(HEADERS_BITS_COMMON))
+HEADERS_BITS_SUBARCH   := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/bits/$(TARGET_SUBARCH)/*.h))
+HEADERS_BITS_COMMON := $(filter-out $(HEADERS_BITS_ARCH) $(HEADERS_BITS_SUBARCH),$(HEADERS_BITS_COMMON))
 headers: include/bits/uClibc_config.h
 	$(Q)$(MAKE) headers-y
 	$(Q)\
-	$(SHELL) $(top_srcdir)extra/scripts/fix_includes.sh \
-		-k $(KERNEL_SOURCE) -t $(TARGET_ARCH) \
-		$(header_extra_args)
-	$(Q)\
 	set -e; \
-	if [ -f libc/sysdeps/linux/$(TARGET_ARCH)/fpu_control.h ] ; then \
+	if [ -e libc/sysdeps/linux/$(TARGET_ARCH)/fpu_control.h ] ; then \
 		$(LN) -fs ../libc/sysdeps/linux/$(TARGET_ARCH)/fpu_control.h include/ ; \
 	else \
 		$(LN) -fs ../libc/sysdeps/linux/common/fpu_control.h include/ ; \
@@ -77,6 +76,9 @@ headers: include/bits/uClibc_config.h
 	done; \
 	for i in $(HEADERS_BITS_ARCH) ; do \
 		$(LN) -fs ../../libc/sysdeps/linux/$(TARGET_ARCH)/bits/$$i .; \
+	done; \
+	for i in $(HEADERS_BITS_SUBARCH) ; do \
+		$(LN) -fs ../../libc/sysdeps/linux/$(TARGET_ARCH)/bits/$(TARGET_SUBARCH)/$$i .; \
 	done
 	$(Q)\
 	cd include/sys; \
@@ -89,22 +91,24 @@ headers: include/bits/uClibc_config.h
 			$(LN) -fs $$i .; \
 		done; \
 	fi
+ifeq ($(UCLIBC_HAS_LOCALE),y)
+	$(MAKE) -C extra/locale locale_headers
+endif
+
+
+pregen: headers
 	$(Q)\
 	set -e; \
 	cd $(top_builddir); \
 	tmp=`mktemp include/bits/sysnum.h.XXXXXX 2>/dev/null`; \
 	[ -z "$$tmp" ] && tmp='include/bits/sysnum.h.new'; \
-	top_builddir=. CC="$(CC)" $(SHELL) extra/scripts/gen_bits_syscall_h.sh > $$tmp; \
+	KERNEL_HEADERS="${KERNEL_HEADERS}" top_builddir=. CC="$(CC) $(CPU_CFLAGS)" $(SHELL) extra/scripts/gen_bits_syscall_h.sh > $$tmp; \
 	if cmp include/bits/sysnum.h $$tmp >/dev/null 2>&1; then \
 		$(RM) $$tmp; \
 	else \
 		mv -f $$tmp include/bits/sysnum.h; \
 	fi
-ifeq ($(UCLIBC_HAS_LOCALE),y)
-	$(MAKE) locale_headers
-endif
 
-pregen: headers
 
 install: install_runtime install_dev
 
@@ -112,19 +116,21 @@ install: install_runtime install_dev
 RUNTIME_PREFIX_LIB_FROM_DEVEL_PREFIX_LIB=$(shell $(top_srcdir)extra/scripts/relative_path.sh $(DEVEL_PREFIX)lib $(RUNTIME_PREFIX)lib)
 
 # Installs header files.
-install_headers:
+install_headers: headers
 	$(INSTALL) -d $(PREFIX)$(DEVEL_PREFIX)include
 	printf ".svn\n.cvsignore\nCVS\n" > tar_exclude ; \
-	if [ "$(KERNEL_SOURCE)" = "$(PREFIX)$(DEVEL_PREFIX)" ] ; then \
-		ls -1d include/linux include/asm* >> tar_exclude ; \
-	fi ; \
 	$(TAR) -chf - -X tar_exclude include \
 		| $(TAR) -xf - -C $(PREFIX)$(DEVEL_PREFIX)
 	rm -f tar_exclude
 	printf '#ifndef _LIBC_INTERNAL_H\n#define _LIBC_INTERNAL_H 1\n#endif\n' > \
 		$(PREFIX)$(DEVEL_PREFIX)include/libc-internal.h
+	echo '/* Dont use _syscall#() macros; use the syscall() function */' > \
+		$(PREFIX)$(DEVEL_PREFIX)include/bits/syscalls.h
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/dl-osinfo.h
+	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/_lfs_64.h
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/bits/uClibc_uintmaxtostr.h
+	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/bits/kernel_sigaction.h
+	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/bits/kernel_stat.h
 ifneq ($(UCLIBC_HAS_FLOATS),y)
 	# Remove floating point related headers since float support is disabled.
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/complex.h
@@ -133,6 +139,11 @@ ifneq ($(UCLIBC_HAS_FLOATS),y)
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/math.h
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/tgmath.h
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/bits/uClibc_fpmax.h
+endif
+ifneq ($(UCLIBC_HAS_FENV),y)
+	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/fenv.h \
+		$(PREFIX)$(DEVEL_PREFIX)include/bits/fenv.h \
+		$(PREFIX)$(DEVEL_PREFIX)include/bits/fenvinline.h
 endif
 ifneq ($(UCLIBC_HAS_WCHAR),y)
 	# Remove wide char headers since wide char support is disabled.
@@ -173,10 +184,12 @@ ifneq ($(UCLIBC_HAS_GLOB),y)
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/glob.h
 endif
 ifneq ($(UCLIBC_HAS_GNU_GETOPT),y)
+ifneq ($(UCLIBC_HAS_GETOPT_LONG),y)
 	# Remove getopt header since gnu getopt support is disabled.
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/getopt.h
 endif
-ifneq ($(HAS_SHADOW),y)
+endif
+ifneq ($(UCLIBC_HAS_SHADOW),y)
 	# Remove shadow header since shadow password support is disabled.
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/shadow.h
 endif
@@ -189,6 +202,11 @@ ifneq ($(UCLIBC_HAS_THREADS),y)
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/*thread*.h
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/semaphore.h
 	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/bits/*thread*.h
+endif
+ifneq ($(HAVE_SHARED),y)
+	# Remove dlfcn header if we don't have shared libraries.
+	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/dlfcn.h
+	$(RM) $(PREFIX)$(DEVEL_PREFIX)include/bits/dlfcn.h
 endif
 ifeq ($(UCLIBC_HAS_THREADS_NATIVE),y)
 	# Remove this as it is only used internally.
@@ -211,11 +229,21 @@ ifeq ($(HAVE_SHARED),y)
 	done
 	if [ -f $(top_builddir)lib/libc.so -a -f $(PREFIX)$(RUNTIME_PREFIX)lib/$(SHARED_MAJORNAME) ] ; then \
 		$(RM) $(PREFIX)$(DEVEL_PREFIX)lib/libc.so; \
-		sed 	-e 's:$(NONSHARED_LIBNAME):$(DEVEL_PREFIX)lib/$(NONSHARED_LIBNAME):' \
-			-e 's:$(SHARED_MAJORNAME):$(RUNTIME_PREFIX)lib/$(SHARED_MAJORNAME):' \
-			-e 's:$(UCLIBC_LDSO):$(RUNTIME_PREFIX)lib/$(UCLIBC_LDSO):' \
-			$(top_builddir)lib/libc.so > $(PREFIX)$(DEVEL_PREFIX)lib/libc.so; \
+		sed -e 's:$(NONSHARED_LIBNAME):$(DEVEL_PREFIX)lib/$(NONSHARED_LIBNAME):' \
+		    -e 's:$(SHARED_MAJORNAME):$(RUNTIME_PREFIX)lib/$(SHARED_MAJORNAME):' \
+		    -e 's:$(UCLIBC_LDSO):$(RUNTIME_PREFIX)lib/$(UCLIBC_LDSO):' \
+		    $(top_builddir)lib/libc.so > $(PREFIX)$(DEVEL_PREFIX)lib/libc.so; \
 	fi
+ifeq ($(UCLIBC_HAS_THREADS),y)
+ifneq ($(LINUXTHREADS_OLD),y)
+	if [ -f $(top_builddir)lib/libpthread.so -a -f $(PREFIX)$(RUNTIME_PREFIX)lib/libpthread.so.$(MAJOR_VERSION) ] ; then \
+		$(RM) $(PREFIX)$(DEVEL_PREFIX)lib/libpthread.so; \
+		cp $(top_srcdir)extra/scripts/format.lds $(PREFIX)$(DEVEL_PREFIX)lib/libpthread.so; \
+		echo "GROUP ( $(RUNTIME_PREFIX)lib/libpthread.so.$(MAJOR_VERSION) $(DEVEL_PREFIX)lib/libpthread_nonshared.a )" \
+			>> $(PREFIX)$(DEVEL_PREFIX)lib/libpthread.so; \
+	fi
+endif
+endif
 ifeq ($(PTHREADS_DEBUG_SUPPORT),y)
 	$(LN) -sf $(RUNTIME_PREFIX_LIB_FROM_DEVEL_PREFIX_LIB)libthread_db.so.1 \
 		$(PREFIX)$(DEVEL_PREFIX)lib/libthread_db.so
@@ -231,19 +259,28 @@ ifeq ($(DOPIC),y)
 	fi
 endif
 endif
+ifeq ($(UCLIBC_FORMAT_SHARED_FLAT),y)
+	for file in lib/lib*.gdb; do \
+		if test -f $$file; then \
+			$(INSTALL) -m 755 $$file $(PREFIX)$(DEVEL_PREFIX)lib; \
+			$(INSTALL) -m 755 `echo $$file | sed 's/\.gdb$$//'` \
+			  $(PREFIX)$(DEVEL_PREFIX)lib; \
+		fi; \
+	done
+endif
 
 # Installs run-time libraries
 install_runtime:
 ifeq ($(HAVE_SHARED),y)
 	$(INSTALL) -d $(PREFIX)$(RUNTIME_PREFIX)lib
-	$(INSTALL) -m 644 lib/lib*-$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBLEVEL).so \
+	$(INSTALL) -m 644 lib/lib*-$(VERSION).so \
 		$(PREFIX)$(RUNTIME_PREFIX)lib
-	cp -dRf lib/*.so.* $(PREFIX)$(RUNTIME_PREFIX)lib
-	@if [ -x lib/$(UCLIBC_LDSO_NAME)-$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBLEVEL).so ] ; then \
-	    set -e; \
+	cd lib && $(TAR) -cf - *.so.* | $(TAR) -xf - -C $(PREFIX)$(RUNTIME_PREFIX)lib
+	@if [ -x lib/$(UCLIBC_LDSO_NAME)-$(VERSION).so ] ; then \
+		set -e; \
 		$(SHELL_SET_X); \
-	    $(INSTALL) -m 755 lib/$(UCLIBC_LDSO_NAME)-$(MAJOR_VERSION).$(MINOR_VERSION).$(SUBLEVEL).so \
-	    		$(PREFIX)$(RUNTIME_PREFIX)lib; \
+		$(INSTALL) -m 755 lib/$(UCLIBC_LDSO_NAME)-$(VERSION).so \
+			$(PREFIX)$(RUNTIME_PREFIX)lib; \
 	fi
 endif
 
@@ -264,24 +301,30 @@ headers:
 
 endif # ifeq ($(HAVE_DOT_CONFIG),y)
 
+include/bits:
+	$(INSTALL) -d include/bits
+
 # configuration
 # ---------------------------------------------------------------------------
-extra/config/conf extra/config/mconf:
-	$(MAKE) -C extra/config $(notdir $@)
+extra/config/conf extra/config/mconf: include/bits
+	$(Q)$(MAKE) -C extra/config $(notdir $@)
 
-menuconfig: extra/config/mconf
+menuconfig: extra/config/mconf include/bits
 	$(Q)./extra/config/mconf extra/Configs/Config.in
 
-config: extra/config/conf
+config: extra/config/conf include/bits
 	$(Q)./extra/config/conf extra/Configs/Config.in
 
-oldconfig: extra/config/conf
+oldconfig: extra/config/conf include/bits
 	$(Q)./extra/config/conf -o extra/Configs/Config.in
 
-randconfig: extra/config/conf
+silentoldconfig: extra/config/conf include/bits
+	$(Q)./extra/config/conf -s extra/Configs/Config.in
+
+randconfig: extra/config/conf include/bits
 	$(Q)./extra/config/conf -r extra/Configs/Config.in
 
-allyesconfig: extra/config/conf
+allyesconfig: extra/config/conf include/bits
 	$(Q)./extra/config/conf -y extra/Configs/Config.in
 	sed -i -e "s/^DODEBUG=.*/# DODEBUG is not set/" .config
 	sed -i -e "s/^DOASSERTS=.*/# DOASSERTS is not set/" .config
@@ -290,10 +333,10 @@ allyesconfig: extra/config/conf
 	sed -i -e "s/^UCLIBC_MJN3_ONLY=.*/# UCLIBC_MJN3_ONLY is not set/" .config
 	$(Q)./extra/config/conf -o extra/Configs/Config.in
 
-allnoconfig: extra/config/conf
+allnoconfig: extra/config/conf include/bits
 	$(Q)./extra/config/conf -n extra/Configs/Config.in
 
-defconfig: extra/config/conf
+defconfig: extra/config/conf include/bits
 	$(Q)./extra/config/conf -d extra/Configs/Config.in
 
 clean:
@@ -320,14 +363,13 @@ distclean: clean
 	-find . \( -name core -o -name \*.orig -o -name \*~ \) -exec $(RM) {} \;
 	$(RM) .config .config.old .config.cmd
 	$(RM) extra/locale/*.tgz
-	$(MAKE) -C extra/config config_clean
+	$(MAKE) -C extra/config distclean
 
 dist release:
-	$(MAKE) -s distclean
-	$(RM) -r ../uClibc-$(VERSION) ../uClibc-$(VERSION).tar.gz
+	$(RM) -r ../uClibc-$(VERSION) ../uClibc-$(VERSION).tar.bz2
 	svn -q export . ../uClibc-$(VERSION)
-	$(TAR) czf ../uClibc-$(VERSION).tar.gz -C .. uClibc-$(VERSION)
-	du -b ../uClibc-$(VERSION).tar.gz
+	$(TAR) cjf ../uClibc-$(VERSION).tar.bz2 -C .. uClibc-$(VERSION)
+	du -b ../uClibc-$(VERSION).tar.bz2
 
 test check:
 	$(Q)$(MAKE) -C test

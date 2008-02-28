@@ -13,7 +13,7 @@
  *    lenient.  See the various glibc difference comments below.
  *
  *  TODO:
- *    Move to dynamic allocation of (currently staticly allocated)
+ *    Move to dynamic allocation of (currently statically allocated)
  *      buffers; especially for the group-related functions since
  *      large group member lists will cause error returns.
  *
@@ -31,7 +31,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <paths.h>
-#ifdef __HAS_SHADOW__
+#ifdef __UCLIBC_HAS_SHADOW__
 #include <shadow.h>
 #endif
 #ifdef __UCLIBC_HAS_THREADS__
@@ -39,7 +39,7 @@
 #endif
 
 /**********************************************************************/
-/* Sizes for staticly allocated buffers. */
+/* Sizes for statically allocated buffers. */
 
 /* If you change these values, also change _SC_GETPW_R_SIZE_MAX and
  * _SC_GETGR_R_SIZE_MAX in libc/unistd/sysconf.c to match */

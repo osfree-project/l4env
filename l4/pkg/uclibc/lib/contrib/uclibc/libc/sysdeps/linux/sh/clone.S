@@ -20,13 +20,14 @@
    and invokes a function in the right context after its all over.  */
 
 #include <features.h>
-#include <asm/unistd.h>
-#define _ERRNO_H	1
+#include <sys/syscall.h>
+#define _ERRNO_H
 #include <bits/errno.h>
+#include <bits/sysnum.h>
 
 
 #ifdef __HAVE_SHARED__ 
-#define PLTJMP(_x)	_x##@PLT
+#define PLTJMP(_x)	_x@PLT
 #else
 #define PLTJMP(_x)	_x
 #endif
@@ -59,9 +60,9 @@ clone:
 	
 	/* do the system call */
 	mov	r6, r4
-	trapa	#0x12
+	trapa	#(__SH_SYSCALL_TRAP_BASE + 2)
 	mov     r0, r1
-#ifdef __sh2__
+#ifdef __CONFIG_SH2__
 // 12 arithmetic shifts for the crappy sh2, because shad doesn't exist!	
 	shar	r1
 	shar	r1

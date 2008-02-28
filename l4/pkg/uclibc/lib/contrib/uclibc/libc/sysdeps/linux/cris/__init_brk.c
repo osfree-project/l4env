@@ -5,13 +5,9 @@
 #include <errno.h>
 #include "sysdep.h"
 
-extern void *__curbrk;
-libc_hidden_proto(__curbrk)
-void * __curbrk = 0;
-libc_hidden_data_def(__curbrk)
+void * __curbrk attribute_hidden = 0;
 
-extern int __init_brk (void);
-libc_hidden_proto(__init_brk)
+extern int __init_brk (void) attribute_hidden;
 int
 __init_brk (void)
 {
@@ -34,4 +30,3 @@ __init_brk (void)
     }
     return 0;
 }
-libc_hidden_def(__init_brk)

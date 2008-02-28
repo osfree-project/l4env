@@ -7,9 +7,11 @@
  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
 
-#include "syscalls.h"
+#include <sys/syscall.h>
 #include <time.h>
 #include <sys/time.h>
+
+#ifdef __USE_SVID
 #ifdef __NR_stime
 _syscall1(int, stime, const time_t *, t);
 #else
@@ -27,4 +29,5 @@ int stime(const time_t * when)
 	tv.tv_usec = 0;
 	return settimeofday(&tv, (struct timezone *) 0);
 }
+#endif
 #endif

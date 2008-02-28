@@ -15,6 +15,7 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <bits/kernel_types.h>
 
 /* With newer versions of linux, the getdents syscall returns d_type
  * information after the name field.  Someday, we should add support for
@@ -100,6 +101,10 @@ ssize_t __getdents (int fd, char *buf, size_t nbytes)
     }
     return (char *) dp - buf;
 }
+
+#if defined __UCLIBC_HAS_LFS__ && ! defined __NR_getdents64
+attribute_hidden strong_alias(__getdents,__getdents64)
+#endif
 
 #elif __WORDSIZE == 32
 

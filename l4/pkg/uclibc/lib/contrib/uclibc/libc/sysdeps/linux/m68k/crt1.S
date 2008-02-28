@@ -34,6 +34,10 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
+#include <features.h>
+#include "m68k_pic.S"
+
+#ifndef L_Scrt1
 /* This is the canonical entry point, usually the first thing in the text
    segment.  The SVR4/m68k ABI says that when the entry point runs,
    most registers' values are unspecified, except for:
@@ -51,9 +55,14 @@
 		(4*(argc+1))(%sp)	envp[0]
 		...
 					NULL
-*/
 
-#include <features.h>
+   The uclinux conventions are different.  %a1 is not defined on entry
+   and the stack is laid out as follows:
+
+		0(%sp)			argc
+		4(%sp)			argv
+		8(%sp)			envp
+*/
 
 	.text
 	.type	_init,%function
@@ -69,35 +78,70 @@ _start:
 	   the outermost frame obviously.  */
 	sub.l %fp, %fp
 
+#if !defined __ARCH_USE_MMU__ && defined __PIC__
+	/* Set up the global pointer.  The GOT is at the beginning of the
+	   data segment, whose address is in %d5.  */
+	move.l %d5,%a5
+	.equ have_current_got, 1
+#endif
+	
+#ifdef __UCLIBC_FORMAT_SHARED_FLAT__
+	CALL __shared_flat_add_library,%a1
+#endif
+
 	/* Extract the arguments as encoded on the stack and set up the
 	   arguments for `main': argc, argv.  envp will be determined
 	   later in __libc_start_main.  */
 	move.l (%sp)+, %d0	/* Pop the argument count.  */
+#ifndef __ARCH_USE_MMU__
+	move.l (%sp)+, %a0
+#else
 	move.l %sp, %a0		/* The argument vector starts just at the
 				   current stack top.  */
+#endif
 
 	/* Provide the highest stack address to the user code (for stacks
 	   which grow downward).  */
 	pea (%sp)
 
+#ifndef __ARCH_USE_MMU__
+	clr.l -(%sp)
+#else
 	pea (%a1)		/* Push address of the shared library
 				   termination function.  */
+#endif
 
 	/* Push the address of our own entry points to `.fini' and
 	   `.init'.  */
-	pea _fini
-	pea _init
+#if defined __UCLIBC_FORMAT_SHARED_FLAT__
+	PEA_TEXT __shared_flat_fini,%a1
+	PEA_TEXT __shared_flat_init,%a1
+#else
+	PEA_TEXT _fini,%a1
+	PEA_TEXT _init,%a1
+#endif
 
 	pea (%a0)		/* Push second argument: argv.  */
 	move.l %d0, -(%sp)	/* Push first argument: argc.  */
 
-	pea main
+	PEA_TEXT main,%a1
 
 	/* Call the user's main function, and exit with its value.  But
 	   let the libc call main.  */
-	jbsr __uClibc_main
+	CALL __uClibc_main,%a1
 
 	illegal			/* Crash if somehow `exit' does return.  */
+#else
+	.text
+	.globl lib_main
+	.hidden lib_main
+	.type lib_main,@function
+lib_main:
+	move.l %d5,%a5
+	JUMP __shared_flat_add_library,%a0
+
+	.hidden _current_shared_library_a5_offset_
+#endif
 
 /* Define a symbol for the first piece of initialized data.  */
 	.data

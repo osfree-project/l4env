@@ -1,24 +1,30 @@
 # Rules.mak for uClibc test subdirs
 #
-# Copyright (C) 2001 by Lineo, inc.
-# Copyright (C) 2000-2005 Erik Andersen <andersen@uclibc.org>
+# Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
 #
 # Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
+#
+
 #
 # Note: This does not read the top level Rules.mak file
 #
 
-top_builddir = ../../
+top_builddir ?= ../
+
 TESTDIR=$(top_builddir)test/
 
--include $(top_builddir).config
-
-ifndef UCLIBC_LDSO
-UCLIBC_LDSO := ld-uClibc.so.0
+include $(top_builddir)/Rules.mak
+ifndef TEST_INSTALLED_UCLIBC
+ifdef UCLIBC_LDSO
+ifeq (,$(findstring /,$(UCLIBC_LDSO)))
+UCLIBC_LDSO := $(top_builddir)lib/$(UCLIBC_LDSO)
 endif
-
+else
+UCLIBC_LDSO := $(firstword $(wildcard $(top_builddir)lib/ld*))
+endif
+endif
 #--------------------------------------------------------
-# Ensure consistent sort order, 'gcc -print-search-dirs' behavior, etc. 
+# Ensure consistent sort order, 'gcc -print-search-dirs' behavior, etc.
 LC_ALL:= C
 export LC_ALL
 
@@ -31,9 +37,9 @@ TARGET_ARCH:=$(shell $(CC) -dumpmachine | sed -e s'/-.*//' \
 	-e 's/ppc/powerpc/g' \
 	-e 's/v850.*/v850/g' \
 	-e 's/sh[234]/sh/' \
-	-e 's/mips-.*/mips/' \
-	-e 's/mipsel-.*/mipsel/' \
+	-e 's/mips.*/mips/' \
 	-e 's/cris.*/cris/' \
+	-e 's/xtensa.*/xtensa/' \
 	)
 endif
 export TARGET_ARCH
@@ -55,13 +61,9 @@ RM         = rm -f
 
 # Select the compiler needed to build binaries for your development system
 HOSTCC     = gcc
-BUILD_CFLAGS = -O2 -Wall
 
 
 #--------------------------------------------------------
-# Check if 'ls -sh' works or not
-LSFLAGS = -l
-
 # A nifty macro to make testing gcc features easier
 check_gcc=$(shell if $(CC) $(1) -S -o /dev/null -xc /dev/null > /dev/null 2>&1; \
 	then echo "$(1)"; else echo "$(2)"; fi)
@@ -75,19 +77,20 @@ OPTIMIZATION   += $(call check_gcc,-Os,-O2)
 endif
 
 XWARNINGS      := $(subst ",, $(strip $(WARNINGS))) -Wstrict-prototypes
-XARCH_CFLAGS   := $(subst ",, $(strip $(ARCH_CFLAGS)))
+XARCH_CFLAGS   := $(subst ",, $(strip $(ARCH_CFLAGS))) $(CPU_CFLAGS)
 XCOMMON_CFLAGS := -D_GNU_SOURCE -I$(top_builddir)test
-CFLAGS         := $(XWARNINGS) $(OPTIMIZATION) $(XCOMMON_CFLAGS) $(XARCH_CFLAGS) -I$(top_builddir)include
+CFLAGS         += $(XWARNINGS) $(OPTIMIZATION) $(XCOMMON_CFLAGS) $(XARCH_CFLAGS) -I$(top_builddir)include $(PTINC)
 HOST_CFLAGS    += $(XWARNINGS) $(OPTIMIZATION) $(XCOMMON_CFLAGS)
 
+LDFLAGS        := $(CPU_LDFLAGS)
 ifeq ($(DODEBUG),y)
 	CFLAGS        += -g
 	HOST_CFLAGS   += -g
-	LDFLAGS       += -g -Wl,-warn-common
-	HOST_LDFLAGS  := -g -Wl,-warn-common
+	LDFLAGS       += -g
+	HOST_LDFLAGS  += -g
 else
-	LDFLAGS       += -s -Wl,-warn-common
-	HOST_LDFLAGS  := -s -Wl,-warn-common
+	LDFLAGS       += -s
+	HOST_LDFLAGS  += -s
 endif
 
 ifneq ($(strip $(HAVE_SHARED)),y)
@@ -95,6 +98,20 @@ ifneq ($(strip $(HAVE_SHARED)),y)
 	HOST_LDFLAGS  += -static
 endif
 LDFLAGS += -B$(top_builddir)lib -Wl,-rpath,$(top_builddir)lib -Wl,-rpath-link,$(top_builddir)lib
+UCLIBC_LDSO_ABSPATH=$(shell pwd)
+ifdef TEST_INSTALLED_UCLIBC
+LDFLAGS += -Wl,-rpath,./
+UCLIBC_LDSO_ABSPATH=/lib
+endif
+
+ifeq ($(findstring -static,$(LDFLAGS)),)
+	LDFLAGS += -Wl,--dynamic-linker,$(UCLIBC_LDSO_ABSPATH)/$(UCLIBC_LDSO)
+endif
+
+ifeq ($(LDSO_GNU_HASH_SUPPORT),y)
+# Check for binutils support is done on root Rules.mak
+LDFLAGS += -Wl,${LDFLAGS_GNUHASH}
+endif
 
 
 # Filter output
@@ -106,7 +123,7 @@ SCAT := -@true
 else
 ifneq ($(V)$(VERBOSE),)
 DISP := ver
-Q    := 
+Q    :=
 SCAT := cat
 else
 DISP := pur
@@ -119,15 +136,15 @@ banner := ---------------------------------
 pur_showclean = echo "  "CLEAN $(notdir $(CURDIR))
 pur_showdiff  = echo "  "TEST_DIFF $(notdir $(CURDIR))/
 pur_showlink  = echo "  "TEST_LINK $(notdir $(CURDIR))/ $@
-pur_showtest  = echo "  "TEST_EXEC $(notdir $(CURDIR))/ $@
-sil_showclean = 
+pur_showtest  = echo "  "TEST_EXEC $(notdir $(CURDIR))/ $(patsubst %.exe,%,$@)
+sil_showclean =
 sil_showdiff  = true
 sil_showlink  = true
 sil_showtest  = true
-ver_showclean = 
+ver_showclean =
 ver_showdiff  = true echo
 ver_showlink  = true echo
-ver_showtest  = printf "\n$(banner)\nTEST $(notdir $(PWD))/ $@\n$(banner)\n"
+ver_showtest  = printf "\n$(banner)\nTEST $(notdir $(PWD))/ $(patsubst %.exe,%,$@)\n$(banner)\n"
 do_showclean  = $($(DISP)_showclean)
 do_showdiff   = $($(DISP)_showdiff)
 do_showlink   = $($(DISP)_showlink)
