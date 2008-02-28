@@ -690,9 +690,7 @@ CBETypedDeclarator::WriteCleanup(CBEFile& pFile, bool bDeferred)
  *  \param pFile the file to write to
  *  \param bUseConst true if type should be const
  */
-void
-CBETypedDeclarator::WriteType(CBEFile& pFile,
-	bool bUseConst)
+void CBETypedDeclarator::WriteType(CBEFile& pFile, bool bUseConst)
 {
 	CCompiler::Verbose("CBETypedDeclarator::%s called\n", __func__);
 	if (bUseConst)
@@ -1765,8 +1763,7 @@ void CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
  * If we do not use C or L4 types, we have to use the CORBA-types, which
  * define a '' as 'const_CORBA_char_ptr'
  */
-void
-CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
+void CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 {
 	CCompiler::Verbose("CBETypedDeclarator::%s called\n", __func__);
 	// check if no-const property is set
@@ -1859,8 +1856,7 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 	if (bConstructed || bIsArray)
 	{
 		CCompiler::Verbose("CBETypedDeclarator::%s for %s (5): constr %s, array %s -> client %s, no corba %s, ptr %s\n",
-			__func__,
-			m_Declarators.First()->GetName().c_str(),
+			__func__, m_Declarators.First()->GetName().c_str(),
 			bConstructed ? "true" : "false",
 			bIsArray ? "true" : "false",
 			pFile.IsOfFileType(FILETYPE_CLIENT) ? "yes" : "no",

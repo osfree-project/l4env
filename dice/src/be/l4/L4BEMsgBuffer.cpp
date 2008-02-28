@@ -1084,7 +1084,7 @@ bool CL4BEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
 /** \brief check whether a member of the specified struct has to be converted
  *  \param pStruct the struct to check for convertable members
  */
-void CL4BEMsgBuffer::CheckConvertStruct(CBEStructType *pStruct)
+void CL4BEMsgBuffer::CheckConvertStruct(CBEStructType *pStruct, CBEFunction *pFunction)
 {
 	CCompiler::Verbose("CL4BEMsgBuffer::%s(%p) struct %s called\n",
 		__func__, pStruct, pStruct->GetTag().c_str());
@@ -1109,7 +1109,7 @@ void CL4BEMsgBuffer::CheckConvertStruct(CBEStructType *pStruct)
 		{
 			CCompiler::Verbose("CL4BEMsgBuffer::%s Convert member %s\n", __func__,
 				pMember->m_Declarators.First()->GetName().c_str());
-			ConvertMember(pMember);
+			ConvertMember(pMember, pFunction);
 			bConverted = true;
 		}
 
@@ -1179,10 +1179,11 @@ CBETypedDeclarator* CL4BEMsgBuffer::CheckConvertMember(CBEStructType *pStruct,
 
 /** \brief convert the member into an indirect part
  *  \param pMember the member to convert
+ *  \param pFunction the function for which the conversion is called
  *
  * We make a refstring parameter out of the member
  */
-void CL4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember)
+void CL4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember, CBEFunction *pFunction)
 {
 	CCompiler::Verbose("CL4BEMsgBuffer::%s(%s) called\n", __func__,
 		pMember->m_Declarators.First()->GetName().c_str());
@@ -1215,9 +1216,14 @@ void CL4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember)
 	pMember->m_Attributes.Add(pAttr);
 	pAttr->CreateBackEnd(ATTR_REF);
 	CCompiler::Verbose("CL4BEMsgBuffer::%s added [ref] to member %s (%p)\n", __func__,
-		pMember->m_Declarators.First()->GetName().c_str(), pMember);
+		pDecl->GetName().c_str(), pMember);
 	// add C language property to avoid const qualifier in struct
 	pMember->AddLanguageProperty(string("noconst"), string());
+
+	// find matching parameter (if possible) and set noconst attribute as well
+	CBETypedDeclarator *pParameter = pFunction ? pFunction->m_Parameters.Find(pDecl->GetName()) : 0;
+	if (pParameter)
+		pParameter->AddLanguageProperty(string("noconst"), string());
 
 	CCompiler::Verbose("CL4BEMsgBuffer::%s %s's type is now %d\n", __func__,
 		pMember->m_Declarators.First()->GetName().c_str(),

@@ -1656,7 +1656,15 @@ bool CBEFunction::HasMallocParameters()
 		if (!(*iter)->IsVariableSized())
 			continue;
 		if ((*iter)->m_Attributes.Find(ATTR_MAX_IS))
-			continue;
+		{
+			// if a parameter has [out, size/string/length, max] and has 2
+			// pointers, then it is potentially malloced. Thus, only continue
+			// if neither of these options matches
+			if ((*iter)->m_Declarators.First()->GetStars() != 2 &&
+				((*iter)->m_Declarators.First()->GetStars() != 1 ||
+				 !(*iter)->GetType()->IsPointerType()))
+				continue;
+		}
 		if ((*iter)->m_Attributes.Find(ATTR_PREALLOC_SERVER))
 			continue;
 		if ((*iter)->GetSize() > 0)

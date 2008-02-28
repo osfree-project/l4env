@@ -588,11 +588,11 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 	int nNumberOfFlexpages = pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages,
 		GetReceiveDirection());
 	CBESizes *pSizes = CCompiler::GetSizes();
-	int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
-		pSizes->GetSizeOfType(TYPE_MWORD);
+	int nSizeFpage = pSizes->WordsFromBytes(pSizes->GetSizeOfType(TYPE_FLEXPAGE));
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	if (!pReturn)
 		return;
+
 	// if fixed number  (should be true for only one flexpage as well)
 	if (bFixedNumberOfFlexpages)
 	{

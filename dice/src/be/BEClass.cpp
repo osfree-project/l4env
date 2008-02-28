@@ -801,10 +801,7 @@ void CBEClass::AddToImpl(CBEImplementationFile* pImpl)
  *  \param nDirection the direction to count
  *  \return the number of parameters of this type
  */
-int
-CBEClass::GetParameterCount(int nFEType,
-	bool& bSameCount,
-	DIRECTION_TYPE nDirection)
+int CBEClass::GetParameterCount(int nFEType, bool& bSameCount, DIRECTION_TYPE nDirection)
 {
 	if (nDirection == DIRECTION_INOUT)
 	{
@@ -826,6 +823,19 @@ CBEClass::GetParameterCount(int nFEType,
 		CCompiler::Verbose("CBEClass::%s: checking %s: has %d parameter of type %d, max is %d\n", __func__,
 			(*iter)->GetName().c_str(), nCurr, nFEType, nCount);
 		if ((nCount > 0) && (nCurr != nCount) && (nCurr > 0))
+			bSameCount = false;
+		nCount = std::max(nCurr, nCount);
+	}
+
+	vector<CBEClass*>::iterator iC;
+	for (iC = m_BaseClasses.begin();
+		 iC != m_BaseClasses.end();
+		 iC++)
+	{
+		nCurr = (*iC)->GetParameterCount(nFEType, bSameCount, nDirection);
+		CCompiler::Verbose("CBEClass::%s: checking class %s: has %d parameter of type\n", __func__,
+			(*iC)->GetName().c_str(), nCurr);
+		if (0 < nCount && 0 < nCurr && nCurr != nCount)
 			bSameCount = false;
 		nCount = std::max(nCurr, nCount);
 	}

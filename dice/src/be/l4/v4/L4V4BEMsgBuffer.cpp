@@ -442,7 +442,7 @@ void CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile, CBEFunction *
 	{
 		pFile << "\t";
 		WriteAccess(pFile, pFunction, nType, pMember);
-		pFile << " = L4_StringItem /* " << __func__ << " */ (";
+		pFile << " = L4_StringItem (";
 		// size
 		CBEType *pType = pParameter->GetType();
 		if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS)) ||
@@ -525,7 +525,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOpera
 	CBEStructType *pStruct = GetStruct(CMsgStructType::In);
 	if (pStruct)
 	{
-		CheckConvertStruct(pStruct);
+		CheckConvertStruct(pStruct, pFunction);
 		GetMaxSize(nSize, pFunction, CMsgStructType::In);
 		CCompiler::Verbose("CL4V4BEMsgBuffer::%s: Check size: %d <= %d?\n", __func__,
 			nSize, nMaxSize);
@@ -534,7 +534,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOpera
 	pStruct = GetStruct(CMsgStructType::Out);
 	if (pStruct)
 	{
-		CheckConvertStruct(pStruct);
+		CheckConvertStruct(pStruct, pFunction);
 		GetMaxSize(nSize, pFunction, CMsgStructType::Out);
 		CCompiler::Verbose("CL4V4BEMsgBuffer::%s: Check size: %d <= %d?\n", __func__,
 			nSize, nMaxSize);
@@ -543,7 +543,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOpera
 	pStruct = GetStruct(CMsgStructType::Exc);
 	if (pStruct)
 	{
-		CheckConvertStruct(pStruct);
+		CheckConvertStruct(pStruct, pFunction);
 		GetMaxSize(nSize, pFunction, CMsgStructType::Exc);
 		CCompiler::Verbose("CL4V4BEMsgBuffer::%s: Check size: %d <= %d?\n", __func__,
 			nSize, nMaxSize);
@@ -625,13 +625,13 @@ void CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
 		string sFuncName = (*i)->GetName();
 		CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName, CMsgStructType::In);
 		if (pStruct)
-			CheckConvertStruct(pStruct);
+			CheckConvertStruct(pStruct, 0);
 		pStruct = pMsgType->GetStruct(sFuncName, sClassName, CMsgStructType::Out);
 		if (pStruct)
-			CheckConvertStruct(pStruct);
+			CheckConvertStruct(pStruct, 0);
 		pStruct = pMsgType->GetStruct(sFuncName, sClassName, CMsgStructType::Exc);
 		if (pStruct)
-			CheckConvertStruct(pStruct);
+			CheckConvertStruct(pStruct, 0);
 	}
 	// call base class
 	CL4BEMsgBuffer::PostCreate(pClass, pFEInterface);

@@ -101,10 +101,10 @@ protected: // protected methods
 
 	virtual void AddGenericStructMembersClass(CBEStructType *pStruct);
 
-	virtual void CheckConvertStruct(CBEStructType *pStruct);
+	virtual void CheckConvertStruct(CBEStructType *pStruct, CBEFunction *pFunction);
 	virtual CBETypedDeclarator* CheckConvertMember(CBEStructType *pStruct,
 		vector<CBETypedDeclarator*>::iterator iter);
-	virtual void ConvertMember(CBETypedDeclarator* pMember);
+	virtual void ConvertMember(CBETypedDeclarator* pMember, CBEFunction *pFunction);
 };
 
 #endif
