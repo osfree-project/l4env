@@ -205,10 +205,18 @@ void	hexdump(void *ptr, int length, const char *hdr, int flags);
 #define	HD_OMIT_CHARS	(1 << 18)
 
 #define ovbcopy(f, t, l) bcopy((f), (t), (l))
+#ifndef DDE_FBSD
 void	bcopy(const void *from, void *to, size_t len) __nonnull(1) __nonnull(2);
+#endif
 void	bzero(void *buf, size_t len) __nonnull(1);
 
 void	*memcpy(void *to, const void *from, size_t len) __nonnull(1) __nonnull(2);
+#ifdef DDE_FBSD
+static inline void	bcopy(const void *from, void *to, size_t len)
+{
+	memmove(to, from, len);
+}
+#endif
 
 int	copystr(const void * __restrict kfaddr, void * __restrict kdaddr,
 	    size_t len, size_t * __restrict lencopied)
