@@ -18,8 +18,8 @@
  * \ingroup api_types_common
  */
 typedef struct {
-  l4_uint32_t low;  ///< Low 32 Bits
-  l4_uint32_t high; ///< High 32 Bits
+  l4_umword_t low;  ///< Low 32 Bits
+  l4_umword_t high; ///< High 32 Bits
 } l4_low_high_t;
 
 /*****************************************************************************

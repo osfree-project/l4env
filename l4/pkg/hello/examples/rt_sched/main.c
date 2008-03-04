@@ -7,14 +7,13 @@
 #include <l4/sys/kernel.h>
 #include <l4/sys/rt_sched.h>
 #include <l4/sys/syscalls.h>
-#include <l4/sys/timeout.h>
 #include <l4/sys/types.h>
 #include <l4/util/atomic.h>
 #include <l4/util/l4_macros.h>
-#include <l4/util/kip.h>
 #include <l4/util/util.h>
 #include <l4/util/thread.h>
 #include <l4/util/parse_cmd.h>
+#include <l4/sigma0/kip.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/log/l4log.h>
 
@@ -31,8 +30,7 @@ static int preempter_stack[4096];
 
 l4_ssize_t l4libc_heapsize = 64*1024;
 
-int count_mand = 0;
-int count_opt  = 0;
+l4_uint32_t count_mand, count_opt;
 
 static void out(const char*);
 void (*LOG_outstring)(const char*log_message)=out;
@@ -57,23 +55,24 @@ static void preempter_thread (void){
                 if (dw.p.id == 1){
 		    LOGd(show_mand_preempts,
 			 "Preemption-IPC, mandatory (Type %u, Time:%llu)",
-			 dw.p.type, dw.p.time);
+			 dw.p.type, (unsigned long long)dw.p.time);
                     l4util_inc32 (&count_mand);
 		} else if (dw.p.id == 2){
 		    LOGd(show_opt_preempts,
 			 "Preemption-IPC, optional (Type %u, Time:%llu)",
-			 dw.p.type, dw.p.time);
+			 dw.p.type, (unsigned long long)dw.p.time);
                     l4util_inc32 (&count_opt);
 		}
             }
         } else
-	    LOG("Preempt-receive returned %x", L4_IPC_ERROR(result));
+	    LOG("Preempt-receive returned %lx", L4_IPC_ERROR(result));
     }
 }
 
 int main (int argc, const char**argv)
 {
-    int period, j, word1, ret;
+    int period, j, ret;
+    l4_umword_t word1;
     int loops_mand, loops_opt;
     l4_kernel_info_t *kinfo;
     l4_threadid_t next_period_id;
@@ -94,7 +93,7 @@ int main (int argc, const char**argv)
 		     0, 0)) return 1;
 
     next_period_id = l4_next_period_id(l4_myself());
-    kinfo = l4util_kip_map();
+    kinfo = l4sigma0_kip_map(L4_INVALID_ID);
 
     main_thread_id = l4_myself();
 
@@ -107,7 +106,7 @@ int main (int argc, const char**argv)
 
     // set preemter
     pager = L4_INVALID_ID;
-    l4_thread_ex_regs(main_thread_id, -1, -1, &preempter, &pager,
+    l4_thread_ex_regs(main_thread_id, -1UL, -1UL, &preempter, &pager,
                       &word1, &word1, &word1);
 
     // add mandatory timeslice

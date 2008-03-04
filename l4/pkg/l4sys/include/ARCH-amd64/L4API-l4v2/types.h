@@ -14,12 +14,12 @@
 #include_next <l4/sys/types.h>
 
 /**
- * 64 Bit -> 32 Bit low/high conversion
+ * 128 Bit -> 64 Bit low/high conversion
  * \ingroup api_types_common
  */
 typedef struct {
-  l4_uint32_t low;  ///< Low 32 Bits
-  l4_uint32_t high; ///< High 32 Bits
+  l4_umword_t low;  ///< Low 64 Bits
+  l4_umword_t high; ///< High 64 Bits
 } l4_low_high_t;
 
 /*****************************************************************************

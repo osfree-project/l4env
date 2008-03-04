@@ -9,7 +9,13 @@ include $(L4DIR)/mk/subdir.mk
 lib: $(addsuffix .lib,$(SUBDIRS))
 
 $(addsuffix .lib,$(SUBDIRS)):
-	echo $@
+	@echo $@
 	$(VERBOSE)PWD=$(PWD)/$(subst .lib,,$@) $(MAKE) -C $(subst .lib,,$@) src
 
-.PHONY: lib
+include: $(addsuffix .headers,$(SUBDIRS))
+
+$(addsuffix .headers,$(SUBDIRS)):
+	@echo $@
+	$(VERBOSE)PWD=$(PWD)/$(subst .headers,,$@) $(MAKE) -C $(subst .headers,,$@) include
+
+.PHONY: lib include

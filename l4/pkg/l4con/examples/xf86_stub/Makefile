@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= pslim_drv_43.o pslim_drv_70.so pslim_drv_71.so pslim_drv_73.so
 MODE		= linux
 LIBS		= -lcon.p -ldm_generic.p -ldm_mem.p -lnames.p \
-		  -ll4util.p $(ROOTPLIB) -ll4sys.p
+		  -ll4util.p $(ROOTPLIB) -ll4sys-l4x.p
 LIBCINCDIR	= $(addprefix -I,$(L4INCDIR) $(GCCINCDIR))
 LDFLAGS		= -nostdlib -nostartfiles
 LDSCRIPT	= $(call findfile,main_rel.ld,$(L4LIBDIR))
