@@ -71,7 +71,7 @@ public:
 	CFETypedDeclarator* FindUserDefinedType(std::string sName);
 	CFEConstDeclarator* FindConstant(std::string sName);
 	CFELibrary* FindLibrary(std::string sName);
-	CFEConstructedType* FindTaggedDecl(std::string sName);
+	CFEConstructedType* FindTypeWithTag(std::string sName);
 
 	void AddSameLibrary(CFELibrary *pLibrary);
 	void AddComponents(vector<CFEFileComponent*> *pComponents);

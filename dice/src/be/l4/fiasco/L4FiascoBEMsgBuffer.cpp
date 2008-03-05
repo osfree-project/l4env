@@ -176,8 +176,25 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 	CL4BEMsgBuffer::PostCreate(pFunction, pFEOperation);
 
 	// detecting if this message buffer fits into a UTCB for IPC
+	// to determine the maximum size, we cannot use the union-type's
+	// GetMaxSize method, because it will ignore variable sized sub-structs.
+	// But, variable sized sub-structs are a killer for UTCBs. Therefore, we
+	// iterate the structs ourselves and check the respecive maximum size.
 	int nMaxSize = 0;
-	GetMaxSize(nMaxSize);
+	CMsgStructType nType(CMsgStructType::Generic);
+	for (; CMsgStructType::Max != nType; ++nType)
+	{
+		CBEStructType *pStruct = GetStruct(pFunction, nType);
+		if (!pStruct)
+			continue;
+		int nCurr = pStruct->GetMaxSize();
+		if (nCurr < 0)
+		{
+			nMaxSize = -1;
+			break;
+		}
+		nMaxSize = std::max(nMaxSize, nCurr);
+	}
 	nMaxSize -= GetPayloadOffset();
 
 	CBESizes *pSizes = CCompiler::GetSizes();
@@ -221,10 +238,13 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 
 	if (m_bIsUtcb)
 	{
+		// if we do not have a generic struct already, add it here.
+		if (!GetStruct(pFunction, CMsgStructType::Generic))
+			AddGenericStruct(pFunction, pFEOperation);
+
 		CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: removing superfluous members\n");
 		CBENameFactory *pNF = CBENameFactory::Instance();
-		CMsgStructType nType(CMsgStructType::Generic);
-		for (; CMsgStructType::Max != nType; ++nType)
+		for (nType = CMsgStructType::Generic; CMsgStructType::Max != nType; ++nType)
 		{
 			CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: checking struct for dir %d\n", (int)nType);
 			CBEStructType *pStruct = GetStruct(pFunction, nType);
@@ -243,10 +263,6 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 			pMember = FindMember(sName, pFunction, nType);
 			pStruct->m_Members.Remove(pMember);
 		}
-
-		// if we do not have a generic struct already, add it here.
-		if (!GetStruct(pFunction, CMsgStructType::Generic))
-			AddGenericStruct(pFunction, pFEOperation);
 	}
 }
 

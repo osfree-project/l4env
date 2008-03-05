@@ -127,14 +127,14 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 		CFEInterface *pFEInterface = pFEType->GetSpecificParent<CFEInterface>();
 		if (pFEInterface)
 		{
-			pFETaggedDecl = pFEInterface->m_TaggedDeclarators.Find(sTag);
+			pFETaggedDecl = pFEInterface->FindTypeWithTag(sTag);
 			if (!pFETaggedDecl)
 			{
 				CFELibrary *pParentLib =
 					pFEInterface->GetSpecificParent<CFELibrary>();
 				while (pParentLib && !pFETaggedDecl)
 				{
-					pFETaggedDecl = pParentLib->FindTaggedDecl(sTag);
+					pFETaggedDecl = pParentLib->FindTypeWithTag(sTag);
 					pParentLib = pParentLib->GetSpecificParent<CFELibrary>();
 				}
 			}
@@ -145,7 +145,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 			// we definetly have a root
 			assert(pFERoot);
 			// we definetly have this decl in there
-			pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
+			pFETaggedDecl = pFERoot->FindTypeWithTag(sTag);
 		}
 		// now we can assign a global tag name
 		if (pFETaggedDecl)

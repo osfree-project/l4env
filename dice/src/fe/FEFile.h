@@ -75,7 +75,7 @@ public:
     void SetPath(std::string sPath);
 
     CFEConstDeclarator* FindConstDeclarator(std::string sName);
-    CFEConstructedType* FindTaggedDecl(std::string sName);
+    CFEConstructedType* FindTypeWithTag(std::string sName);
     CFETypedDeclarator* FindUserDefinedType(std::string sName);
     CFETypedDeclarator* FindUserDefinedType(const char* sName);
     CFELibrary* FindLibrary(std::string sName);

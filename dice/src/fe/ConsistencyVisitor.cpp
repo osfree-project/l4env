@@ -540,7 +540,7 @@ void CConsistencyVisitor::Visit(CFEStructType& type)
 		return;
 	}
 	if (pFEInterface &&
-		((pTagType = pFEInterface->m_TaggedDeclarators.Find(sTag)) != 0) &&
+		((pTagType = pFEInterface->FindTypeWithTag(sTag)) != 0) &&
 		(pTagType != &type))
 	{
 		pTagType->Accept(*this);
@@ -555,7 +555,7 @@ void CConsistencyVisitor::Visit(CFEStructType& type)
 			pType->Accept(*this);
 			return;
 		}
-		if (((pTagType = pFELibrary->FindTaggedDecl(sTag)) != 0) &&
+		if (((pTagType = pFELibrary->FindTypeWithTag(sTag)) != 0) &&
 			(pTagType != &type))
 		{
 			pTagType->Accept(*this);
@@ -570,7 +570,7 @@ void CConsistencyVisitor::Visit(CFEStructType& type)
 		pType->Accept(*this);
 		return;
 	}
-	if (pFEFile && ((pTagType = pFEFile->FindTaggedDecl(sTag)) != 0) &&
+	if (pFEFile && ((pTagType = pFEFile->FindTypeWithTag(sTag)) != 0) &&
 		(pTagType != &type))
 	{
 		pTagType->Accept(*this);
@@ -588,7 +588,7 @@ void CConsistencyVisitor::Visit(CFEUnionType& type)
 	if (type.IsForwardDeclaration())
 	{
 		CFEFile *pRoot = type.GetRoot();
-		if (pRoot->FindTaggedDecl(type.GetTag()))
+		if (pRoot->FindTypeWithTag(type.GetTag()))
 			return;
 	}
 	if (type.m_UnionCases.empty())

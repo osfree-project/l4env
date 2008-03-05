@@ -80,6 +80,8 @@ public:
     virtual CFEInterface* FindBaseInterface(std::string sName);
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
 
+	virtual CFEConstructedType* FindTypeWithTag(std::string sName);
+
     virtual void Accept(CVisitor&);
 	virtual CFEInterface* Clone();
     virtual int GetOperationCount(bool bCountBase = true);

@@ -26,7 +26,7 @@ if (!defined $img)
 }
 
 my $nm = 'nm';
-$nm = 'arm-linux-nm' if !(system("file $img | grep -qw ARM") >> 8);
+$nm = 'arm-linux-nm' if !(system("file -L $img | grep -qw ARM") >> 8);
 
 foreach my $l (split('\n', qx{$nm $img | c++filt}))
 {

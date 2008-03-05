@@ -45,6 +45,8 @@
 #include "Error.h"
 #include "fe/FEFile.h"
 #include "fe/FEUnionType.h"
+#include "fe/FEInterface.h"
+#include "fe/FELibrary.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>
@@ -107,15 +109,38 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 	string sTag = pFEUnion->GetTag();
 	if (!sTag.empty())
 	{
+		// we start with the parent interface and walk all the way up to the
+		// root
+		CFEConstructedType *pFETaggedDecl = 0;
+		CFEInterface *pFEInterface = pFEType->GetSpecificParent<CFEInterface>();
+		if (pFEInterface)
+		{
+			pFETaggedDecl = pFEInterface->FindTypeWithTag(sTag);
+			if (!pFETaggedDecl)
+			{
+				CFELibrary *pParentLib =
+					pFEInterface->GetSpecificParent<CFELibrary>();
+				while (pParentLib && !pFETaggedDecl)
+				{
+					pFETaggedDecl = pParentLib->FindTypeWithTag(sTag);
+					pParentLib = pParentLib->GetSpecificParent<CFELibrary>();
+				}
+			}
+		}
+		if (!pFETaggedDecl)
+		{
+			CFEFile *pFERoot = pFEType->GetRoot();
+			assert(pFERoot);
+			// we definetly have this decl in there
+			pFETaggedDecl = pFERoot->FindTypeWithTag(sTag);
+		}
+		// now we can assign a global tag name
 		CBENameFactory *pNF = CBENameFactory::Instance();
-		// see if we can find the original struct
-		CFEFile *pFERoot = pFEType->GetRoot();
-		assert(pFERoot);
-		CFEConstructedType *pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
 		if (pFETaggedDecl)
-			sTag = pNF->GetTypeName(pFETaggedDecl, sTag);
+			m_sTag = pNF->GetTypeName(pFETaggedDecl, sTag);
+		else
+			m_sTag = sTag;
 	}
-	m_sTag = sTag;
 
 	CCompiler::VerboseD("CBEUnionType::%s(fe) returns\n", __func__);
 }

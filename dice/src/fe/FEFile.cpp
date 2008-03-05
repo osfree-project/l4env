@@ -208,19 +208,27 @@ CFETypedDeclarator *CFEFile::FindUserDefinedType(std::string sName)
  *  \param sName the tag (name) of the tagged decl
  *  \return a reference to the tagged declarator or NULL if none found
  */
-CFEConstructedType* CFEFile::FindTaggedDecl(std::string sName)
+CFEConstructedType* CFEFile::FindTypeWithTag(std::string sName)
 {
 	// own tagged decls
 	CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
 	if (pTaggedDecl)
 		return pTaggedDecl;
+	// can be the type of one of the typedefs
+	vector<CFETypedDeclarator*>::iterator iterT;
+	for (iterT = m_Typedefs.begin(); iterT != m_Typedefs.end(); iterT++)
+	{
+		pTaggedDecl = dynamic_cast<CFEConstructedType*>((*iterT)->GetType());
+		if (pTaggedDecl && pTaggedDecl->Match(sName))
+			return pTaggedDecl;
+	}
 	// search interfaces
 	vector<CFEInterface*>::iterator iterI;
 	for (iterI = m_Interfaces.begin();
 		iterI != m_Interfaces.end();
 		iterI++)
 	{
-		if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)))
+		if ((pTaggedDecl = (*iterI)->FindTypeWithTag(sName)))
 			return pTaggedDecl;
 	}
 	// search libs
@@ -229,7 +237,7 @@ CFEConstructedType* CFEFile::FindTaggedDecl(std::string sName)
 		iterL != m_Libraries.end();
 		iterL++)
 	{
-		if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)))
+		if ((pTaggedDecl = (*iterL)->FindTypeWithTag(sName)))
 			return pTaggedDecl;
 	}
 	// search included files
@@ -238,7 +246,7 @@ CFEConstructedType* CFEFile::FindTaggedDecl(std::string sName)
 		iterF != m_ChildFiles.end();
 		iterF++)
 	{
-		if ((pTaggedDecl = (*iterF)->FindTaggedDecl(sName)))
+		if ((pTaggedDecl = (*iterF)->FindTypeWithTag(sName)))
 			return pTaggedDecl;
 	}
 	// nothing found:

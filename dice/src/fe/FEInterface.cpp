@@ -223,6 +223,28 @@ CFEInterface *CFEInterface::FindBaseInterface(std::string sName)
 	return 0;
 }
 
+/** \brief search for a tagged declarator
+ *  \param sName the tag (name) of the tagged decl
+ *  \return a reference to the found tagged decl or NULL if none found
+ */
+CFEConstructedType* CFEInterface::FindTypeWithTag(std::string sName)
+{
+	// own tagged decls
+	CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
+	if (pTaggedDecl)
+		return pTaggedDecl;
+	// can be the type of one of the typedefs
+	vector<CFETypedDeclarator*>::iterator iterT;
+	for (iterT = m_Typedefs.begin(); iterT != m_Typedefs.end(); iterT++)
+	{
+		pTaggedDecl = dynamic_cast<CFEConstructedType*>((*iterT)->GetType());
+		if (pTaggedDecl && pTaggedDecl->Match(sName))
+			return pTaggedDecl;
+	}
+	// nothing found
+	return 0;
+}
+
 /** \brief the accept method for the visitors
  *  \param v reference to the current visitor
  *

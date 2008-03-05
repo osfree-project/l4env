@@ -510,10 +510,7 @@ CBENameFactory::GetCORBATypeName(int nType,
  * This function skips types, which it won't provide names for. This way the
  * GetTypeName function will set the name for it.
  */
-string
-CBENameFactory::GetTypeName(int nType,
-	bool bUnsigned,
-	int nSize)
+string CBENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize)
 {
 	string sReturn;
 	if (CCompiler::IsOptionSet(PROGRAM_USE_CORBA_TYPES))
@@ -686,9 +683,8 @@ CBENameFactory::GetTypeName(int nType,
  * - FUNCTION_SRV_LOOP:   "_server_loop" (12)
  * - FUNCTION_DISPATCH:   "_dispatch"    (9)
  */
-string
-CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
-	FUNCTION_TYPE nFunctionType, bool bComponentSide)
+string CBENameFactory::GetFunctionName(CFEOperation * pFEOperation, FUNCTION_TYPE nFunctionType,
+	bool bComponentSide)
 {
 	if (!pFEOperation)
 	{
@@ -785,9 +781,8 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
  * - FUNCTION_DISPATCH: "_dispatch"    (9)
  * - FUNCTION_REPLY_WAIT: "_reply_and_wait"  (15)
  */
-string
-CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
-	FUNCTION_TYPE nFunctionType, bool bComponentSide)
+string CBENameFactory::GetFunctionName(CFEInterface * pFEInterface, FUNCTION_TYPE nFunctionType,
+	bool bComponentSide)
 {
 	if (!pFEInterface)
 		return string();

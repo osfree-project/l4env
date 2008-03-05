@@ -358,19 +358,27 @@ void CFELibrary::AddSameLibrary(CFELibrary* pLibrary)
  *  \param sName the tag (name) of the tagged decl
  *  \return a reference to the found tagged decl or NULL if none found
  */
-CFEConstructedType* CFELibrary::FindTaggedDecl(std::string sName)
+CFEConstructedType* CFELibrary::FindTypeWithTag(std::string sName)
 {
 	// own tagged decls
 	CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
 	if (pTaggedDecl)
 		return pTaggedDecl;
+	// can be the type of one of the typedefs
+	vector<CFETypedDeclarator*>::iterator iterT;
+	for (iterT = m_Typedefs.begin(); iterT != m_Typedefs.end(); iterT++)
+	{
+		pTaggedDecl = dynamic_cast<CFEConstructedType*>((*iterT)->GetType());
+		if (pTaggedDecl && pTaggedDecl->Match(sName))
+			return pTaggedDecl;
+	}
 	// search interfaces
 	vector<CFEInterface*>::iterator iterI;
 	for (iterI = m_Interfaces.begin();
 		iterI != m_Interfaces.end();
 		iterI++)
 	{
-		if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)) != 0)
+		if ((pTaggedDecl = (*iterI)->FindTypeWithTag(sName)) != 0)
 			return pTaggedDecl;
 	}
 	// search nested libs
@@ -379,7 +387,7 @@ CFEConstructedType* CFELibrary::FindTaggedDecl(std::string sName)
 		iterL != m_Libraries.end();
 		iterL++)
 	{
-		if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)) != 0)
+		if ((pTaggedDecl = (*iterL)->FindTypeWithTag(sName)) != 0)
 			return pTaggedDecl;
 	}
 	// nothing found:
