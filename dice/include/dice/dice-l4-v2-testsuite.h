@@ -19,7 +19,8 @@
 extern "C" {
 #endif
 
-static void pager_thread(void *parameters)
+L4_INLINE void pager_thread(void *parameters);
+L4_INLINE void pager_thread(void *parameters)
 {
 	l4_threadid_t src;
 	l4_umword_t pfa, eip, snd_base, fp;

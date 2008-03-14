@@ -440,8 +440,7 @@ bool CL4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPara
 		// because preallocated refstrings are already assigned to rcv_str.
 		//
 		// if parameter is [out] and has *one* reference then we have to
-		// dereference the parameter, because the reference is simply for
-		// [out].
+		// dereference the parameter, because the reference is for [out].
 		bool bDeref = pParameter->m_Attributes.Find(ATTR_OUT) &&
 			pParameter->m_Declarators.First()->GetStars() == 1 &&
 			!pParameter->GetType()->IsPointerType();

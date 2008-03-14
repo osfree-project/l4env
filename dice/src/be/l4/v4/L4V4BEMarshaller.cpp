@@ -176,6 +176,18 @@ bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPa
 			WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
 			// append receive member
 			pFile << ".X.str.string_ptr;\n";
+		} else if (m_pFunction->IsComponentSide()) {
+			// if at component side do not copy, but reference the message
+			// buffer. This is implicit optimization...
+			pFile << "\t";
+			WriteParameter(pFile, pParameter, pStack, true);
+			pFile << " = ";
+			// cast to type of parameter
+			pType->WriteCast(pFile, true);
+			// access message buffer
+			WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
+			// append receive member
+			pFile << ".X.str.string_ptr;\n";
 		} else {
 			pFile << "\t_dice_memcpy (";
 			WriteParameter(pFile, pParameter, pStack, true);
@@ -195,6 +207,13 @@ bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPa
 				pType->WriteCast(pFile, false);
 			}
 			pFile << ");\n";
+
+			// we alocated refstring buffer at client side, now free it
+			pFile << "\t";
+			CBEContext::WriteFree(pFile, m_pFunction);
+			pFile << " ( (void*) ";
+			WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
+			pFile << ".X.str.string_ptr);\n";
 		}
 	}
 

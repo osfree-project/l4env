@@ -13,14 +13,14 @@ extern "C" {
 DICE_INLINE
 void* malloc_warning(unsigned long size)
 {
-    L4_KDB_Enter("malloc not set in environment");
+    L4_KDB_Enter("malloc");
     return 0;
 };
 
 DICE_INLINE
 void free_warning(void* addr)
 {
-    L4_KDB_Enter("free not set in environment");
+    L4_KDB_Enter("free");
 };
 
 #ifdef __cplusplus
