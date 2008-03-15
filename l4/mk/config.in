@@ -18,7 +18,6 @@ fi
 
 if [ "$BUILD_ARCH_arm" = "y" ] ; then
   define_string BUILD_ARCH "arm"
-  string " CPU type" CPU 'sa'
 fi
 
 if [ "$BUILD_ARCH_amd64" = "y" ] ; then
@@ -36,6 +35,36 @@ if [ "$BUILD_ABI_l4v2" = "y" ] ; then
 fi
 if [ "$BUILD_ABI_linux" = "y" ] ; then
   define_string BUILD_ABI "linux"
+fi
+
+if [ "$BUILD_ARCH_arm" = "y" ] ; then
+
+  choice 'ARM Platform' \
+     "integrator   PLATFORM_ARM_integrator \
+      rv           PLATFORM_ARM_rv \
+      custom       PLATFORM_ARM_custom" integrator
+
+  if [ "$PLATFORM_ARM_integrator" = "y" ] ; then
+    define_string CPU 'int'
+    define_string ARM_PLATFORM_TYPE 'integrator'
+    string "RAM base" RAM_BASE 0x0
+    int  "RAM size in MB" RAM_SIZE_MB 256
+  fi
+  if [ "$PLATFORM_ARM_rv" = "y" ] ; then
+    define_string CPU 'rv'
+    define_string ARM_PLATFORM_TYPE 'rv'
+    string "RAM base" RAM_BASE 0x0
+    int "RAM size in MB" RAM_SIZE_MB 256
+  fi
+
+  if [ "$PLATFORM_ARM_custom" = "y" ] ; then
+    string " CPU type" CPU 'int'
+    string " Platform name" ARM_PLATFORM_TYPE 'integrator'
+    string "RAM base" RAM_BASE 0x0
+    int "RAM size in MB" RAM_SIZE_MB 256
+  fi
+
+
 fi
 
 endmenu

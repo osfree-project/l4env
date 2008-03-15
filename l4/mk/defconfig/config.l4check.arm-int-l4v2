@@ -9,10 +9,16 @@ BUILD_ARCH_x86=n
 BUILD_ARCH_arm=y
 BUILD_ARCH_amd64=n
 BUILD_ARCH='arm'
-CPU='int'
 BUILD_ABI_l4v2=y
 BUILD_ABI_linux=n
 BUILD_ABI='l4v2'
+PLATFORM_ARM_integrator=y
+PLATFORM_ARM_rv=n
+PLATFORM_ARM_custom=n
+CPU='int'
+ARM_PLATFORM_TYPE='integrator'
+RAM_BASE='0x0'
+RAM_SIZE_MB=256
 
 #
 # Paths and Directories
