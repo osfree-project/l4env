@@ -81,7 +81,7 @@ l4lock_unlock(l4lock_t * lock);
  */
 /*****************************************************************************/ 
 L4_INLINE l4thread_t
-l4lock_owner(l4lock_t * lock);
+l4lock_owner(const l4lock_t * lock);
 
 __END_DECLS;
 
@@ -178,7 +178,7 @@ l4lock_unlock(l4lock_t * lock)
  * owner
  *****************************************************************************/
 L4_INLINE l4thread_t
-l4lock_owner(l4lock_t * lock)
+l4lock_owner(const l4lock_t * lock)
 {
   /* sanity checks */
   if (lock == NULL)
