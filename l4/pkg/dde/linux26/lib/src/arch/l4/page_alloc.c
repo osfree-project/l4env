@@ -223,6 +223,52 @@ int set_page_dirty_lock(struct page *page)
 }
 
 
+/*
+ * basically copied from linux/mm/page_alloc.c
+ */
+void *__init alloc_large_system_hash(const char *tablename,
+                                     unsigned long bucketsize,
+                                     unsigned long numentries,
+                                     int scale,
+                                     int flags,
+                                     unsigned int *_hash_shift,
+                                     unsigned int *_hash_mask,
+                                     unsigned long limit)
+{
+	void * table = NULL;
+	unsigned long log2qty;
+	unsigned long size;
+
+	if (numentries == 0)
+		numentries = 1024;
+
+	log2qty = ilog2(numentries);
+	size = bucketsize << log2qty;
+
+	do {
+		unsigned long order;
+		for (order = 0; ((1UL << order) << PAGE_SHIFT) < size; order++);
+			table = (void*) __get_free_pages(GFP_ATOMIC, order);
+	} while (!table && size > PAGE_SIZE && --log2qty);
+
+	if (!table)
+		panic("Failed to allocate %s hash table\n", tablename);
+
+	printk("%s hash table entries: %d (order: %d, %lu bytes)\n",
+	       tablename,
+	       (1U << log2qty),
+	       ilog2(size) - PAGE_SHIFT,
+	       size);
+
+	if (_hash_shift)
+		*_hash_shift = log2qty;
+	if (_hash_mask)
+		*_hash_mask = (1 << log2qty) - 1;
+
+	return table;
+}
+
+
 static void __init dde_page_cache_init(void)
 {
 	printk("Initializing DDE page cache\n");

@@ -34,8 +34,8 @@ void __init driver_init(void)
 	/* These are also core pieces, but must come after the
 	 * core core pieces.
 	 */
-#ifndef DDE_LINUX
 	platform_bus_init();
+#ifndef DDE_LINUX
 	system_bus_init();
 	cpu_dev_init();
 	memory_dev_init();

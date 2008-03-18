@@ -10,6 +10,7 @@ if [ "$CONFIG_DDE26" = "y" ]; then
 	bool '  Network driver support library' CONFIG_DDE26_NET
 	bool '  Sound driver support library' CONFIG_DDE26_SOUND
 	bool '  Block device layer support library' CONFIG_DDE26_BLOCK
+#bool '  USB support library (now common stuff in future usbcore)' CONFIG_DDE26_USB
 fi
 
 bool 'Build DDE FreeBSD'	CONFIG_FBSD

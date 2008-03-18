@@ -65,10 +65,14 @@
 #ifndef CONFIG_NEED_MULTIPLE_NODES
 /* use the per-pgdat data instead for discontigmem - mbligh */
 unsigned long max_mapnr;
+#ifndef DDE_LINUX
 struct page *mem_map;
+#endif
 
 EXPORT_SYMBOL(max_mapnr);
+#ifndef DDE_LINUX
 EXPORT_SYMBOL(mem_map);
+#endif
 #endif
 
 unsigned long num_physpages;

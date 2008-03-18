@@ -28,6 +28,10 @@
 #include <linux/blktrace_api.h>
 #include <scsi/sg.h>		/* for struct sg_iovec */
 
+#ifdef DDE_LINUX
+#include "local.h"
+#endif
+
 #define BIO_POOL_SIZE 256
 
 static struct kmem_cache *bio_slab __read_mostly;
@@ -122,6 +126,7 @@ void bio_free(struct bio *bio, struct bio_set *bio_set)
  */
 static void bio_fs_destructor(struct bio *bio)
 {
+	DEBUG_MSG("freeing bio %p", bio);
 	bio_free(bio, fs_bio_set);
 }
 

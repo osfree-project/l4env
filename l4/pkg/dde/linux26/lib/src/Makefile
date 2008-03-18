@@ -57,12 +57,13 @@ SRC_C_libdde_linux26.a += \
                           kernel/exit.c \
                           kernel/kthread.c \
                           kernel/mutex.c \
+						  kernel/pid.c \
                           kernel/rcupdate.c \
                           kernel/resource.c \
                           kernel/rwsem.c \
                           kernel/sched.c \
-                          kernel/spinlock.c \
                           kernel/sys.c \
+						  kernel/time.c \
                           kernel/wait.c \
                           kernel/workqueue.c \
                           lib/bitmap.c \
@@ -70,12 +71,14 @@ SRC_C_libdde_linux26.a += \
                           lib/crc32.c \
                           lib/ctype.c \
                           lib/cpumask.c \
+						  lib/idr.c \
                           lib/iomap.c \
 						  lib/hweight.c \
 						  lib/kernel_lock.c \
                           lib/klist.c \
                           lib/kobject.c \
                           lib/kref.c \
+						  lib/parser.c \
 						  lib/radix-tree.c \
 						  lib/sha1.c \
                           lib/rwsem.c \
@@ -91,11 +94,14 @@ SRC_C_libdde_linux26.a += \
                           drivers/base/core.c \
                           drivers/base/cpu.c \
                           drivers/base/dd.c \
+						  drivers/base/dmapool.c \
                           drivers/base/driver.c \
                           drivers/base/init.c \
 						  drivers/base/map.c \
+						  drivers/base/platform.c \
                           drivers/base/sys.c \
 						  drivers/char/random.c \
+						  drivers/firmware/dmi_scan.c \
                           drivers/pci/access.c \
                           drivers/pci/bus.c \
                           drivers/pci/pci.c \

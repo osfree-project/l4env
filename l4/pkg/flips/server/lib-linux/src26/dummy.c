@@ -7,6 +7,12 @@
 #include <linux/mm.h> //si_meminfo
 #include <linux/vmalloc.h> //__vmalloc
 
+//This causes trouble, because we mix here libc includes
+//with dde/linux kernel includes
+//#include <stdlib.h>
+//Therefore we define prototypes here explicitly
+long int random(void);
+void srandom(unsigned int seed);
 
 //used in tcp.c (2.6.20.19)
 //number of all pages available
@@ -52,13 +58,12 @@ inline ssize_t fastcall wait_on_sync_kiocb(struct kiocb *iocb)
 
 void srandom32(u32 seed)
 {
-  LOG("not implemented");
+  srandom32(seed);
 } 
 
 u32 random32(void)
 {
-  LOG("not implemented");
-  return 0;
+  return random();
 }
 
 int send_sig(int a, struct task_struct * b, int c)

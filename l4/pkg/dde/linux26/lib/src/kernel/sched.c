@@ -3815,7 +3815,6 @@ void fastcall __sched wait_for_completion(struct completion *x)
 }
 EXPORT_SYMBOL(wait_for_completion);
 
-#ifndef DDE_LINUX
 unsigned long fastcall __sched
 wait_for_completion_timeout(struct completion *x, unsigned long timeout)
 {
@@ -3914,7 +3913,6 @@ out:
 	return timeout;
 }
 EXPORT_SYMBOL(wait_for_completion_interruptible_timeout);
-#endif /* !DDE_LINUX */
 
 #define	SLEEP_ON_VAR					\
 	unsigned long flags;				\

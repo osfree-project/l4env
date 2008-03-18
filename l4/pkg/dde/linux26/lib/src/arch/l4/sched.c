@@ -64,14 +64,6 @@ int try_to_wake_up(struct task_struct *p, unsigned int state, int sync)
 }
 
 
-unsigned long fastcall __sched
-wait_for_completion_timeout(struct completion *x, unsigned long timeout)
-{
-	WARN_UNIMPL;
-	return 0;
-}
-
-
 static void process_timeout(unsigned long data)
 {
 	wake_up_process((struct task_struct *)data);
@@ -126,6 +118,7 @@ void set_user_nice(struct task_struct *p, long nice)
 void __sched io_schedule(void)
 {
 	WARN_UNIMPL;
+	return 0;  
 }
 
 long __sched io_schedule_timeout(long timeout)

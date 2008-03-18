@@ -153,14 +153,14 @@ void l4dde26_init_timers(void)
 }
 
 
-void do_gettimeofday (struct timeval *tv)
+__attribute__((weak)) void do_gettimeofday (struct timeval *tv)
 {
 	WARN_UNIMPL;
 }
 
 struct timespec current_fs_time(struct super_block *sb)
 {
-	struct timespec now;
+	struct timespec now = {0,0};
 	WARN_UNIMPL;
 	return now;
 }

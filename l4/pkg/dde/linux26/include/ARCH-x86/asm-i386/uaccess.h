@@ -581,6 +581,9 @@ long __must_check __strncpy_from_user(char *dst,
 #define copy_from_user(to,from,n)			\
 	__copy_from_user(to,from,n)
 
+#define strncpy_from_user(to, from, n)			\
+	__copy_from_user(to,from,n)
+
 /* use memcpy; "In both cases, the return value is the amount of memory still
    to be copied." */
 static inline unsigned long

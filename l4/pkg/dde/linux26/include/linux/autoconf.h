@@ -28,6 +28,9 @@
 /* Also, no sysFS */
 #undef CONFIG_SYSFS
 
+/* No NFS support */
+#undef CONFIG_ROOT_NFS
+
 /* We don't support hotplug */
 #undef CONFIG_HOTPLUG
 
