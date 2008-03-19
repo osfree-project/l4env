@@ -132,7 +132,8 @@ inline
 Context * NO_INSTRUMENT
 Switch_lock<VALID>::lock_owner() const
 {
-  return _lock_owner;
+  Lock_guard<Cpu_lock> guard(&cpu_lock);
+  return (EXPECT_TRUE(valid())) ? _lock_owner : 0;
 }
 
 /** Is lock set?.

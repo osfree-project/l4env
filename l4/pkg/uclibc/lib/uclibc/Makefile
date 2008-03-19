@@ -89,7 +89,7 @@ $(INCDIRS_OBJ_m):
 
 include:: $(addprefix $(OBJ_DIR)/ARCH-,$(addsuffix /links-done,$(BUILD_ARCHS))) $(INCDIRS_OBJ_m)
 	$(VERBOSE)for i in $(INCDIRS); do \
-	  PWD=$(PWD)/$$i $(MAKE) -C $$i all; \
+	  PWD=$$i $(MAKE) -C $$i all; \
 	done
 
 install:: all

@@ -360,11 +360,9 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 		       !partner->invalid_ipc_buffer(_target_desc.msg())))
         {
           // the receiver's message buffer is mapped into VM window 1.
-          setup_ipc_window(0, ((Address)(_target_desc.msg())) 
-						     & Config::SUPERPAGE_MASK);
-
-        // IPC has been aborted
-	  if (!partner->in_long_ipc (this))
+          if (!setup_ipc_window(0, ((Address)(_target_desc.msg()))
+                                   & Config::SUPERPAGE_MASK)
+              || !partner->in_long_ipc (this))
 	    return ipc_finish (partner, Ipc_err::Reaborted);
 
           rcv_descr = reinterpret_cast<message_header*>
@@ -589,10 +587,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  if (min > 0)
 	    {
 	      // XXX no bounds checking!
-	      setup_ipc_window(1, ((Address)to) & Config::SUPERPAGE_MASK);
-
-	      // IPC has been aborted
-	      if (!partner->in_long_ipc (this))
+              if (!setup_ipc_window(1, ((Address)to) & Config::SUPERPAGE_MASK) ||
+                  !partner->in_long_ipc (this))
 		return ipc_finish (partner, Ipc_err::Reaborted);
 
 	      mem_space()->copy_from_user
@@ -639,7 +635,11 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       error &= ~Ipc_err::Send_error;
       result_err.combine(error);
 
-      partner->rcv_regs()->msg_dope (result_dope);
+        {
+          Lock_guard<Cpu_lock> guard(&cpu_lock);
+          if (partner->is_tcb_mapped())
+            partner->rcv_regs()->msg_dope (result_dope);
+        }
       return ipc_finish (partner, result_err);
     }
 }

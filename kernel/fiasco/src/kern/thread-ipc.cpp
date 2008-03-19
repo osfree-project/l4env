@@ -1135,7 +1135,7 @@ Ipc_err Thread::do_ipc (L4_msg_tag const &tag, bool have_send, Thread *partner,
 	dont_switch = true;
 
       // partner locked, i.e. lazy locking (not locked) or we own the lock
-      assert(!partner->thread_lock()->test()
+      assert(partner->thread_lock()->test() != Thread_lock::Locked
 	     || partner->thread_lock()->lock_owner() == this);
 
 
@@ -1149,7 +1149,9 @@ Ipc_err Thread::do_ipc (L4_msg_tag const &tag, bool have_send, Thread *partner,
 		partner->thread_lock()->set_switch_hint(SWITCH_ACTIVATE_LOCKEE);
 	    }
 
-	  partner->thread_lock()->clear_dirty();
+          assert(cpu_lock.test());
+          if (partner->is_tcb_mapped())
+            partner->thread_lock()->clear_dirty();
 
 	  state_del (Thread_ipc_sending_mask
 		     |Thread_transfer_in_progress
@@ -1405,7 +1407,7 @@ Ipc_err Thread::transfer_msg (L4_msg_tag const &tag, Thread *receiver,
   error_ret = do_send_long (receiver, sender_regs);
   cpu_lock.lock();
 
-  assert(receiver->thread_lock()->lock_owner() == this);
+  assert(receiver->thread_lock()->lock_owner() == this || receiver->thread_lock()->lock_owner() == 0);
 
   assert(error_ret.has_error() || state()
          & (Thread_send_in_progress | Thread_transfer_in_progress));

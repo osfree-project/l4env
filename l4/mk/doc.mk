@@ -221,7 +221,7 @@ $(SRC_TEX:.tex=.dvi) $(TARGET): $(SRC_FIG:.fig=.pdf) $(SRC_FIG:.fig=.png) $(SRC_
 		$(LATEX) $< \
 		let latex_count=$$latex_count-1 ;\
 	done
-	$(VERBOSE)$(VIEVERREFRESH_DVI)
+	$(VERBOSE)$(VIEWERREFRESH_DVI)
 
 SHOWTEX ?= $(firstword $(SRC_TEX))
 SHOWDVI ?= $(SHOWTEX:.tex=.dvi)
@@ -231,7 +231,7 @@ SHOWPDF ?= $(SHOWTEX:.tex=.pdf)
 VIEWER_DVI	  ?= xdvi
 VIEWER_PS         ?= gv
 VIEWER_PDF	  ?= xpdf
-VIEVERREFRESH_DVI ?= killall -q -USR1 xdvi xdvi.bin xdvi.real || true
+VIEWERREFRESH_DVI ?= killall -q -USR1 xdvi xdvi.bin xdvi.real || true
 VIEWERREFRESH_PS  ?= killall -q -HUP $(VIEWER_PS) || true
 
 dvi:	$(SHOWDVI)

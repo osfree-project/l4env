@@ -1,4 +1,3 @@
-include/sys/ucontext.h
 libc/string/_string.h
 libc/string/bcopy.c
 libc/string/bzero.c
@@ -19,7 +18,6 @@ libc/string/i386/strrchr.c
 libc/string/memcmp.c
 libc/string/memmem.c
 libc/string/mempcpy.c
-libc/string/memcopy.h
 libc/string/memrchr.c
 libc/string/rawmemchr.c
 libc/string/strchrnul.c
@@ -81,7 +79,6 @@ libc/sysdeps/linux/i386/bits/byteswap.h
 libc/sysdeps/linux/i386/bits/endian.h
 libc/sysdeps/linux/i386/bits/fcntl.h
 libc/sysdeps/linux/i386/bits/fenv.h
-libc/sysdeps/linux/i386/bits/huge_val.h
 libc/sysdeps/linux/i386/bits/kernel_types.h
 libc/sysdeps/linux/i386/bits/mathdef.h
 libc/sysdeps/linux/i386/bits/mman.h
@@ -90,5 +87,4 @@ libc/sysdeps/linux/i386/bits/setjmp.h
 libc/sysdeps/linux/i386/bits/stackinfo.h
 libc/sysdeps/linux/i386/bits/uClibc_arch_features.h
 libc/sysdeps/linux/i386/bits/wordsize.h
-libc/sysdeps/linux/i386/bits/resource.h
 libc/sysdeps/linux/i386/sys/ucontext.h

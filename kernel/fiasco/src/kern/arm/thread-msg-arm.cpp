@@ -9,7 +9,7 @@ IMPLEMENTATION [arm]:
 
 
 PROTECTED inline NEEDS ["config.h", "mem_unit.h", "kmem.h", "std_macros.h"]
-void             
+bool
 Thread::setup_ipc_window(unsigned win, Address address)
 {                
   if (win == 0) {
@@ -27,7 +27,7 @@ Thread::setup_ipc_window(unsigned win, Address address)
   } else {
     // Only makes sense if some strings are in the same 4mb region.
     if (EXPECT_FALSE (_vm_window1 == address))
-      return;
+      return true;
 
     _vm_window1 = address;
   }
@@ -42,11 +42,17 @@ Thread::setup_ipc_window(unsigned win, Address address)
   // does not prevent a pagefault on either of these mappings later on, e.g.
   // if the receiver's mapping is r/o here and needs to be r/w for Long-IPC.
   // Careful: for SMAS current_mem_space() != space()
-  Page_table::current()->copy_in((void*)Kmem::ipc_window(win),
+  {
+    Lock_guard<Cpu_lock> guard(&cpu_lock);
+          if (!receiver()->is_tcb_mapped())
+	            return false;
+    Page_table::current()->copy_in((void*)Kmem::ipc_window(win),
                            receiver()->mem_space()->dir(), 
                            (void*)address, 
                            Config::SUPERPAGE_SIZE * 2, 
 			   current_mem_space()->c_asid());
+  }
+  return true;
 }
 
 IMPLEMENT inline

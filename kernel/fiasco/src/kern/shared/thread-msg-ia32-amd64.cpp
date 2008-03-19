@@ -25,7 +25,7 @@ Thread::remote_fault_addr (Address pfa)
  *                into given window
  */              
 PROTECTED inline NEEDS ["config.h", "kmem.h", "std_macros.h"]
-void             
+bool
 Thread::setup_ipc_window(unsigned win, Address address)
 {
   if (win == 0)
@@ -44,7 +44,7 @@ Thread::setup_ipc_window(unsigned win, Address address)
     {
       // Only makes sense if some strings are in the same 4mb region.
       if (EXPECT_FALSE (_vm_window1 == address))
-	return;
+	return true;
       _vm_window1 = address;
     }
 
@@ -54,8 +54,14 @@ Thread::setup_ipc_window(unsigned win, Address address)
   // does not prevent a pagefault on either of these mappings later on, e.g.
   // if the receiver's mapping is r/o here and needs to be r/w for Long-IPC.
   // Careful: for SMAS current_mem_space() != space()
-  current_mem_space()->remote_update (Kmem::ipc_window (win),
-                                  receiver()->mem_space(), address,
-				  Kmem::ipc_slots());
-}
+    {
+      Lock_guard<Cpu_lock> guard(&cpu_lock);
+      if (!receiver()->is_tcb_mapped())
+        return false;
+      current_mem_space()->remote_update (Kmem::ipc_window (win),
+                                          receiver()->mem_space(), address,
+                                          Kmem::ipc_slots());
+    }
 
+  return true;
+}

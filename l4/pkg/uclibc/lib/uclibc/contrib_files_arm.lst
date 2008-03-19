@@ -87,7 +87,6 @@ libc/sysdeps/linux/arm/bits/mathdef.h
 libc/sysdeps/linux/arm/bits/mman.h
 libc/sysdeps/linux/arm/bits/stackinfo.h
 libc/sysdeps/linux/arm/bits/uClibc_arch_features.h
-libc/sysdeps/linux/arm/bits/resource.h
 libc/sysdeps/linux/arm/bits/setjmp.h
 libc/sysdeps/linux/arm/bits/wordsize.h
 libc/sysdeps/linux/arm/sys/ucontext.h

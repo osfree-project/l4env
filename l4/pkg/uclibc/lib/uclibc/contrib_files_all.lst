@@ -32,7 +32,6 @@ include/poll.h
 include/printf.h
 include/pwd.h
 include/resolv.h
-include/semaphore.h
 include/setjmp.h
 include/shadow.h
 include/signal.h
@@ -110,7 +109,6 @@ libc/inet/gai_strerror.c
 libc/inet/getaddrinfo.c
 libc/inet/herror.c
 libc/inet/inet_net.c
-libc/inet/if_nametoindex.c
 libc/inet/in6_addr.c
 libc/inet/ether_addr.c
 libc/inet/ntohl.c
@@ -172,7 +170,6 @@ libc/signal/sigsetops.h
 libc/stdlib/_atexit.c
 libc/stdlib/atexit.c
 libc/stdlib/__cxa_atexit.c
-libc/stdlib/onexit.c
 libc/stdlib/__exit_handler.c
 libc/stdlib/div.c
 libc/stdlib/exit.c
@@ -305,8 +302,6 @@ libc/stdio/_ppfs_init.c
 libc/stdio/_ppfs_prepargs.c
 libc/stdio/_ppfs_setargs.c
 libc/stdio/_ppfs_parsespec.c
-libc/stdio/_register_printf_function.c
-libc/stdio/_parse_printf_format.c
 libc/stdio/vsnprintf.c
 libc/stdio/vsprintf.c
 libc/stdio/vprintf.c
@@ -355,8 +350,6 @@ libc/misc/ctype/toascii.c
 libc/misc/ctype/tolower.c
 libc/misc/ctype/toupper.c
 libc/misc/ctype/isblank.c
-libc/misc/ctype/isxlower.c
-libc/misc/ctype/isxupper.c
 libc/misc/ctype/__C_ctype_b.c
 libc/misc/ctype/__C_ctype_tolower.c
 libc/misc/ctype/__C_ctype_toupper.c
@@ -526,8 +519,6 @@ libm/w_sinh.c
 libm/w_sqrt.c
 libm/fpmacros.c
 libm/nan.c
-libm/s_ceilf.c
-libm/s_floorf.c
 libm/float_wrappers.c				acos__FN
 libm/float_wrappers.c				acosf__FN
 libm/float_wrappers.c				acoshf__FN

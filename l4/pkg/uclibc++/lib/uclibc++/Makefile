@@ -51,7 +51,7 @@ $(OBJ_DIR)/ARCH-all/include/Makefile: .general.d
 .PHONY: include
 
 include: CONTRIB $(OBJ_DIR)/ARCH-all/include/Makefile
-	$(VERBOSE)PWD=$(PWD)/ARCH-all/include $(MAKE) -C \
+	$(VERBOSE)PWD=$(OBJ_DIR)/ARCH-all/include $(MAKE) -C \
 	   $(OBJ_DIR)/ARCH-all/include all
 
 install:: all
