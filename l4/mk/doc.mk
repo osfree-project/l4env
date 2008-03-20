@@ -102,7 +102,7 @@ $(OBJ_DIR)/% $(OBJ_DIR)/%/html:$(SRC_DIR)/%.cfg
 	$(VERBOSE)$(ECHO) '@INCLUDE=$(notdir $<);$(DOXY_FLAGS);OUTPUT_DIRECTORY=$(OBJ_DIR)/$(call OUTPUTDIR,$<)' | $(TR) \; \\n >$@.flags
 	$(VERBOSE)cd $(SRC_DIR) && $(call MAKEDEP,doxygen) OBJ_DIR=$(OBJ_DIR) doxygen $@.flags
 	$(VERBOSE)( [ -r $@/latex/Makefile ] && \
-		echo | $(MAKE) -C $@/latex ) || true
+		echo | PWD=$@/latex $(MAKE) -C $@/latex ) || true
 	$(VERBOSE)if [ -d $@ ] ; then touch $@ ; fi
 
 # Installation rules follow

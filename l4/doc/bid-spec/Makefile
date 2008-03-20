@@ -5,7 +5,7 @@ include $(L4DIR)/mk/Makeconf
 ifeq ($(IN_OBJ_DIR),)
 
 all install clean cleanall:: $(OBJ_DIR)/Makefile.build
-	$(MAKE) -C $(OBJ_DIR) O=$(OBJ_BASE) -f Makefile.build $@
+	$(VERBOSE)PWD=$(OBJ_DIR) $(MAKE) -C $(OBJ_DIR) O=$(OBJ_BASE) -f Makefile.build $@
 
 $(OBJ_DIR)/Makefile.build: $(SRC_DIR)/Makefile
 	$(VERBOSE)install -d $(dir $@)

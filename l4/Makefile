@@ -90,7 +90,7 @@ tool ../kernel/fiasco pkg: ../dice
 
 ../dice:
 	$(VERBOSE)if [ -r $@/Makefile.drops ]; then                \
-	   $(MAKE) -C $@ -f Makefile.drops;                        \
+	   PWD=$(PWD)/$@ $(MAKE) -C $@ -f Makefile.drops;                        \
 	 fi
 
 doc:
@@ -189,13 +189,13 @@ Makeconf.bid.local-helper:
 
 Makeconf.bid.local-internal-names:
 ifeq ($(INT_CPP_NAME_SWITCH), y)
-	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
+	$(VERBOSE) set -e; X="$(OBJ_DIR)/tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
 		rm -f $$X.out ; $(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
 		GENDEP_OUTPUT=$$X.out $(CC) -c $$X -o $$X.o; \
 		test -e $$X.out; echo INT_CPP_NAME=`cat $$X.out` \
 			>>$(DROPSCONF_CONFIG_MK); \
 		rm -f $$X $$X.{o,out};
-	$(VERBOSE)set -e; X="tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
+	$(VERBOSE)set -e; X="$(OBJ_DIR)/tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
 		rm -f $$X.out; $(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
 		GENDEP_OUTPUT=$$X.out $(CXX) -c $$X -o $$X.o; \
 		test -e $$X.out; echo INT_CXX_NAME=`cat $$X.out` \

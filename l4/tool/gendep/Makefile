@@ -3,7 +3,7 @@ include $(L4DIR)/mk/Makeconf
 
 VERSION	= 0.2
 CSRC	= deptrack.c syscall.c
-MAN	= man/man7/libgendep.so.7
+MAN	= $(OBJ_DIR)/man/man7/libgendep.so.7
 MAN_SRC	= manpage.dox Doxyfile
 
 CFLAGS	= -fPIC -Wall -pedantic -g
@@ -31,7 +31,7 @@ endif
 doc: $(MAN)
 
 $(MAN): $(MAN_SRC)
-	doxygen
+	sed 's#^OUTPUT_DIRECTORY.*$$#OUTPUT_DIRECTORY = $(OBJ_DIR)#' Doxyfile | doxygen -
 
 install:: $(LIB) $(MAN)
 	$(if $(DROPS_STDDIR),,$(error DROPS_STDDIR is not set. Do a 'make config' in $(L4DIR)))
@@ -44,16 +44,16 @@ test:
 	GENDEP_TARGET='simple-cat' \
 		GENDEP_BINARY=cpp\
 		GENDEP_cpp='+\.h$$ -^/usr' \
-		$(LD_PRELOAD)=$(OBJ_DIR)/libgendep.so\
+		$(LD_PRELOAD)=$(LIB) \
 		$(HOST_CC) -o $(OBJ_DIR)/simple-cat simple-cat.c
 	GENDEP_TARGET='blabla' \
 		GENDEP_BINARY=cpp\
-		$(LD_PRELOAD)=$(OBJ_DIR)/libgendep.so\
+		$(LD_PRELOAD)=$(LIB) \
 		$(HOST_CC) -o $(OBJ_DIR)/simple-cat simple-cat.c
 	GENDEP_TARGET='badexp' \
 		GENDEP_BINARY=cpp\
 		GENDEP_cpp='\)foo'\
-		$(LD_PRELOAD)=$(OBJ_DIR)/libgendep.so\
+		$(LD_PRELOAD)=$(LIB) \
 		$(HOST_CC) -o $(OBJ_DIR)/simple-cat simple-cat.c
 	@echo ==========
 	cat simple-cat.dep
@@ -64,7 +64,7 @@ clean cleanall::
 
 cleanall::
 	rm -f $(LIB)
-	rm -fr man/ html/
+	rm -fr $(OBJ_DIR)/man $(OBJ_DIR)/html
 
 dist:
 	rm -rf $(DDIR)

@@ -23,9 +23,9 @@ l4_ipc_call_tag(l4_threadid_t dest,
   struct { unsigned long a,b,c; } msg = {snd_dword0, snd_dword1, tag.raw};
 
   __asm__ __volatile__
-    ("pushl  %%ebp		\n\t"	/* save ebp, no memory references 
+    ("movl   %%ebx,%[ebx]	\n\t"
+     "pushl  %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-     "movl   %%ebx,%[ebx]	\n\t"
      "movl   %[rcv_msg],%%ebp	\n\t"
      "movl   4(%[msg]),%%ebx	\n\t"
      "movl   8(%[msg]),%%edi	\n\t"

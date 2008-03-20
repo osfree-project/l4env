@@ -135,7 +135,7 @@ $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch)):%:%/$(BID_OBJ_Makefile
 clean::
 	$(if $(wildcard $(OBJ_DIR)/OBJ-*), $(VERBOSE)set -e ; \
 	    for d in $(wildcard $(OBJ_DIR)/OBJ-*) ; do \
-	        PWD=OBJ-$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
+	        PWD=$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
 	    done, @true)
 
 cleanall::

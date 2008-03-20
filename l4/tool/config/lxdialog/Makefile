@@ -30,11 +30,11 @@ $(OBJ_DIR)/lxdialog: $(OBJS)
 	$(HOST_CC) -o $@ $(OBJS) $(LIBS)
 
 ncurses:
-	$(VERBOSE)echo "main() {}" > lxtemp.c
-	$(VERBOSE)if $(HOST_CC) -lncurses lxtemp.c ; then \
-		rm -f lxtemp.c a.out; \
+	$(VERBOSE)echo "main() {}" > $(OBJ_DIR)/lxtemp.c
+	$(VERBOSE)if $(HOST_CC) -lncurses $(OBJ_DIR)/lxtemp.c -o $(OBJ_DIR)/a.out ; then \
+		rm -f $(OBJ_DIR)/lxtemp.c $(OBJ_DIR)/a.out; \
 	else \
-		rm -f lxtemp.c; \
+		rm -f $(OBJ_DIR)/lxtemp.c; \
 		echo -e "\007" ;\
 		echo ">> Unable to find the Ncurses libraries." ;\
 		echo ">>" ;\

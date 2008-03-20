@@ -157,7 +157,7 @@ load_functions () {
 #
 function comment () {
 	comment_ctr=$[ comment_ctr + 1 ]
-	echo -ne "': $comment_ctr' '--- $1' " >>MCmenu
+	echo -ne "': $comment_ctr' '--- $1' " >> $OBJ_DIR_EXPORT/MCmenu
 }
 
 #
@@ -195,9 +195,9 @@ function bool () {
 	n)	flag=" " ;;
 	esac
 
-	echo -ne "'$2' '[$flag] $1$info' " >>MCmenu
+	echo -ne "'$2' '[$flag] $1$info' " >> $OBJ_DIR_EXPORT/MCmenu
 
-	echo -e "function $2 () { l_bool '$2' \"\$1\" ;}\n" >>MCradiolists
+	echo -e "function $2 () { l_bool '$2' \"\$1\" ;}\n" >> $OBJ_DIR_EXPORT/MCradiolists
 }
 
 #
@@ -219,10 +219,10 @@ function tristate () {
 		*) flag=" " ;;
 		esac
 	
-		echo -ne "'$2' '<$flag> $1$info' " >>MCmenu
+		echo -ne "'$2' '<$flag> $1$info' " >> $OBJ_DIR_EXPORT/MCmenu
 	
 		echo -e "
-		function $2 () { l_tristate '$2' \"\$1\" ;}" >>MCradiolists
+		function $2 () { l_tristate '$2' \"\$1\" ;}" >> $OBJ_DIR_EXPORT/MCradiolists
 	fi
 }
 
@@ -313,9 +313,9 @@ function dep_mbool () {
 function int () {
 	set_x_info "$2" "$3"
 
-	echo -ne "'$2' '($x) $1$info' " >>MCmenu
+	echo -ne "'$2' '($x) $1$info' " >> $OBJ_DIR_EXPORT/MCmenu
 
-	echo -e "function $2 () { l_int '$1' '$2' '$3' '$x' ;}" >>MCradiolists
+	echo -e "function $2 () { l_int '$1' '$2' '$3' '$x' ;}" >> $OBJ_DIR_EXPORT/MCradiolists
 }
 
 #
@@ -325,9 +325,9 @@ function hex () {
 	set_x_info "$2" "$3"
 	x=${x##*[x,X]}
 
-	echo -ne "'$2' '($x) $1$info' " >>MCmenu
+	echo -ne "'$2' '($x) $1$info' " >> $OBJ_DIR_EXPORT/MCmenu
 
-	echo -e "function $2 () { l_hex '$1' '$2' '$3' '$x' ;}" >>MCradiolists
+	echo -e "function $2 () { l_hex '$1' '$2' '$3' '$x' ;}" >> $OBJ_DIR_EXPORT/MCradiolists
 }
 
 #
@@ -336,9 +336,9 @@ function hex () {
 function string () {
 	set_x_info "$2" "$3"
 
-	echo -ne "'$2' '     $1: \"$x\"$info' " >>MCmenu
+	echo -ne "'$2' '     $1: \"$x\"$info' " >> $OBJ_DIR_EXPORT/MCmenu
 
-	echo -e "function $2 () { l_string '$1' '$2' '$3' '$x' ;}" >>MCradiolists
+	echo -e "function $2 () { l_string '$1' '$2' '$3' '$x' ;}" >> $OBJ_DIR_EXPORT/MCradiolists
 }
 
 #
@@ -372,11 +372,11 @@ function choice () {
 
 	: ${current:=$default}
 
-	echo -ne "'$firstchoice' '($current) $title' " >>MCmenu
+	echo -ne "'$firstchoice' '($current) $title' " >> $OBJ_DIR_EXPORT/MCmenu
 
 	echo -e "
 	function $firstchoice () \
-		{ l_choice '$title' \"$choices\" \"$current\" ;}" >>MCradiolists
+		{ l_choice '$title' \"$choices\" \"$current\" ;}" >> $OBJ_DIR_EXPORT/MCradiolists
 }
 
 } # END load_functions()
@@ -432,15 +432,15 @@ ${var}:\\
 # Activate a help dialog.
 #
 function help () {
-	if extract_help $1 >help.out
+	if extract_help $1 > $OBJ_DIR_EXPORT/help.out
 	then
 		$DIALOG	--backtitle "$backtitle" --title "$2"\
-			--textbox help.out $ROWS $COLS
+			--textbox $OBJ_DIR_EXPORT/help.out $ROWS $COLS
 	else
 		$DIALOG	--backtitle "$backtitle" \
-			--textbox help.out $ROWS $COLS
+			--textbox $OBJ_DIR_EXPORT/help.out $ROWS $COLS
 	fi
-	rm -f help.out
+	rm -f $OBJ_DIR_EXPORT/help.out
 }
 
 #
@@ -460,15 +460,15 @@ function menu_name () {
 			--backtitle '$backtitle' \
 			--menu '$menu_instructions' \
 			$ROWS $COLS $((ROWS-10)) \
-			'$default' " >MCmenu
-	>MCradiolists
+			'$default' " > $OBJ_DIR_EXPORT/MCmenu
+	> $OBJ_DIR_EXPORT/MCradiolists
 }
 
 #
 # Add a submenu option to the menu currently under construction.
 #
 function submenu () {
-	echo -ne "'activate_menu $2' '$1  --->' " >>MCmenu
+	echo -ne "'activate_menu $2' '$1  --->' " >> $OBJ_DIR_EXPORT/MCmenu
 }
 
 #
@@ -506,9 +506,9 @@ function mod_bool () {
 	    *)   flag=' ' ;;
 	    esac
  
-	    echo -ne "'$2' '<$flag> $1$info' " >>MCmenu
+	    echo -ne "'$2' '<$flag> $1$info' " >> $OBJ_DIR_EXPORT/MCmenu
  
-	    echo -e "function $2 () { l_mod_bool '$2' \"\$1\" ;}" >>MCradiolists
+	    echo -e "function $2 () { l_mod_bool '$2' \"\$1\" ;}" >> $OBJ_DIR_EXPORT/MCradiolists
 	fi
 }
 
@@ -574,9 +574,9 @@ function l_int () {
 		if $DIALOG --title "$1" \
 			--backtitle "$backtitle" \
 			--inputbox "$inputbox_instructions_int" \
-			10 75 "$4" 2>MCdialog.out
+			10 75 "$4" 2> $OBJ_DIR_EXPORT/MCdialog.out
 		then
-			answer="`cat MCdialog.out`"
+			answer="`cat $OBJ_DIR_EXPORT/MCdialog.out`"
 			answer="${answer:-$3}"
 
 			# Semantics of + and ? in GNU expr changed, so
@@ -608,9 +608,9 @@ function l_hex () {
 		if $DIALOG --title "$1" \
 			--backtitle "$backtitle" \
 			--inputbox "$inputbox_instructions_hex" \
-			10 75 "$4" 2>MCdialog.out
+			10 75 "$4" 2> $OBJ_DIR_EXPORT/MCdialog.out
 		then
-			answer="`cat MCdialog.out`"
+			answer="`cat $OBJ_DIR_EXPORT/MCdialog.out`"
 			answer="${answer:-$3}"
 			answer="${answer##*[x,X]}"
 
@@ -641,9 +641,9 @@ function l_string () {
 		if $DIALOG --title "$1" \
 			--backtitle "$backtitle" \
 			--inputbox "$inputbox_instructions_string" \
-			10 75 "$4" 2>MCdialog.out
+			10 75 "$4" 2> $OBJ_DIR_EXPORT/MCdialog.out
 		then
-			answer="`cat MCdialog.out`"
+			answer="`cat $OBJ_DIR_EXPORT/MCdialog.out`"
 			answer="${answer:-$3}"
 
 			#
@@ -698,9 +698,9 @@ function l_choice () {
 		if $DIALOG --title "$title" \
 			--backtitle "$backtitle" \
 			--radiolist "$radiolist_instructions" \
-			15 70 6 $list 2>MCdialog.out
+			15 70 6 $list 2> $OBJ_DIR_EXPORT/MCdialog.out
 		then
-			choice=`cat MCdialog.out`
+			choice=`cat $OBJ_DIR_EXPORT/MCdialog.out`
 			break
 		fi
 
@@ -740,7 +740,7 @@ callawk '
 BEGIN {
 	menu_no = 0
 	comment_is_option = 0
-	parser("'$CONFIG_IN'","MCmenu0")
+	parser("'$CONFIG_IN'","'$OBJ_DIR_EXPORT/MCmenu0'")
 }
 
 function parser(ifile,menu) {
@@ -756,7 +756,7 @@ function parser(ifile,menu) {
 
 			printf("submenu %s MCmenu%s\n", $0, menu_no) >>menu
 
-			newmenu = sprintf("MCmenu%d", menu_no);
+			newmenu = sprintf("'$OBJ_DIR_EXPORT/MCmenu%d'", menu_no);
 			printf( "function MCmenu%s () {\n"\
 				"default=$1\n"\
 				"menu_name %s\n",\
@@ -787,7 +787,7 @@ function parser(ifile,menu) {
 function parser2 () {
 callawk '
 BEGIN {
-	parser("'$CONFIG_IN'","MCmenu0")
+	parser("'$CONFIG_IN'","'$OBJ_DIR_EXPORT/MCmenu0'")
 }
 
 function parser(ifile,menu) {
@@ -813,11 +813,11 @@ function parser(ifile,menu) {
 # Parse all the config.in files into mini scripts.
 #
 function parse_config_files () {
-	rm -f MCmenu*
+	rm -f $OBJ_DIR_EXPORT/MCmenu*
 
-	echo "function MCmenu0 () {" >MCmenu0
-	echo 'default=$1' >>MCmenu0
-	echo "menu_name 'Main Menu'" >>MCmenu0
+	echo "function MCmenu0 () {" > $OBJ_DIR_EXPORT/MCmenu0
+	echo 'default=$1' >> $OBJ_DIR_EXPORT/MCmenu0
+	echo "menu_name 'Main Menu'" >> $OBJ_DIR_EXPORT/MCmenu0
 
 	if [ "_$single_menu_mode" = "_TRUE" ]
 	then
@@ -826,11 +826,11 @@ function parse_config_files () {
 		parser1
 	fi
 
-	echo "comment ''"	>>MCmenu0
-	echo "g_alt_config" 	>>MCmenu0
-	echo "s_alt_config" 	>>MCmenu0
+	echo "comment ''"	>> $OBJ_DIR_EXPORT/MCmenu0
+	echo "g_alt_config" 	>> $OBJ_DIR_EXPORT/MCmenu0
+	echo "s_alt_config" 	>> $OBJ_DIR_EXPORT/MCmenu0
 
-	echo "}" >>MCmenu0
+	echo "}" >> $OBJ_DIR_EXPORT/MCmenu0
 
 	#
 	# These mini scripts must be sourced into the current
@@ -839,12 +839,12 @@ function parse_config_files () {
 	# in activate_menu(), among other things.  Once they are
 	# sourced we can discard them.
 	#
-	for i in MCmenu*
+	for i in $OBJ_DIR_EXPORT/MCmenu*
 	do
 		echo -n "."
-		source ./$i
+		source $i
 	done
-	rm -f MCmenu*
+	rm -f $OBJ_DIR_EXPORT/MCmenu*
 }
 
 #
@@ -860,7 +860,7 @@ function activate_menu () {
 	do
 		comment_ctr=0		#So comment lines get unique tags
 
-		$1 "$default" 2> MCerror #Create the lxdialog menu & functions
+		$1 "$default" 2> $OBJ_DIR_EXPORT/MCerror #Create the lxdialog menu & functions
 
 		if [ "$?" != "0" ]
 		then
@@ -872,7 +872,7 @@ configuration files and is unable to continue.  Here is the error
 report:
 
 EOM
-			sed 's/^/ Q> /' MCerror
+			sed 's/^/ Q> /' $OBJ_DIR_EXPORT/MCerror
 			cat <<EOM
 
 Please report this to the maintainer <mec@shout.net>.  You may also
@@ -885,14 +885,14 @@ EOM
 			cleanup
 			exit 1
 		fi
-		rm -f MCerror
+		rm -f $OBJ_DIR_EXPORT/MCerror
 
-		. ./MCradiolists		#Source the menu's functions
+		. $OBJ_DIR_EXPORT/MCradiolists		#Source the menu's functions
 
-		. ./MCmenu 2>MCdialog.out	#Activate the lxdialog menu
+		. $OBJ_DIR_EXPORT/MCmenu 2> $OBJ_DIR_EXPORT/MCdialog.out	#Activate the lxdialog menu
 		ret=$?
 
-		read selection <MCdialog.out
+		read selection < $OBJ_DIR_EXPORT/MCdialog.out
 		case "$ret" in
 		0|3|4|5|6)
 			defaults="$selection$defaults"  #pseudo stack
@@ -953,7 +953,7 @@ EOM
 #
 g_alt_config () {
 	echo -n "get_alt_config 'Load an Alternate Configuration File' "\
-		>>MCmenu
+		>> $OBJ_DIR_EXPORT/MCmenu
 }
 
 #
@@ -972,11 +972,11 @@ get_alt_config () {
 Enter the name of the configuration file you wish to load.  \
 Accept the name shown to restore the configuration you \
 last retrieved.  Leave blank to abort."\
-			11 55 "$ALT_CONFIG" 2>MCdialog.out
+			11 55 "$ALT_CONFIG" 2> $OBJ_DIR_EXPORT/MCdialog.out
 
 		if [ "$?" = "0" ]
 		then
-			ALT_CONFIG=`cat MCdialog.out`
+			ALT_CONFIG=`cat $OBJ_DIR_EXPORT/MCdialog.out`
 
 			[ "_" = "_$ALT_CONFIG" ] && break
 
@@ -991,7 +991,7 @@ last retrieved.  Leave blank to abort."\
 				sleep 2
 			fi
 		else
-			cat <<EOM >help.out
+			cat <<EOM > $OBJ_DIR_EXPORT/help.out
 
 For various reasons, one may wish to keep several different kernel
 configurations available on a single machine.  
@@ -1006,12 +1006,12 @@ configuration files.  You should therefor leave this blank to abort.
 EOM
 			$DIALOG	--backtitle "$backtitle"\
 				--title "Load Alternate Configuration"\
-				--textbox help.out $ROWS $COLS
+				--textbox $OBJ_DIR_EXPORT/help.out $ROWS $COLS
 		fi
 	done
 
 	set +f ## Switch file expansion ON
-	rm -f help.out MCdialog.out
+	rm -f $OBJ_DIR_EXPORT/help.out $OBJ_DIR_EXPORT/MCdialog.out
 }
 
 #
@@ -1019,7 +1019,7 @@ EOM
 #
 s_alt_config () {
 	echo -n "save_alt_config 'Save Configuration to an Alternate File' "\
-		 >>MCmenu
+		 >> $OBJ_DIR_EXPORT/MCmenu
 }
 
 #
@@ -1035,11 +1035,11 @@ save_alt_config () {
 			--inputbox "\
 Enter a filename to which this configuration should be saved \
 as an alternate.  Leave blank to abort."\
-			10 55 "$ALT_CONFIG" 2>MCdialog.out
+			10 55 "$ALT_CONFIG" 2> $OBJ_DIR_EXPORT/MCdialog.out
 
 		if [ "$?" = "0" ]
 		then
-			ALT_CONFIG=`cat MCdialog.out`
+			ALT_CONFIG=`cat $OBJ_DIR_EXPORT/MCdialog.out`
 
 			[ "_" = "_$ALT_CONFIG" ] && break
 
@@ -1055,7 +1055,7 @@ as an alternate.  Leave blank to abort."\
 				sleep 2
 			fi
 		else
-			cat <<EOM >help.out
+			cat <<EOM > $OBJ_DIR_EXPORT/help.out
 
 For various reasons, one may wish to keep different kernel
 configurations available on a single machine.  
@@ -1069,12 +1069,12 @@ leave this blank.
 EOM
 			$DIALOG	--backtitle "$backtitle"\
 				--title "Save Alternate Configuration"\
-				--textbox help.out $ROWS $COLS
+				--textbox $OBJ_DIR_EXPORT/help.out $ROWS $COLS
 		fi
 	done
 
 	set +f  ## Switch file expansion ON
-	rm -f help.out MCdialog.out
+	rm -f $OBJ_DIR_EXPORT/help.out $OBJ_DIR_EXPORT/MCdialog.out
 }
 
 #
@@ -1085,10 +1085,10 @@ function load_config_file () {
 	awk '
 	  /# .* is not set.*/ { printf("%s=n\n", $2) }
 	! /# .* is not set.*/ { print }
-	' $1 >.tmpconfig
+	' $1 > $OBJ_DIR_EXPORT/.tmpconfig
 
-	source ./.tmpconfig
-	rm -f .tmpconfig
+	source $OBJ_DIR_EXPORT/.tmpconfig
+	rm -f $OBJ_DIR_EXPORT/.tmpconfig
 }
 
 #
@@ -1314,8 +1314,8 @@ save_configuration () {
 	DEF_CONFIG_H="${DROPSCONF_CONFIG_H}"
 	DEF_CONFIG_MACRO="${DROPSCONF_MACRO}"
 
-	CONFIG=.tmpconfig
-	CONFIG_H=.tmpconfig.h
+	CONFIG=$OBJ_DIR_EXPORT/.tmpconfig
+	CONFIG_H=$OBJ_DIR_EXPORT/.tmpconfig.h
 
 	echo "#" >$CONFIG
 	echo "# Automatically generated by configuration tool: don't edit" >>$CONFIG
@@ -1354,11 +1354,11 @@ cleanup () {
 }
 
 cleanup1 () {
-	rm -f MCmenu* MCradiolists MCdialog.out help.out
+	rm -f $OBJ_DIR_EXPORT/MCmenu* $OBJ_DIR_EXPORT/MCradiolists $OBJ_DIR_EXPORT/MCdialog.out $OBJ_DIR_EXPORT/help.out
 }
 
 cleanup2 () {
-	rm -f .tmpconfig .tmpconfig.h
+	rm -f $OBJ_DIR_EXPORT/.tmpconfig $OBJ_DIR_EXPORT/.tmpconfig.h
 }
 
 set_geometry () {

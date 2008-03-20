@@ -9,7 +9,7 @@ include $(L4DIR)/mk/Makeconf
 ifeq ($(IN_OBJ_DIR),)
 
 all clean cleanall install:: $(OBJ_DIR)/Makefile.build
-	$(VERBOSE)make -C $(OBJ_DIR)  O=$(OBJ_BASE) -f $(OBJ_DIR)/Makefile.build $@
+	$(VERBOSE)PWD=$(OBJ_DIR) make -C $(OBJ_DIR)  O=$(OBJ_BASE) -f $(OBJ_DIR)/Makefile.build $@
 
 $(OBJ_DIR)/Makefile.build: $(SRC_DIR)/Makefile
 	$(VERBOSE)install -d $(dir $@)

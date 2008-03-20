@@ -176,8 +176,10 @@ endif
 # if PKGDIR is not in L4DIR, we have an external package, so make up some
 # build-dir for it
 ifneq ($(patsubst $(L4DIR_ABS)/%,,$(PKGDIR_ABS)),)
+ifneq ($(filter-out $(OBJ_BASE)/ext-pkg%,$(PKGDIR_OBJ)),)
 PKGDIR_OBJ     := $(OBJ_BASE)/ext-pkg$(PKGDIR_OBJ)
 OBJ_DIR        := $(OBJ_BASE)/ext-pkg$(OBJ_DIR)
+endif
 endif
 
 # sanity check the object dir
@@ -374,9 +376,9 @@ $(OBJ_DIR)/Makefile: $(L4DIR)/mk/Makeconf
 	$(VERBOSE)echo 'OBJ := $(OBJ_BASE)'                                   >> $@
 	$(VERBOSE)echo '.PHONY: x $$(MAKECMDGOALS)'                           >> $@
 	$(VERBOSE)echo 'x:'                                                   >> $@
-	$(VERBOSE)echo '	$$(MAKE) -C $$(SRC) O=$$(OBJ)'                >> $@
+	$(VERBOSE)echo '	PWD=$$(SRC) $$(MAKE) -C $$(SRC) O=$$(OBJ)'    >> $@
 	$(VERBOSE)echo '$$(MAKECMDGOALS):'                                    >> $@
-	$(VERBOSE)echo '	$$(MAKE) -C $$(SRC) O=$$(OBJ) $$@'            >> $@
+	$(VERBOSE)echo '	PWD=$$(SRC) $$(MAKE) -C $$(SRC) O=$$(OBJ) $$@'>> $@
 
 else
 # we are within an OBJ-*/ dir, create dummy target
