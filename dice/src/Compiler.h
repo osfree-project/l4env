@@ -103,6 +103,7 @@ public:
 	static bool IsBackEndInterfaceSet(BackEnd_Interface_Type nOption);
 	static bool IsBackEndPlatformSet(BackEnd_Platform_Type nOption);
 	static bool IsBackEndLanguageSet(BackEnd_Language_Type nOption);
+	static bool IsAllowedIpc(BackEnd_Allowed_Ipc_Type nOption);
 	static bool IsWarningSet(ProgramWarning_Type nLevel);
 	static int GetTraceMsgBufDwords();
 	static CBESizes* GetSizes();
@@ -127,6 +128,8 @@ protected:
 	static void SetBackEndLanguage(BackEnd_Language_Type nAdd);
 	static void SetWarningLevel(ProgramWarning_Type nLevel);
 	static void UnsetWarningLevel(ProgramWarning_Type nLevel);
+	static void SetAllowedIpc(size_t nAdd);
+	static void UnsetAllowedIpc(size_t nRemove);
 	static void SetTraceMsgBufDwords(int nDwords);
 	static void SetSizes(CBESizes *pSizes);
 	static void SetBackEndOption(const string sOption, const string sValue);
@@ -283,6 +286,10 @@ protected:
 	 *  \brief number of warnings issued
 	 */
 	static int warningcount;
+	/** \var biset<PROGRAM_BE_ALLOWED_IPC_MAX> m_AllowedIpc
+	 *  \brief determines which forms of IPC are allowed
+	 */
+	static bitset<PROGRAM_BE_ALLOWED_IPC_MAX> m_AllowedIpc;
 };
 
 /** \brief set the option
@@ -582,6 +589,64 @@ CCompiler::GetBackEndOption(const string sOption, string& sValue)
 		return false;
 	sValue = m_mBackEndOptions[sOption];
 	return true;
+}
+
+/** \brief set the permission to use one specific IPC type
+ *  \param nAdd the IPC type to allow
+ *
+ * If nAdd is PROGRAM_BE_ALLOWED_IPC_NONE, then nothing happens. If nAdd is
+ * PROGRAM_BE_ALLOWED_IPC_ALL, the all IPC types are allowed.
+ */
+inline void
+CCompiler::SetAllowedIpc(size_t nAdd)
+{
+	if (nAdd == PROGRAM_BE_ALLOWED_IPC_NONE)
+		return;
+	if (nAdd == PROGRAM_BE_ALLOWED_IPC_ALL)
+	{
+		for (size_t i = PROGRAM_BE_ALLOWED_IPC_NONE; i < PROGRAM_BE_ALLOWED_IPC_ALL; i++)
+			m_AllowedIpc.set(i);
+		return;
+	}
+	m_AllowedIpc.set(nAdd);
+}
+
+/** \brief reset the permission to use one specific IPC type
+ *  \param nRemove the IPC type to remove permission
+ *
+ * If nRemove is PROGRAM_BE_ALLOWED_IPC_NONE, nothing happens. If nRemove is
+ * PROGRAM_BE_ALLOWED_IPC_ALL, all IPC types are removed.
+ */
+inline void
+CCompiler::UnsetAllowedIpc(size_t nRemove)
+{
+	if (nRemove == PROGRAM_BE_ALLOWED_IPC_NONE)
+		return;
+	if (nRemove == PROGRAM_BE_ALLOWED_IPC_ALL)
+	{
+		for (size_t i = PROGRAM_BE_ALLOWED_IPC_NONE; i < PROGRAM_BE_ALLOWED_IPC_ALL; i++)
+			m_AllowedIpc.reset(i);
+		return;
+	}
+	m_AllowedIpc.reset(nRemove);
+}
+
+/** \brief test if one specific IPC is allowed
+ *  \param nOption the IPC type to test
+ *  \return true if specific IPC type is allowed
+ *
+ * If nOption is PROGRAM_BE_ALLOWED_IPC_NONE, then return true if no IPC type
+ * is allowed. If nOption is PROGRAM_BE_ALLOWED_IPC_ALL, then return true if
+ * at least one IPC type is allowed.
+ */
+inline bool
+CCompiler::IsAllowedIpc(BackEnd_Allowed_Ipc_Type nOption)
+{
+	if (nOption == PROGRAM_BE_ALLOWED_IPC_NONE)
+		return m_AllowedIpc.none();
+	if (nOption == PROGRAM_BE_ALLOWED_IPC_ALL)
+		return m_AllowedIpc.any();
+	return m_AllowedIpc.test(nOption);
 }
 
 

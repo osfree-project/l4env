@@ -616,18 +616,22 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 		string sTempVar = pNF->GetTempOffsetVariable();
 		// init temp var
 		++pFile << "\t" << sTempVar << " = 0;\n";
-		pFile << "\twhile ((";
+		pFile << "\t/* the send base of a flexpage can be zero or not, so only test the actual \n";
+		pFile << "\t * fpage member for zero fpage. */\n";
+		pFile << "\twhile (";
 		CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar);
-		pFile << " != 0) && (";
 		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar + "+1");
-		pFile << " != 0)) " << sTempVar << " += 2;\n";
+		pFile << ") " << sTempVar << " += 2;\n";
 
 		// now sTempVar points to the delimiter flexpage
 		// we have to add another 8 bytes to find the opcode, because
 		// UnmarshalReturn does only use temp-var
-		pFile << "\t/* skip zero fpage */\n";
-		pFile << "\t" << sTempVar << " += 2;\n";
+		pFile << "\t/* skip zero fpage(s) (may have multiple zero fpages - don't ask) */\n";
+		pFile << "\twhile ((";
+		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar);
+		pFile << " == 0) && (";
+		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar + "+1");
+		pFile << " == 0)) " << sTempVar << " += 2;\n";
 		// now unmarshal opcode
 		pFile << "\t" << pReturn->m_Declarators.First()->GetName() << " = ";
 		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar);

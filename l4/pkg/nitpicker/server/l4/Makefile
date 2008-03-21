@@ -16,12 +16,10 @@ PRIVATE_INCDIR    = $(SRC_DIR)/../include \
 SRC_C             = screen.c main.c startup.c view.c buffer.c clipping.c \
                     gfx16.c font.c server.c input.c client.c
 
-OBJS             += default_fnt.o
+OBJS             += $(OBJ_DIR)/default_fnt.o
 
 vpath % $(SRC_DIR)/../common
 vpath default.fnt $(DOPEDIR)/server/gfx
-
-$(warning default.fnt $(DOPEDIR)/server/gfx)
 
 CLIENTIDL         = nitpicker.idl nitevent.idl
 SERVERIDL         = nitpicker.idl
@@ -29,9 +27,9 @@ IDL_PKGDIR        = $(PKGDIR_OBJ) $(PKGDIR_OBJ)/server
 
 include $(L4DIR)/mk/prog.mk
 
-%_fnt.o: %.tff
-	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
+$(OBJ_DIR)/%_fnt.o: $(OBJ_DIR)/%.tff
+	$(VERBOSE)cd $(OBJ_DIR) && $(LD) -r --oformat default -o $(@F) -b binary $(^F)
 
-%.tff: %.fnt
+$(OBJ_DIR)/%.tff: %.fnt
 	$(VERBOSE)$(PKGDIR_OBJ)/tool/fnt2tff/OBJ-$(SYSTEM)/fnt2tff $< $@
 

@@ -112,6 +112,7 @@ CBESizes *CCompiler::m_pSizes = 0;
 map<string, string> CCompiler::m_mBackEndOptions;
 int CCompiler::errcount = 0;
 int CCompiler::warningcount = 0;
+bitset<PROGRAM_BE_ALLOWED_IPC_MAX> CCompiler::m_AllowedIpc;
 //@}
 
 CCompiler::CCompiler()
@@ -186,6 +187,8 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 	// and create one if not existent
 	CPreprocessor *pPreprocess = CPreprocessor::GetPreprocessor();
 
+	// first reset, so we can set specific IPC types
+	UnsetAllowedIpc(PROGRAM_BE_ALLOWED_IPC_ALL);
 
 	while (1)
 	{
@@ -241,36 +244,9 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			{
 				// there may follow an optional argument stating whether this is "static" or "extern" inline
 				SetOption(PROGRAM_GENERATE_INLINE);
-				if (!optarg)
-				{
-					Verbose(PROGRAM_VERBOSE_OPTIONS, "create client stub as inline\n");
-				}
-				else
-				{
-					// make upper case
-					string sArg(optarg);
-					transform(sArg.begin(), sArg.end(), sArg.begin(), toupper);
-					while (sArg[0] == '=')
-						sArg.erase(sArg.begin());
-					if (sArg == "EXTERN")
-					{
-						SetOption(PROGRAM_GENERATE_INLINE_EXTERN);
-						UnsetOption(PROGRAM_GENERATE_INLINE_STATIC);
-						Verbose(PROGRAM_VERBOSE_OPTIONS, "create client stub as extern inline\n");
-					}
-					else if (sArg == "STATIC")
-					{
-						SetOption(PROGRAM_GENERATE_INLINE_STATIC);
-						UnsetOption(PROGRAM_GENERATE_INLINE_EXTERN);
-						Verbose(PROGRAM_VERBOSE_OPTIONS, "create client stub as static inline\n");
-					}
-					else
-					{
-						CMessages::Warning("dice: Inline argument \"%s\" not supported. (assume none)\n", optarg);
-						UnsetOption(PROGRAM_GENERATE_INLINE_EXTERN);
-						UnsetOption(PROGRAM_GENERATE_INLINE_STATIC);
-					}
-				}
+				Verbose(PROGRAM_VERBOSE_OPTIONS, "create client stub as inline\n");
+				if (optarg)
+					CMessages::Warning("dice: Inline argument \"%s\" not supported.\n", optarg);
 			}
 			break;
 		case 'n':
@@ -385,6 +361,88 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 					{
 						SetOption(PROGRAM_ALIGN_TO_TYPE);
 						Verbose(PROGRAM_VERBOSE_OPTIONS, "align parameters in message buffer to type\n");
+					}
+					else if (sArg.substr(0,10) == "ALLOW-IPC=")
+					{
+						// one more element then max, because here we want to
+						// see ALL as one bit
+						bitset<PROGRAM_BE_ALLOWED_IPC_MAX+1> allowed, forbidden, *cur;
+						// now iterate the possible options and activate one
+						// by one
+						string sParam = sArg.substr(10);
+						string::size_type pos;
+						while ((pos = sParam.find(",")) != string::npos)
+						{
+							string s1 = sParam.substr(0, pos);
+							sParam = sParam.substr(pos+1);
+							bool bNot = s1[0] == '!';
+							if (bNot)
+							{
+								s1 = s1.substr(1);
+								cur = &forbidden;
+							} else
+								cur = &allowed;
+							if (s1 == "UDP")
+								cur->set(PROGRAM_BE_ALLOWED_IPC_UDP);
+							else if (s1 == "SHORT")
+								cur->set(PROGRAM_BE_ALLOWED_IPC_SHORT);
+							else if (s1 == "DIRECT")
+								cur->set(PROGRAM_BE_ALLOWED_IPC_DIRECT);
+							else if (s1 == "INDIRECT")
+								cur->set(PROGRAM_BE_ALLOWED_IPC_INDIRECT);
+							else if ((s1 == "FLEXPAGE") || (s1 == "FPAGE"))
+								cur->set(PROGRAM_BE_ALLOWED_IPC_FPAGE);
+							else if (s1 == "UTCB")
+								cur->set(PROGRAM_BE_ALLOWED_IPC_UTCB);
+							else if (s1 == "ALL")
+								cur->set(PROGRAM_BE_ALLOWED_IPC_ALL);
+							else
+								CMessages::Warning("unsupported argument \"%s%s\" for option -fallow-ipc\n",
+									bNot ? "!" : "", s1.c_str());
+						}
+						// one left
+						bool bNot = sParam[0] == '!';
+						if (bNot)
+						{
+							sParam = sParam.substr(1);
+							cur = &forbidden;
+						} else
+							cur = &allowed;
+						if (sParam == "UDP")
+							cur->set(PROGRAM_BE_ALLOWED_IPC_UDP);
+						else if (sParam == "SHORT")
+							cur->set(PROGRAM_BE_ALLOWED_IPC_SHORT);
+						else if (sParam == "DIRECT")
+							cur->set(PROGRAM_BE_ALLOWED_IPC_DIRECT);
+						else if (sParam == "INDIRECT")
+							cur->set(PROGRAM_BE_ALLOWED_IPC_INDIRECT);
+						else if ((sParam == "FLEXPAGE") || (sParam == "FPAGE"))
+							cur->set(PROGRAM_BE_ALLOWED_IPC_FPAGE);
+						else if (sParam == "UTCB")
+							cur->set(PROGRAM_BE_ALLOWED_IPC_UTCB);
+						else if (sParam == "ALL")
+							cur->set(PROGRAM_BE_ALLOWED_IPC_ALL);
+						else
+							CMessages::Warning("unsupported argument \"%s%s\" for option -fallow-ipc\n",
+								bNot ? "!" : "", sParam.c_str());
+						// if only setters, then reset whole bitset
+						if ((allowed.any() && !forbidden.any()) ||
+							(!allowed.test(PROGRAM_BE_ALLOWED_IPC_ALL) &&
+							forbidden.test(PROGRAM_BE_ALLOWED_IPC_ALL)))
+							UnsetAllowedIpc(PROGRAM_BE_ALLOWED_IPC_ALL);
+						// if only unsetters, then set whole bitset
+						if ((!allowed.any() && forbidden.any()) ||
+							allowed.test(PROGRAM_BE_ALLOWED_IPC_ALL))
+							SetAllowedIpc(PROGRAM_BE_ALLOWED_IPC_ALL);
+						for (size_t i = PROGRAM_BE_ALLOWED_IPC_NONE; i < PROGRAM_BE_ALLOWED_IPC_MAX; i++)
+						{
+							if (forbidden.test(i))
+								UnsetAllowedIpc(i);
+							if (allowed.test(i))
+								SetAllowedIpc(i);
+							if (forbidden.test(i) && allowed.test(i))
+								CMessages::Warning("allowed option overwrites forbidden in -fallow-ipc\n");
+						}
 					}
 					break;
 				case 'C':
@@ -1104,6 +1162,22 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		CMessages::Error("Option -MF requires argument.\n");
 	}
 
+	// if no IPC types are allowed, then allow all
+	if (!IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_ALL))
+		SetAllowedIpc(PROGRAM_BE_ALLOWED_IPC_ALL);
+
+	if (IsBackEndInterfaceSet(PROGRAM_BE_V4) &&
+		!IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_UTCB))
+	{
+		CMessages::Error("Dis-allowing UTCB IPC for X2/V4 back-end is not allowed\n");
+		return;
+	}
+	if (IsBackEndInterfaceSet(PROGRAM_BE_SOCKETS) &&
+		!IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_UDP))
+	{
+		CMessages::Error("Dis-allowing UDP for socket back-end is not allowed\n");
+		return;
+	}
 
 	// init plugins
 	InitTraceLib(argc, argv);
@@ -1222,13 +1296,7 @@ void CCompiler::ShowHelp(bool bShort)
 #if defined(HAVE_GETOPT_LONG)
 		", --inline"
 #endif
-		" <mode>  generate client stubs as inline\n";
-	if (!bShort)
-		std::cout <<
-			"    set <mode> to \"static\" to generate static inline\n"
-			"    set <mode> to \"extern\" to generate extern inline\n"
-			"    <mode> is optional\n";
-	std::cout <<
+		"         generate client stubs as inline\n";
 		" -n"
 #if defined(HAVE_GETOPT_LONG)
 		", --no-opcodes"

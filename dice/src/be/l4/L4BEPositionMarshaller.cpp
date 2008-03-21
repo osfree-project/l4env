@@ -193,6 +193,13 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 					pFile << "&";
 				pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
 			}
+			else if (pMember->m_Declarators.First()->IsArray() &&
+				!pTransmitType)
+			{
+				if (bReference)
+					pFile << "&";
+				pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
+			}
 			else
 			{
 				// if there is an attribute we have a possibly different type.

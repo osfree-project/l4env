@@ -186,8 +186,7 @@ CBEFunction::AddAfterParameters()
  * the options of the compiler. Based on the last check it decides which
  * internal Write function to call.
  */
-void
-CBEFunction::Write(CBEHeaderFile& pFile)
+void CBEFunction::Write(CBEHeaderFile& pFile)
 {
 	CCompiler::VerboseI("CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
@@ -228,8 +227,7 @@ void CBEFunction::Write(CBEImplementationFile& pFile)
 /** \brief test if this function is written inline
  *  \param pFile the file to write to
  */
-bool
-CBEFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
+bool CBEFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 {
 	return CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE);
 }

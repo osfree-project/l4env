@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 	fontconv = dope.get_module("ConvertFNT 1.0");
 
 	/* read fnt input data */
-	fh = open(argv[1], O_RDWR);
+	fh = open(argv[1], O_RDONLY);
 	if (fh < 0) {
 		printf("Error: could not open input file %s\n", argv[1]);
 		exit(1);

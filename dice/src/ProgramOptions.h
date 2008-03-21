@@ -43,8 +43,6 @@ enum ProgramOption_Type
     PROGRAM_GENERATE_TEMPLATE,  /**< generate the server function templates */
     PROGRAM_NO_OPCODES,         /**< generate NO opcode files */
     PROGRAM_GENERATE_INLINE,    /**< generate client stub as inline */
-    PROGRAM_GENERATE_INLINE_STATIC, /**< generate client stub as static inline */
-    PROGRAM_GENERATE_INLINE_EXTERN, /**< generate client stub as extern inline */
     PROGRAM_INIT_RCVSTRING,     /**< use a user-provided function to init recv-ref-strings */
     PROGRAM_STOP_AFTER_PRE,     /**< the compiler stops processing after the pre-processing */
     PROGRAM_GENERATE_MESSAGE,   /**< generate message passing functions as well */
@@ -162,6 +160,22 @@ enum BackEnd_Language_Type
     PROGRAM_BE_C,         /**< defines the back-end for C mapping */
     PROGRAM_BE_CPP,       /**< defines the back-end for C++ mapping */
     PROGRAM_BE_LANGUAGE   /**< max-value for language mapping values */
+};
+
+/** \enum BackEnd_Allowed_Ipc_Type
+ *  \brief toggles the Inter-Process Communication that is allowed
+ */
+enum BackEnd_Allowed_Ipc_Type
+{
+	PROGRAM_BE_ALLOWED_IPC_NONE,	/**< nothing set */
+	PROGRAM_BE_ALLOWED_IPC_UDP,		/**< socket BE: UDP allowed (default) */
+	PROGRAM_BE_ALLOWED_IPC_SHORT,	/**< L4 BE: short IPC allowed */
+	PROGRAM_BE_ALLOWED_IPC_DIRECT,	/**< L4 BE: L4 V2 message buffer allowed */
+	PROGRAM_BE_ALLOWED_IPC_INDIRECT,	/**< L4 BE: indirect string IPC allowed */
+	PROGRAM_BE_ALLOWED_IPC_FPAGE,	/**< L4 BE: flexpage allowed */
+	PROGRAM_BE_ALLOWED_IPC_UTCB,	/**< L4 BE: UTCB alowed */
+	PROGRAM_BE_ALLOWED_IPC_ALL,		/**< all of the above */
+	PROGRAM_BE_ALLOWED_IPC_MAX = PROGRAM_BE_ALLOWED_IPC_ALL		/**< upper bound for options */
 };
 
 //@}

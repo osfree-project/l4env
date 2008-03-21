@@ -44,6 +44,7 @@
 #include "be/BEUnionCase.h"
 #include "be/BEClassFactory.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "Error.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
@@ -1044,9 +1045,12 @@ int CL4BEMsgBuffer::GetMaxPosOfRefstringInMsgBuffer()
  */
 bool CL4BEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
 {
+	CCompiler::Verbose("CL4BEMsgBuffer::%s(%d, %d) called\n", __func__, nProperty, (int)nType);
 	if (nProperty == MSGBUF_PROP_SHORT_IPC)
 	{
 		CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+		CCompiler::Verbose("CL4BEMsgBuffer::%s(SHORT_IPC, %d) for func %s\n", __func__, (int)nType,
+			pFunction ? pFunction->GetName().c_str() : "");
 
 		// if direction is 0 we have to get maximum of IN and OUT
 		int nWords = 0;
@@ -1074,7 +1078,15 @@ bool CL4BEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
 
 		// get short IPC values
 		int nShortSize = pSizes->GetMaxShortIPCSize() / nWordSize;
-		return (nStrings == 0) && (nWords <= nShortSize) && (nWords > 0);
+		bool bRet = (nStrings == 0) && (nWords <= nShortSize) && (nWords > 0);
+
+		if (bRet && !CCompiler::IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_SHORT))
+		{
+			CMessages::Warning("Warning: disallowing short IPC in \"%s\" due to '-fallow-ipc=!short.\n",
+				pFunction->GetName().c_str());
+			return false;
+		}
+		return bRet;
 	}
 
 	// send everything else to base class

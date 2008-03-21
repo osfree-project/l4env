@@ -828,7 +828,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
 						(!typeddecl.m_Attributes.Find(ATTR_MAX_IS)))
 					{
 						CMessages::GccError(&typeddecl,
-							"Unbound array declarator \"%s\" with direction IN needs max_is attribute",
+							"Unbound array declarator \"%s\" with direction IN needs max_is attribute\n",
 							pArray->GetName().c_str());
 						throw error::consistency_error();
 					}
@@ -837,7 +837,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
 						(!typeddecl.m_Attributes.Find(ATTR_LENGTH_IS)))
 					{
 						CMessages::GccError(&typeddecl,
-							"Unbound array declarator \"%s\" needs size_is, length_is or max_is attribute",
+							"Unbound array declarator \"%s\" needs size_is, length_is or max_is attribute\n",
 							pArray->GetName().c_str());
 						throw error::consistency_error();
 					}

@@ -1041,12 +1041,9 @@ string CBENameFactory::GetInlinePrefix()
 {
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 		return string("inline");
-	if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE_EXTERN))
-		return string("extern inline");
-	else if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE_STATIC))
+	if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE))
 		return string("static inline");
-	else
-		return string("inline");
+	return string("inline");
 }
 
 /** \brief general function for accessing strings of derived name factories

@@ -44,6 +44,7 @@
 #include "fe/FEOperation.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "Error.h"
 #include <cassert>
 
@@ -197,6 +198,32 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 	}
 	nMaxSize -= GetPayloadOffset();
 
+	// checking if flexpages allowed
+	if (!CCompiler::IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_FPAGE))
+	{
+		for (nType = CMsgStructType::In; CMsgStructType::Max != nType; ++nType)
+		{
+			if (GetCountAll(TYPE_FLEXPAGE, nType))
+				CMessages::Warning("Warning: '-fallow-ipc=!fpage' but transmitting flexpage in \"%s\".\n",
+					pFunction->GetName().c_str());
+		}
+	}
+	// checking if refstrings allowed
+	if (!CCompiler::IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_INDIRECT))
+	{
+		for (nType = CMsgStructType::In; CMsgStructType::Max != nType; ++nType)
+		{
+			CBEStructType *pStruct = GetStruct(pFunction, nType);
+			if (!pStruct)
+				continue;
+			CBETypedDeclarator *pMember = pStruct->FindMemberAttribute(ATTR_REF);
+			if (pMember)
+				CMessages::Warning("Warning: '-fallow-ipc=!indirect' but transmitting indirect string \"%s\" in \"%s\".\n",
+					pMember->m_Declarators.First()->GetName().c_str(),
+					pFunction->GetName().c_str());
+		}
+	}
+
 	CBESizes *pSizes = CCompiler::GetSizes();
 	int nUtcbSize = pSizes->GetSizeOfType(TYPE_UTCB);
 	if (0 < nMaxSize && nMaxSize < nUtcbSize &&
@@ -215,7 +242,8 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
 			bRefFound = true;
 		m_bIsUtcb = !bRefFound;
-		CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: m_bIsUtcb is now %s\n", m_bIsUtcb ? "true" : "false");
+		CCompiler::Verbose("CL4FiascoBEMsgBuffer::PostCreate: m_bIsUtcb is now %s\n",
+			m_bIsUtcb ? "true" : "false");
 	}
 
 	if (m_bIsUtcb &&
@@ -235,6 +263,8 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 			m_bIsUtcb = false;
 	}
 
+	if (m_bIsUtcb && !CCompiler::IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_UTCB))
+		m_bIsUtcb = false;
 
 	if (m_bIsUtcb)
 	{
@@ -263,6 +293,17 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 			pMember = FindMember(sName, pFunction, nType);
 			pStruct->m_Members.Remove(pMember);
 		}
+	}
+
+	// if neither UTCB IPC nor short IPC and the "don't do direct IPC" option
+	// is set, print warning
+	if (!m_bIsUtcb &&
+		!HasProperty(MSGBUF_PROP_SHORT_IPC, CMsgStructType::In) &&
+		!HasProperty(MSGBUF_PROP_SHORT_IPC, CMsgStructType::Out) &&
+		!CCompiler::IsAllowedIpc(PROGRAM_BE_ALLOWED_IPC_DIRECT))
+	{
+		CMessages::Warning("Warning: In function \"%s\" using message buffer despite '-fallow-ipc=!direct'.\n",
+			pFunction->GetName().c_str());
 	}
 }
 
