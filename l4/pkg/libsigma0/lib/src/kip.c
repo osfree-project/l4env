@@ -59,7 +59,7 @@ l4sigma0_kip_map(l4_threadid_t pager)
   l4sigma0_kip_unmap();
 
   if (l4_is_invalid_id(pager))
-    pager = SIGMA0_ID;
+    pager = l4sigma0_id();
 
   if (l4sigma0_kip_map_to(pager, kip_area))
     return NULL;

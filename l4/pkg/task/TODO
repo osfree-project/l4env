@@ -1,0 +1,6 @@
+* Callbacks:
+  * provide callbacks so that a server can interface the server lib and implement
+    its own handling of client requests (e.g., L4Linux can implement task caching
+	this way and one might implement task allocation policies with it).
+* X0 - cannot use l4_task_new(). Tasks always need to be created by roottask, so
+  provide create/kill interface, too.

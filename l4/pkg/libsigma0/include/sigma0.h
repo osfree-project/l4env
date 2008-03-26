@@ -4,8 +4,6 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/types.h>
 
-#define SIGMA0_ID (l4_threadid_t){.id = {.lthread = 0, .task = 2}}
-
 #undef SIGMA0_REQ_MAGIC
 #undef SIGMA0_REQ_MASK
 
@@ -127,9 +125,17 @@ int l4sigma0_map_tbuf(l4_threadid_t pager, l4_addr_t virt);
  * The debug information, such as internal memory maps, as well as
  * statistics about the internal allocators is dumped to the kernel debugger.
  *
- * @param pager the sigmao thread id.
+ * @param pager the sigma0 thread id.
  */
 void l4sigma0_debug_dump(l4_threadid_t pager);
+
+/**
+ * @brief Return L4 thread ID of sigma0 server
+ * @ingroup sigma0
+ *
+ * @return L4 thread ID of the sigma0 server.
+ */
+l4_threadid_t l4sigma0_id(void);
 
 /**
  * @brief Get a user readable error messages for the return codes.

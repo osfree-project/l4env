@@ -7,11 +7,9 @@
 
 int arm_driver_reserve_region(l4_addr_t addr, l4_size_t size)
 {
-  l4_threadid_t sigma0_id = SIGMA0_ID;
-
   if (l4rm_area_setup_region(addr, size,
                              L4RM_DEFAULT_REGION_AREA, L4RM_REGION_PAGER,
-                             0, sigma0_id))
+                             0, l4sigma0_id()))
     {
       printf("l4rm_area_setup_region failed for %08lx\n", addr);
       return 1;
@@ -25,8 +23,6 @@ l4_addr_t arm_driver_map_io_region(l4_addr_t phys, l4_size_t size)
 {
   int ret;
   l4_addr_t virt;
-  l4_threadid_t sigma0_id = L4_NIL_ID;
-  sigma0_id.id.task = 2;
 
   ret = l4rm_area_setup(size, L4RM_DEFAULT_REGION_AREA,
                         L4RM_REGION_PAGER, L4RM_LOG2_ALIGNED,
@@ -38,7 +34,7 @@ l4_addr_t arm_driver_map_io_region(l4_addr_t phys, l4_size_t size)
       return -1;
     }
 
-  ret = l4sigma0_map_iomem(sigma0_id, phys, virt, size, 0);
+  ret = l4sigma0_map_iomem(l4sigma0_id(), phys, virt, size, 0);
   if (ret)
     {
       printf("l4sigma0_map_iomem failed with %d(%s)\n",

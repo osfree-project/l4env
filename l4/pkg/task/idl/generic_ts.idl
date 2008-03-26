@@ -1,0 +1,51 @@
+/* $Id: generic_ts.idl 27064 2006-09-30 23:01:23Z adam $*/
+/*! \file generic_ts/idl/generic_ts.idl
+ *
+ * \date   06/04/2000
+ * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ *         Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
+ *
+ * \brief Generic task server interface
+ */
+
+import <l4/sys/types.h>
+
+/** \anchor ts l4 namespace */
+library l4
+{
+  /** generic task server interface */
+  [error_function_server(dice_server_error)]
+  interface ts
+    {
+      /** Allocate a new task id. Returns -L4_ENOTASK if no task is available.
+       * We have to split allocating and creating the task in two steps 
+       * because creating a task means that the task starts immediatly. If
+       * the task starts before the task's pager knows the task ID of the new
+       * task, the pager gets confused and should deny the page fault handling
+       * for that task. Therefore we allocate the task ID in the first step
+       * and can tell the new task ID to the pager in the next step. Finally
+       * we create the task. 
+       * 
+       * \retval taskid		Id of new task assigned to calling client
+       * \return 		0 on success (\a taskid contains a valid id),
+       * 			error code otherwise:
+       * 			- -#L4_ENOTASK  no unused task id available */
+      long allocate([in] unsigned long taskno,
+                    [out] l4_taskid_t *taskid);
+
+      /**
+       * Free previously allocated task id.
+       *
+       * \param  taskid		Id of the task to free.
+       * \return 		0 on success
+       *			-#L4_ENOTFOUND if invalid task */
+      long free([in] l4_taskid_t taskid);
+
+      /** Terminate the caller */
+      [allow_reply_only]
+      long exit(void);
+
+      /** Dump list of all allocated tasks */
+      void dump();
+    };
+};

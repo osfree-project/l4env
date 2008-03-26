@@ -794,7 +794,7 @@ void callback_announce_mem_region(unsigned long addr, unsigned long len)
 
   io_ares_t **s = &io_mem_ares;
   io_ares_t *p = io_mem_ares;
-  l4_threadid_t pager = SIGMA0_ID;
+  l4_threadid_t pager = l4sigma0_id();
 
   /* reserve area */
   size = len >> IO_REQ_LOG2_PAGESIZE;

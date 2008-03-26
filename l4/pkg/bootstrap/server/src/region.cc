@@ -15,8 +15,8 @@ Region_list::test_fit(unsigned long long start, unsigned long long _size)
   for (Region const *c = _reg; c < _end; ++c)
     {
 #if 0
-      printf("test [%p-%p] [%p-%p]\n", (char*)start, (char*)start + _size,
-	  (char*)__region[i].begin, (char*)__region[i].end);
+      printf("test [%p-%p] [%llx-%llx]\n", (char*)start, (char*)start + _size,
+             c->begin(), c->end());
 #endif
 
       if (c->overlaps(r))
@@ -46,10 +46,10 @@ Region_list::find_free(Region const &search, unsigned long long _size,
     {
       start = (start + (1ULL << align) -1) & ~((1ULL << align)-1);
 
-      if (start + _size > end)
+      if (start + _size - 1 > end)
 	return 0;
 
-      // printf("try start %p\n", (void*)start);
+      //printf("try start %p\n", (void*)start);
       if (test_fit(start, _size))
 	return start;
 
