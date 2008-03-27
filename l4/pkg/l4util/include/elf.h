@@ -49,6 +49,26 @@ typedef	l4_int64_t	Elf64_Sxword;		/* size 8 align 8 */
 #define _ElfW(e,w,t)    __ElfW(e, w, _##t)
 #define __ElfW(e,w,t)   e##w##t
 
+#ifdef ARCH_x86
+#define L4_ARCH_EI_DATA      ELFDATA2LSB
+#define L4_ARCH_E_MACHINE    EM_386
+#define L4_ARCH_EI_CLASS     ELFCLASS32
+#else
+#ifdef ARCH_amd64
+#define L4_ARCH_EI_DATA      ELFDATA2LSB
+#define L4_ARCH_E_MACHINE    EM_AMD64
+#define L4_ARCH_EI_CLASS     ELFCLASS64
+#else
+#ifdef ARCH_arm
+#define L4_ARCH_EI_DATA      ELFDATA2LSB
+#define L4_ARCH_E_MACHINE    EM_ARM
+#define L4_ARCH_EI_CLASS     ELFCLASS32
+#else
+#warning elf.h: Unsupported build architecture!
+#endif
+#endif
+#endif
+
 
 /*************************************/
 /* ELF Header - figure 1-3, page 1-3 */

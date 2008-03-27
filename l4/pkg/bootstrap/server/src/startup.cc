@@ -518,8 +518,10 @@ static
 void
 print_e820_map(l4util_mb_info_t *mbi)
 {
+#ifndef ARCH_arm
   printf("  Bootloader MMAP%s\n", mbi->flags & L4UTIL_MB_MEM_MAP
                                    ? ":" : " not available.");
+#endif
 
   if (mbi->flags & L4UTIL_MB_MEM_MAP)
     {
