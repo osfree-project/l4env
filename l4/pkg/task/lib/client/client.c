@@ -254,6 +254,14 @@ int l4ts_free_task(const l4_taskid_t *t)
 	return err;
 }
 
+/** In fact there are no two semantics of free() for the tasklib, so we just
+ *  map this call to free_task().
+ */
+int l4ts_free2_task(const l4_taskid_t *t)
+{
+	return l4ts_free_task(t);
+}
+
 
 /** Exit task.
  *
