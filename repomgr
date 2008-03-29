@@ -27,7 +27,8 @@ my %modules =
                          ) ], },
 
    l4env_pkg => {
-      paths => [ qw(l4/pkg/bootstrap
+      paths => [ qw(l4/pkg/arm_drivers
+                    l4/pkg/bootstrap
 		    l4/pkg/cxx
 		    l4/pkg/demangle
 		    l4/pkg/dm_mem
@@ -165,8 +166,7 @@ my %modules =
 
    remote_repo_l4 => {
       modules => [ qw(bid hello l4env l4env_diet l4env_uclibc dope misc) ],
-      paths   => [ qw(l4/pkg/arm_drivers
-                      l4/pkg/bmsi
+      paths   => [ qw(l4/pkg/bmsi
                       l4/pkg/c++-examples
                       l4/pkg/cpu_reserve
                       l4/pkg/cxx_linux_io
