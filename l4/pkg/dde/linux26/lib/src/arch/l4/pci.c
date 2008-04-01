@@ -186,6 +186,12 @@ pci_enable_device(struct pci_dev *dev)
 }
 
 
+int pcibios_enable_device(struct pci_dev *dev, int mask)
+{
+	WARN_UNIMPL;
+	return 0;
+}
+
 /**
  * pci_disable_device - Disable PCI device after use
  *

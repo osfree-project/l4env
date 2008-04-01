@@ -37,7 +37,6 @@ cebit04.bin:		nethub.bin
 flips.headers:		l4vfs.headers
 ferret.headers:		l4vfs.lib
 uclibc++.headers:	uclibc.headers
-uclibc.lib:		libc_support.lib libc_backends.lib
 cunit.lib:		dde.bin
 nitpicker.bin:		dope.bin
 examples.bin:		dope.bin l4con.bin

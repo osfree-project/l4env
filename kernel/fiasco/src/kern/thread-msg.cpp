@@ -359,15 +359,20 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       if (EXPECT_TRUE (_target_desc.msg() != 0 && !_target_desc.rmap() &&
 		       !partner->invalid_ipc_buffer(_target_desc.msg())))
         {
-          // the receiver's message buffer is mapped into VM window 1.
-          if (!setup_ipc_window(0, ((Address)(_target_desc.msg()))
-                                   & Config::SUPERPAGE_MASK)
-              || !partner->in_long_ipc (this))
-	    return ipc_finish (partner, Ipc_err::Reaborted);
+	  if (space() != partner->space())
+            {
+              // the receiver's message buffer is mapped into VM window 1.
+              if (!setup_ipc_window(0, ((Address)(_target_desc.msg()))
+                                       & Config::SUPERPAGE_MASK)
+                  || !partner->in_long_ipc (this))
+                return ipc_finish (partner, Ipc_err::Reaborted);
 
-          rcv_descr = reinterpret_cast<message_header*>
-            (Kmem::ipc_window(0)
-	     + ((Address)_target_desc.msg() & ~Config::SUPERPAGE_MASK));
+              rcv_descr = reinterpret_cast<message_header*>
+                (Kmem::ipc_window(0)
+                 + ((Address)_target_desc.msg() & ~Config::SUPERPAGE_MASK));
+            }
+          else
+            rcv_descr = reinterpret_cast<message_header*>(_target_desc.msg());
         }
 
       // Treat dwords as fpage mappings
@@ -586,15 +591,20 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  min = from_size > to_size ? to_size : from_size;
 	  if (min > 0)
 	    {
-	      // XXX no bounds checking!
-              if (!setup_ipc_window(1, ((Address)to) & Config::SUPERPAGE_MASK) ||
-                  !partner->in_long_ipc (this))
-		return ipc_finish (partner, Ipc_err::Reaborted);
+              if (space() != partner->space())
+                {
+                  // XXX no bounds checking!
+                  if (!setup_ipc_window(1, ((Address)to) & Config::SUPERPAGE_MASK) ||
+                      !partner->in_long_ipc (this))
+                    return ipc_finish (partner, Ipc_err::Reaborted);
 
-	      mem_space()->copy_from_user
-		((Unsigned8*) (Kmem::ipc_window(1)
-			       + (((Address)to) & ~Config::SUPERPAGE_MASK)),
-		 from, min);
+                  mem_space()->copy_from_user
+                    ((Unsigned8*) (Kmem::ipc_window(1)
+                                   + (((Address)to) & ~Config::SUPERPAGE_MASK)),
+                     from, min);
+                }
+              else
+                mem_space()->copy_from_user(to, from, min);
 	    }
 
           // indicate size of received data

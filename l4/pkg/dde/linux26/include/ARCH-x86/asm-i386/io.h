@@ -112,7 +112,11 @@ static inline void * phys_to_virt(unsigned long address)
 /*
  * Change "struct page" to physical address.
  */
+#ifndef DDE_LINUX
 #define page_to_phys(page)    ((dma_addr_t)page_to_pfn(page) << PAGE_SHIFT)
+#else
+extern unsigned long page_to_phys(struct page *p);
+#endif
 
 extern void __iomem * __ioremap(unsigned long offset, unsigned long size, unsigned long flags);
 

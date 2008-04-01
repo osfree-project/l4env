@@ -1129,18 +1129,12 @@ static int do_open(struct block_device *bdev, struct file *file, int for_part)
 	}
 	owner = disk->fops->owner;
 
-	DEBUG_MSG("before lock nested");
 	mutex_lock_nested(&bdev->bd_mutex, for_part);
-	DEBUG_MSG("after lock nested");
 	if (!bdev->bd_openers) {
-		DEBUG_MSG("no openers yet");
 		bdev->bd_disk = disk;
 		bdev->bd_contains = bdev;
-		DEBUG_MSG("part %d", part);
 		if (!part) {
 			struct backing_dev_info *bdi;
-			DEBUG_MSG("disk->fops->open @ %p, do_open %p",
-					  disk->fops->open, do_open);
 			if (disk->fops->open) {
 				ret = disk->fops->open(bdev->bd_inode, file);
 				if (ret)
@@ -1158,7 +1152,6 @@ static int do_open(struct block_device *bdev, struct file *file, int for_part)
 		} else {
 			struct hd_struct *p;
 			struct block_device *whole;
-			DEBUG_MSG("here");
 			whole = bdget_disk(disk, 0);
 			ret = -ENOMEM;
 			if (!whole)

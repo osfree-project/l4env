@@ -101,6 +101,16 @@ my %modules =
       modules => [ qw(l4env_uclibc l4env_pkg dice) ],
    },
 
+   sigma0 => {
+      modules => [ qw(bid) ],
+      paths   => [ qw(l4/pkg/crtx
+                      l4/pkg/cxx
+		      l4/pkg/l4sys
+		      l4/pkg/libsigma0
+                      l4/pkg/sigma0
+		      l4/pkg/uclibc) ],
+   },
+
    hello_pkg => {
       paths => [ qw(l4/pkg/bootstrap
 		    l4/pkg/crtx

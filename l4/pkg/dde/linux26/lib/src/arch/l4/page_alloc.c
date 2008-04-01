@@ -112,6 +112,9 @@ void dde_page_cache_remove(struct page *p)
 struct page* dde_page_lookup(unsigned long va)
 {
 	unsigned int hashval = VIRT_TO_PAGEHASH(va);
+#if DEBUG_PAGE_ALLOC
+	DEBUG_MSG("%p", (void*)va);
+#endif
 
 	struct hlist_node *hn = NULL;
 	struct hlist_head *h  = &dde_page_cache[hashval];
@@ -202,6 +205,12 @@ fastcall void free_pages(unsigned long addr, unsigned int order)
 	ddekit_log(DEBUG_PAGE_ALLOC, "addr=%p order=%d", (void *)addr, order);
 
 	ddekit_large_free((void *)addr);
+}
+
+
+unsigned long page_to_phys(struct page *p)
+{
+	return __pa(p->virtual) & PAGE_MASK;
 }
 
 

@@ -497,13 +497,16 @@ config POWERSAVE_GETCHAR
 
 choice
 	prompt "Warn levels"
-	default WARN_ANY
+	default WARN_WARNING
 
 config WARN_NONE
 	bool "Do not show show any kernel warning"
 
+config WARN_WARNING
+	bool "Show messages of warning level"
+
 config WARN_ANY
-	bool "Show any kernel warning"
+	bool "Show all kernel warnings"
 
 endchoice # warn levels
 
@@ -583,6 +586,7 @@ config ARMv6
 config WARN_LEVEL
 	int
 	default 2 if WARN_ANY
+	default 1 if WARN_WARNING
 	default 0 if WARN_NONE
 
 config XARCH
