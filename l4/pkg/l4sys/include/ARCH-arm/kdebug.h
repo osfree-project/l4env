@@ -124,11 +124,12 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
       (								\
        "stmdb sp!, {r2-r12,lr}	\n\t"				\
        "mov	lr, pc		\n\t"				\
-       "mov	pc, %1		\n\t"				\
+       "mov	pc, %2		\n\t"				\
        "cmp	lr, #" #nr "	\n\t"				\
        "ldmia sp!, {r2-r12,lr}	\n\t"				\
        :							\
-       "=r" (r0)						\
+       "=r" (r0),						\
+       "=r" (r1)						\
        :							\
        "i" (L4_SYSCALL_ENTER_KDEBUG),				\
        "0" (r0),						\
@@ -146,11 +147,13 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
       (								\
        "stmdb sp!, {r3-r12,lr}	\n\t"				\
        "mov	lr, pc		\n\t"				\
-       "mov	pc, %1		\n\t"				\
+       "mov	pc, %3		\n\t"				\
        "cmp	lr, #" #nr "	\n\t"				\
        "ldmia sp!, {r3-r12,lr}	\n\t"				\
        :							\
-       "=r" (r0)						\
+       "=r" (r0),						\
+       "=r" (r1),						\
+       "=r" (r2)						\
        :							\
        "i" (L4_SYSCALL_ENTER_KDEBUG),				\
        "0" (r0),						\
@@ -171,11 +174,15 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
       (								\
        "stmdb sp!, {r5-r12,lr}	\n\t"				\
        "mov	lr, pc		\n\t"				\
-       "mov	pc, %1		\n\t"				\
+       "mov	pc, %5		\n\t"				\
        "cmp	lr, #" #nr "	\n\t"				\
        "ldmia sp!, {r5-r12,lr}	\n\t"				\
        :							\
-       "=r" (r0)						\
+       "=r" (r0),						\
+       "=r" (r1),						\
+       "=r" (r2),						\
+       "=r" (r3),						\
+       "=r" (r4)						\
        :							\
        "i" (L4_SYSCALL_ENTER_KDEBUG),				\
        "0" (r0),						\
