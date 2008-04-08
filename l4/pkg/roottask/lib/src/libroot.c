@@ -9,8 +9,26 @@
 
 /* XXX Check return value of DICE environment (e.g. IPC errors!) */
 
-l4_threadid_t rmgr_id;
-l4_threadid_t rmgr_pager_id;
+static l4_threadid_t _rmgr_service_id;
+static l4_threadid_t _rmgr_pager_id;
+
+/**
+ * Return pager ID of roottask
+ */
+l4_threadid_t
+rmgr_pager_id(void)
+{
+  return (l4_threadid_t){.id = {.lthread = 0, .task = 4}};
+}
+
+/**
+ * Return service ID of roottask
+ */
+l4_threadid_t
+rmgr_service_id(void)
+{
+  return (l4_threadid_t){.id = {.lthread = 1, .task = 4}};
+}
 
 /**
  * Find the roottask.
@@ -26,11 +44,10 @@ rmgr_init(void)
    * roottask is not the chief of all programs. Every chief would need to
    * implement the roottask protocol or at least a query_roottask function
    */
-  rmgr_id.id.task          = rmgr_pager_id.id.task = RMGR_TASK_ID;
-  rmgr_id.id.lthread       = RMGR_LTHREAD_SUPER;
-  rmgr_pager_id.id.lthread = RMGR_LTHREAD_PAGER;
+  _rmgr_service_id = rmgr_service_id();
+  _rmgr_pager_id   = rmgr_pager_id();
 
-  rmgr_init_ping_call(&rmgr_id, 0xaffeaffe, &value, &env);
+  rmgr_init_ping_call(&_rmgr_service_id, 0xaffeaffe, &value, &env);
 
   return value == ~0xaffeaffeUL;
 }
@@ -45,7 +62,7 @@ int
 rmgr_set_small_space(l4_threadid_t tid, int num)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_set_small_space_call(&rmgr_id, &tid, num, &env);
+  return rmgr_set_small_space_call(&_rmgr_service_id, &tid, num, &env);
 }
 
 /**
@@ -95,7 +112,7 @@ rmgr_set_prio(l4_threadid_t tid, int prio)
     }
 
   /* failed to set directly -- use the RMGR */
-  return rmgr_set_prio_call(&rmgr_id, &tid, prio, &env);
+  return rmgr_set_prio_call(&_rmgr_service_id, &tid, prio, &env);
 }
 
 /**
@@ -125,7 +142,7 @@ int
 rmgr_get_task(int num)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_get_task_call(&rmgr_id, num, &env);
+  return rmgr_get_task_call(&_rmgr_service_id, num, &env);
 }
 
 /**
@@ -141,11 +158,11 @@ rmgr_free_task(int num)
 
   /* Give task creation right back to RMGR */
   n.id.task = num;
-  l4_task_new(n, (l4_umword_t)rmgr_id.raw, /* lower part, if any (x0...) */
+  l4_task_new(n, (l4_umword_t)_rmgr_service_id.raw, /* lower part, if any (x0...) */
               0, 0, L4_NIL_ID);
 
   /* And then tell RMGR about it */
-  return rmgr_free_task_call(&rmgr_id, num, &env);
+  return rmgr_free_task_call(&_rmgr_service_id, num, &env);
 }
 
 /**
@@ -157,7 +174,7 @@ int
 rmgr_free_task_all(l4_threadid_t tid)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_free_task_all_call(&rmgr_id, &tid, &env);
+  return rmgr_free_task_all_call(&_rmgr_service_id, &tid, &env);
 }
 
 /**
@@ -167,7 +184,7 @@ int
 rmgr_get_irq(int num)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_get_irq_call(&rmgr_id, num, &env);
+  return rmgr_get_irq_call(&_rmgr_service_id, num, &env);
 }
 
 /**
@@ -177,7 +194,7 @@ int
 rmgr_free_irq(int num)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_free_irq_call(&rmgr_id, num, &env);
+  return rmgr_free_irq_call(&_rmgr_service_id, num, &env);
 }
 
 /**
@@ -188,7 +205,7 @@ int
 rmgr_free_irq_all(l4_threadid_t tid)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_free_irq_all_call(&rmgr_id, &tid, &env);
+  return rmgr_free_irq_all_call(&_rmgr_service_id, &tid, &env);
 }
 
 /**
@@ -198,7 +215,7 @@ int
 rmgr_free_fpage(l4_fpage_t fp)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_free_fpage_call(&rmgr_id, fp.raw, &env);
+  return rmgr_free_fpage_call(&_rmgr_service_id, fp.raw, &env);
 }
 
 /**
@@ -208,7 +225,7 @@ int
 rmgr_free_page(l4_umword_t addr)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_free_page_call(&rmgr_id, addr, &env);
+  return rmgr_free_page_call(&_rmgr_service_id, addr, &env);
 }
 
 /**
@@ -218,7 +235,7 @@ int
 rmgr_dump_mem(void)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_dump_mem_call(&rmgr_id, &env);
+  return rmgr_dump_mem_call(&_rmgr_service_id, &env);
 }
 
 /**
@@ -231,7 +248,7 @@ rmgr_reserve_mem(l4_umword_t size, l4_umword_t align, l4_umword_t flags,
   l4_addr_t addr;
   DICE_DECLARE_ENV(env);
 
-  if (rmgr_reserve_mem_call(&rmgr_id, size, align, flags,
+  if (rmgr_reserve_mem_call(&_rmgr_service_id, size, align, flags,
                             range_low, range_high, &addr, &env))
     return addr;
 
@@ -246,7 +263,7 @@ int
 rmgr_free_mem_all(l4_threadid_t tid)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_free_mem_all_call(&rmgr_id, &tid, &env);
+  return rmgr_free_mem_all_call(&_rmgr_service_id, &tid, &env);
 }
 
 /**
@@ -262,7 +279,7 @@ rmgr_get_page0(void *address)
   env.rcv_fpage = l4_fpage((l4_umword_t)address, L4_LOG2_PAGESIZE,
                            L4_FPAGE_RO, L4_FPAGE_MAP);
 
-  rmgr_get_page0_call(&rmgr_id, &page0, &env);
+  rmgr_get_page0_call(&_rmgr_service_id, &page0, &env);
 
   return 0;
 }
@@ -275,7 +292,7 @@ int
 rmgr_get_task_id(const char *modname, l4_threadid_t *tid)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_get_task_id_call(&rmgr_id, modname, tid, &env);
+  return rmgr_get_task_id_call(&_rmgr_service_id, modname, tid, &env);
 }
 
 /**
@@ -286,7 +303,7 @@ int
 rmgr_set_task_id(const char *modname, l4_threadid_t tid)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_set_task_id_call(&rmgr_id, modname, &tid, &env);
+  return rmgr_set_task_id_call(&_rmgr_service_id, modname, &tid, &env);
 }
 
 /**
@@ -302,7 +319,7 @@ rmgr_task_new(l4_taskid_t tid, l4_umword_t mcp_or_chief,
   l4_threadid_t inv = L4_INVALID_ID;
   l4_quota_desc_t q = L4_INVALID_KQUOTA;
 
-  if (rmgr_task_new_call(&rmgr_id, &tid, mcp_or_chief, esp, eip,
+  if (rmgr_task_new_call(&_rmgr_service_id, &tid, mcp_or_chief, esp, eip,
                          &pager, &inv, &q, -1, &ntid, &env))
     return L4_NIL_ID;
 
@@ -322,7 +339,7 @@ rmgr_task_new_long(l4_taskid_t tid, l4_umword_t mcp_or_chief,
   DICE_DECLARE_ENV(env);
   l4_threadid_t ntid = L4_NIL_ID;
 
-  if (rmgr_task_new_call(&rmgr_id, &tid, mcp_or_chief, esp, eip,
+  if (rmgr_task_new_call(&_rmgr_service_id, &tid, mcp_or_chief, esp, eip,
                          &pager, &caphandler, &kquota, -1, &ntid, &env))
     return L4_NIL_ID;
 
@@ -343,7 +360,7 @@ rmgr_task_new_with_prio(l4_taskid_t tid, l4_umword_t mcp_or_chief,
   l4_threadid_t inv = L4_INVALID_ID;
   l4_quota_desc_t q = L4_INVALID_KQUOTA;
 
-  if (rmgr_task_new_call(&rmgr_id, &tid, mcp_or_chief, esp, eip,
+  if (rmgr_task_new_call(&_rmgr_service_id, &tid, mcp_or_chief, esp, eip,
                          &pager, &inv, &q, sched_param.sched_param, &ntid,
                          &env))
     return L4_NIL_ID;
@@ -355,5 +372,5 @@ int
 rmgr_privctrl(l4_umword_t cmd, l4_umword_t param)
 {
   DICE_DECLARE_ENV(env);
-  return rmgr_privctrl_call(&rmgr_id, cmd, param, &env);
+  return rmgr_privctrl_call(&_rmgr_service_id, cmd, param, &env);
 }

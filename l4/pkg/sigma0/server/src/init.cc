@@ -20,6 +20,44 @@
 #include "ioports.h"
 #include "mem_man_test.h"
 
+static int
+slen(const char *s)
+{
+  int l = 0;
+  while (*s++)
+    ++l;
+  return l;
+}
+
+static int
+scmp(const char *a, const char *b)
+{
+  while (*a == *b && *a && *b)
+    {
+      a++;
+      b++;
+    }
+  return *a == *b;
+}
+
+static void
+setup_names(l4_kernel_info_t *info)
+{
+  if (info->version >> 24 != 0x87)
+    return;
+
+  const char *v = (char *)info + l4_kernel_info_version_offset(info);
+
+  for (v += slen(v) + 1; *v; v += slen(v) + 1)
+    if (scmp(v, "thread_names"))
+      {
+        fiasco_register_thread_name(L4_NIL_ID, "kernel idler");
+        fiasco_register_thread_name(l4_myself(), "sigma0");
+        return;
+      }
+
+}
+
 /* started as the L4 sigma0 task from crt0.S */
 void
 init(l4_kernel_info_t *info)
@@ -35,6 +73,7 @@ init(l4_kernel_info_t *info)
 
   init_memory(info);
   init_io_ports(info);
+  setup_names(info);
 
   //mem_man_test();
 

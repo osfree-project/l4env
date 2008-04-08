@@ -23,11 +23,23 @@
  * API.
  */
 
-extern int have_rmgr;
-extern l4_threadid_t rmgr_id;
-extern l4_threadid_t rmgr_pager_id;
-
 EXTERN_C_BEGIN
+
+/**
+ * \brief   Get the L4 thread id of the roottask pager.
+ * \ingroup rmgr_api
+ *
+ * \return  L4 thread id of the roottask pager.
+ */
+l4_threadid_t rmgr_pager_id(void);
+
+/**
+ * \brief   Get the L4 thread id of the roottask service.
+ * \ingroup rmgr_api
+ *
+ * \return  L4 thread id of the roottask service.
+ */
+l4_threadid_t rmgr_service_id(void);
 
 /**
  * \brief   Initialize the roottask lib.

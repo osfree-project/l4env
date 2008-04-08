@@ -396,7 +396,7 @@ l4_io_request_region_component (CORBA_Object _dice_corba_obj,
 
   /* ensure we posses the I/O ports */
   unsigned i;
-  l4_threadid_t pager = rmgr_pager_id; /* FIXME should be sigma0 */
+  l4_threadid_t pager = rmgr_pager_id(); /* FIXME should be sigma0 */
   for (i = 0; i < *num; i++)
     {
       l4_umword_t dw0, dw1;
@@ -984,7 +984,7 @@ int bios_map_area(unsigned long *ret_vaddr)
   l4_umword_t paddr = bios_paddr;
   l4_umword_t dw0, dw1;
   l4_msgdope_t result;
-  l4_threadid_t pager = rmgr_pager_id;
+  l4_threadid_t pager = rmgr_pager_id();
   l4_uint32_t vaddr_area;  /* ??? */
   l4_msgtag_t tag;
 

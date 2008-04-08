@@ -624,7 +624,7 @@ pager(void)
 	  //printf("ROOT: Received PF from "l4util_idfmt": pfa: "l4_addr_fmt
 	  //" ip: "l4_addr_fmt" ret = %d\n", l4util_idstr(t), d1, d2, err);
 	  /* we must synchronise the access to memmap functions */
-	  enter_memmap_functions(RMGR_LTHREAD_PAGER, rmgr_super_id);
+	  enter_memmap_functions(RMGR_INTERNAL_LTHREAD_PAGER, _rmgr_super_id);
 
 	  /* we received a paging request here */
 	  /* handle the sigma0 protocol */
@@ -698,7 +698,7 @@ pager(void)
               skip = 1;
             }
 
-	  leave_memmap_functions(RMGR_LTHREAD_PAGER, rmgr_super_id);
+	  leave_memmap_functions(RMGR_INTERNAL_LTHREAD_PAGER, _rmgr_super_id);
 
           if (skip)
             break;

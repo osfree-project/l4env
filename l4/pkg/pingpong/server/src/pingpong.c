@@ -409,7 +409,7 @@ create_pingpong_tasks(void (*ping_thread)(void),
     {
       printf("failed to create ping task "l4util_idtskfmt"\n",
 	  l4util_idtskstr(ping_id));
-      rmgr_task_new(pong_id,rmgr_id.raw,0,0,L4_NIL_ID);
+      rmgr_task_new(pong_id,(l4_umword_t)rmgr_service_id().raw,0,0,L4_NIL_ID);
       return;
     }
 
@@ -434,8 +434,8 @@ static void
 kill_pingpong_tasks(void)
 {
   /* delete ping and pong tasks */
-  rmgr_task_new(ping_id,rmgr_id.raw,0,0,L4_NIL_ID);
-  rmgr_task_new(pong_id,rmgr_id.raw,0,0,L4_NIL_ID);
+  rmgr_task_new(ping_id,(l4_umword_t)rmgr_service_id().raw,0,0,L4_NIL_ID);
+  rmgr_task_new(pong_id,(l4_umword_t)rmgr_service_id().raw,0,0,L4_NIL_ID);
 }
 
 static inline
@@ -501,7 +501,7 @@ map_scratch_mem_from_rmgr(void)
   l4_umword_t a;
 
   for (a=scratch_mem; a<scratch_mem+SCRATCH_MEM_SIZE; a+=L4_SUPERPAGESIZE)
-    map_4m_page(rmgr_pager_id, a);
+    map_4m_page(rmgr_pager_id(), a);
 
 }
 
@@ -965,13 +965,13 @@ error:
 	    {
 	      p = pong_id;
 	      p.id.task += i;
-	      rmgr_task_new(p, rmgr_id.raw, 0, 0, L4_NIL_ID);
+	      rmgr_task_new(p, rmgr_service_id().raw, 0, 0, L4_NIL_ID);
 	    }
 	  for (i=0; i<ping_tasks; i++)
 	    {
 	      p = ping_id;
 	      p.id.task += i;
-	      rmgr_task_new(p, rmgr_id.raw, 0, 0, L4_NIL_ID);
+	      rmgr_task_new(p, rmgr_service_id().raw, 0, 0, L4_NIL_ID);
 	    }
 	}
     }
@@ -1794,7 +1794,7 @@ main(int argc, const char **argv)
   memcpy_id.id.lthread = MEMCPY_THREAD;
 
   create_thread(pager_id,(l4_umword_t)pager,
-		(l4_umword_t)pager_stack+STACKSIZE, rmgr_pager_id);
+		(l4_umword_t)pager_stack+STACKSIZE, rmgr_pager_id());
 
   intra_ping = intra_pong = inter_ping = inter_pong = main_id;
   intra_ping.id.lthread  = PING_THREAD;

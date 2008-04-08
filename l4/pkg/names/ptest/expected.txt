@@ -11,28 +11,6 @@ names_de| Querying ABCGEFG FAILED!!! (but expected)
 names_de| Unregistering ABCGEFG FAILED!!! (but expected)
 names_de| Requesting dump from names:
 names   | dumping names server:
-names   | taskid 0.00 name kernel idler
-names   | taskid 2.00 name sigma0
-names   | taskid 4.00 name rmgr.pager
-names   | taskid 4.01 name rmgr.service
-names   | taskid 4.10 name rmgr.irq00
-names   | taskid 4.11 name rmgr.irq01
-names   | taskid 4.12 name rmgr.irq02
-names   | taskid 4.13 name rmgr.irq03
-names   | taskid 4.14 name rmgr.irq04
-names   | taskid 4.15 name rmgr.irq05
-names   | taskid 4.16 name rmgr.irq06
-names   | taskid 4.17 name rmgr.irq07
-names   | taskid 4.18 name rmgr.irq08
-names   | taskid 4.19 name rmgr.irq09
-names   | taskid 4.1A name rmgr.irq0A
-names   | taskid 4.1B name rmgr.irq0B
-names   | taskid 4.1C name rmgr.irq0C
-names   | taskid 4.1D name rmgr.irq0D
-names   | taskid 4.1E name rmgr.irq0E
-names   | taskid 4.1F name rmgr.irq0F
-names   | taskid 4.20 name rmgr.irq10
-names   | taskid 4.21 name rmgr.irq11
 names   | taskid 5.00 name stdlogV05
 names   | taskid 5.01 name log.flush
 names   | taskid 5.02 name log.flushsig

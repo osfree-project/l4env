@@ -48,6 +48,7 @@ static TASK_VECTYPE   task_term[TASK_VECSIZE] = {0, }; // task is terminating
 static const unsigned taskno_min = TASK_FIRST;
 static unsigned       task_cnt = TASK_CNT_DFL;
 static char           task_name[TASK_CNT_MAX][16];
+static l4_threadid_t  _rmgr_pager_id;
 
 typedef struct __task
 {
@@ -183,7 +184,7 @@ task_init(void)
 	   * through RMGR, just return the L4 task right back to RMGR */
 	  tid = server_id;
 	  tid.id.task = taskno;
-	  l4_task_new(tid, (l4_umword_t)rmgr_id.raw, 0, 0, L4_NIL_ID);
+	  l4_task_new(tid, (l4_umword_t)_rmgr_pager_id.raw, 0, 0, L4_NIL_ID);
 	}
     }
 }
@@ -335,7 +336,7 @@ task_kill(l4_threadid_t caller, l4_taskid_t taskid, l4_uint8_t options)
       return -L4_EUNKNOWN;
     }
   /* as we create tasks through RMGR, return the L4 task right back to RMGR */
-  l4_task_new(taskid, (l4_umword_t)rmgr_id.raw, 0, 0, L4_NIL_ID);
+  l4_task_new(taskid, (l4_umword_t)_rmgr_pager_id.raw, 0, 0, L4_NIL_ID);
 
   /* Tell the ack thread that he should send the EXIT event to the event
    * server. We cannot make this ourself since the event server should
@@ -464,7 +465,7 @@ l4_ts_free2_component(CORBA_Object client, const l4_taskid_t *taskid,
 		      CORBA_Server_Environment *_dice_corba_env)
 {
   /* as we create tasks through RMGR, return the L4 task right back to RMGR */
-  l4_task_new(*taskid, (l4_umword_t)rmgr_id.raw, 0, 0, L4_NIL_ID);
+  l4_task_new(*taskid, (l4_umword_t)_rmgr_pager_id.raw, 0, 0, L4_NIL_ID);
 
   return task_free(client, taskid->id.task);
 }
@@ -905,6 +906,7 @@ main(int argc, const char **argv)
     }
 
   server_id = l4_myself();
+  _rmgr_pager_id = rmgr_pager_id();
 
   /* get task id's from rmgr */
   task_init();

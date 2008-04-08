@@ -43,6 +43,7 @@ l4_threadid_t app_pager_id = L4_INVALID_ID;	/**< pager thread. */
 static l4_addr_t pager_map_addr_4K = 0;		/**< map addr for 4K pages. */
 static l4_addr_t pager_map_addr_4M = 0;		/**< map addr for 4M pages. */
 static l4_kernel_info_t *kip;			/**< address of KI page. */
+static l4_threadid_t _rmgr_pager_id;		/**< thread id of roottask pager */
 #ifdef ARCH_x86
 static l4_addr_t tb_stat_map_addr  = 0;		/**< address of Tbuf status. */
 #endif
@@ -137,7 +138,7 @@ forward_pf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
     {
       /* we could get l4_thread_ex_regs'd ... */
       tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
-      error = l4_ipc_call_tag(rmgr_pager_id,
+      error = l4_ipc_call_tag(_rmgr_pager_id,
 			      L4_IPC_SHORT_MSG, *dw1 | rw, 0, tag,
 			      L4_IPC_MAPMSG(map_addr, log2_size),
 			        &dummy, &dummy,
@@ -224,7 +225,7 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
 	  /* we could get l4_thread_ex_regs'd ... */
           tag = l4_msgtag(L4_MSGTAG_IO_PAGE_FAULT, 0, 0, 0);
 	  error = l4_ipc_call_tag
-             (rmgr_pager_id, L4_IPC_SHORT_MSG,
+             (_rmgr_pager_id, L4_IPC_SHORT_MSG,
               l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0).fpage, 0, tag,
               L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
               &dummy, &dummy, L4_IPC_NEVER, &result, &tag);
@@ -329,7 +330,7 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
     {
       /* we could get l4_thread_ex_regs'd ... */
       tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
-      error = l4_ipc_call_tag(rmgr_pager_id,
+      error = l4_ipc_call_tag(_rmgr_pager_id,
 			      L4_IPC_SHORT_MSG, *dw1, *dw2, tag,
 			      L4_IPC_MAPMSG(map_addr, log2_size),
 			        &dummy, &dummy,
@@ -344,7 +345,7 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
                    *dw1, *dw2);
       rmgr_memmap_error("ROOT (" l4util_idfmt ") denies page at %08x "
                         "(map=%08x, error=%02x result=%08x)",
-                        l4util_idstr(rmgr_pager_id),
+                        l4util_idstr(_rmgr_pager_id),
                         *dw1, map_addr, error, result.msgdope);
       enter_kdebug("app_pager");
       *reply = L4_IPC_SHORT_MSG;
@@ -473,7 +474,7 @@ map_kernel_info_page(void)
 	  return error;
 	}
 
-      if ((l4sigma0_map_tbuf(rmgr_pager_id, tb_stat_map_addr)))
+      if ((l4sigma0_map_tbuf(_rmgr_pager_id, tb_stat_map_addr)))
 	{
 	  printf("Can't map tbuf status page\n");
 	  l4rm_area_release(rm_area);
@@ -519,6 +520,8 @@ app_pager_thread(void *data)
       printf("Error %d reserving 4M map area\n", error);
       enter_kdebug("app_pager");
     }
+
+  _rmgr_pager_id = rmgr_pager_id();
 
   /* shake hands with creator */
   l4thread_started(NULL);

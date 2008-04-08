@@ -11,7 +11,6 @@ TARGET			= $(PKGNAME)
 DEFAULT_RELOC_x86	= 0x002d0000
 DEFAULT_RELOC_amd64	= 0x00300000
 DEFAULT_RELOC_arm	= 0x00148000
-#MODE			= sigma0_diet
 MODE			= sigma0
 SERVERIDL		= names.idl
 
@@ -21,7 +20,7 @@ all::
 include		$(OBJ_DIR)/Makeconf.bid.local
 Makefile.inc:   $(OBJ_DIR)/Makeconf.bid.local
 
-SRC_C		+= names.c predefined.c
+SRC_C		+= names.c
 
 ifeq ($(ARCH),x86)
 LIBS		+= -llogserver

@@ -288,7 +288,7 @@ x86emu_int10_init(void)
     {
       l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
       v_page[idx] = v_page[0] + addr;
-      error = l4_ipc_call_tag(rmgr_pager_id,
+      error = l4_ipc_call_tag(rmgr_pager_id(),
 			      L4_IPC_SHORT_MSG, addr, 0, tag,
 			      L4_IPC_MAPMSG(v_page[idx], L4_LOG2_PAGESIZE),
 			      &dummy, &dummy, L4_IPC_NEVER, &result, &tag);

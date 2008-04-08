@@ -151,7 +151,7 @@ map_emu_page(unsigned get_address, unsigned map_address)
   l4_umword_t dummy;
   l4_msgdope_t result;
   
-  error = l4_ipc_call(rmgr_pager_id,
+  error = l4_ipc_call(rmgr_pager_id(),
 		      L4_IPC_SHORT_MSG, get_address, 0,
 		      L4_IPC_MAPMSG((l4_umword_t)emu_mem+map_address,
 				    L4_LOG2_PAGESIZE),

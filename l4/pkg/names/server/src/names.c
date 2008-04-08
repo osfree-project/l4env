@@ -480,6 +480,7 @@ parse_args(int argc, char* argv[])
 int
 main(int argc, char* argv[])
 {
+  l4_threadid_t me = l4_myself();
   /* first: use the own output function, because we do not know who is the
             logserver. */
   logsrv_outfunc = LOG_outstring;
@@ -498,8 +499,8 @@ main(int argc, char* argv[])
 
   rmgr_init();
 
-  if (preregister() == 0)
-      LOG_Error("Error preregistering threads. Continuing anyway.");
+  if (!server_names_register(&me, "names", &me, 0))
+    LOG_Error("Error registering names. Continuing anyway.");
 
 #if CONFIG_EVENT
   if (using_events)

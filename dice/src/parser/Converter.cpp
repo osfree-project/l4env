@@ -232,7 +232,7 @@ long dice::parser::hex_to_long (char *s, IntType& t)
 		break;
 	case INT_INT:
 		{
-			long n = strtol(s, 0, 16);
+			int n = strtol(s, 0, 16);
 			if (! (std::numeric_limits<int>::min() <= n &&
 					n <= std::numeric_limits<int>::max() &&
 					errno != ERANGE))

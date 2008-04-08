@@ -26,6 +26,8 @@ IDL_PATH	=
 LIBCINCDIR	= $(addprefix -I,$(GCCINCDIR))
 CPPFLAGS	:= -nostdinc
 CXXFLAGS	:= -fno-builtin -nostdinc++ -ansi
+# for g++-4.3 (temporary?)
+CXXFLAGS        += -fpermissive
 DEFINES		:= $(HAS_VISIBILITY)
 endif
 

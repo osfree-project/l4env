@@ -9,8 +9,8 @@
 extern l4_threadid_t     myself;	/* the rmgr threadid */
 extern l4_threadid_t     my_pager;	/* the pager threadid */
 extern l4_threadid_t     my_preempter;	/* the preempter threadid */
-extern l4_threadid_t     rmgr_super_id;	/* resource manager threadid */
-extern l4_threadid_t     rmgr_pager_id;	/* page fault handler threadid */
+extern l4_threadid_t     _rmgr_super_id;/* resource manager threadid */
+extern l4_threadid_t     _rmgr_pager_id;/* page fault handler threadid */
 extern int               l4_version;	/* version of the l4 kernel */
 extern int               ux_running;
 extern int               quiet;

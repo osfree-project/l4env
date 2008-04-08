@@ -10,9 +10,8 @@
 
 #include <l4/sys/types.h>
 
-#define RMGR_TASK_ID       (4)  /*!< The task ID of the roottask */
-#define RMGR_LTHREAD_PAGER (0)  /*!< The thread ID of the pager thread */
-#define RMGR_LTHREAD_SUPER (1)  /*!< The thread ID of the super thread */
+#define RMGR_INTERNAL_LTHREAD_PAGER (0)  /*!< The thread ID of the pager thread */
+#define RMGR_INTERNAL_LTHREAD_SUPER (1)  /*!< The thread ID of the super thread */
 
 #define RMGR_RMGR (0)		/*!< PROTOCOL: rmgr meta protocol */
 #define RMGR_RMGR_PING (0xf3)	/*!< ping -- returns ~arg in d2 */

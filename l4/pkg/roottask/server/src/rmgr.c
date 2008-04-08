@@ -31,8 +31,8 @@
 l4_threadid_t myself;		/* used to derive taskids for new tasks */
 l4_threadid_t my_pager;
 l4_threadid_t my_preempter;
-l4_threadid_t rmgr_super_id;	/* resource manager normally thread (4.1)*/
-l4_threadid_t rmgr_pager_id;	/* pager normally thread (4.0) */
+l4_threadid_t _rmgr_super_id;	/* resource manager, normally thread (4.1)*/
+l4_threadid_t _rmgr_pager_id;	/* pager, normally thread (4.0) */
 int           l4_version;
 int           ux_running;
 int           quiet;
@@ -89,7 +89,7 @@ rmgr_main(int memdump)
   pa = my_pager;
   pr = my_preempter;
 
-  l4_thread_ex_regs(rmgr_super_id, (l4_umword_t) mgr,
+  l4_thread_ex_regs(_rmgr_super_id, (l4_umword_t) mgr,
 		    (l4_umword_t)(mgr_stack + MGR_STACKSIZE),
 		    &pr, &pa, &dummy, &dummy, &dummy);
 
@@ -465,9 +465,9 @@ long
 rmgr_dump_mem_component(CORBA_Object _dice_corba_obj,
                         CORBA_Server_Environment *_dice_corba_env)
 {
-  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  enter_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
   memmap_dump();
-  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  leave_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
   return 0;
 }
 
@@ -482,7 +482,7 @@ rmgr_free_page_component(CORBA_Object _dice_corba_obj,
     printf("ROOT: free_page sender=" l4util_idfmt " for address=%lx\n",
 	l4util_idstr(*_dice_corba_obj), address);
 
-  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  enter_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
   if (address >= 0x40000000 && address < 0xC0000000)
     {
       address += 0x40000000;
@@ -511,7 +511,7 @@ rmgr_free_page_component(CORBA_Object _dice_corba_obj,
   ret = 0;
 
 error:
-  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  leave_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
   return ret;
 }
 
@@ -562,7 +562,7 @@ rmgr_free_mem_all_component(CORBA_Object _dice_corba_obj,
 	l4util_idstr(*_dice_corba_obj),
 	l4util_idstr(*tid));
 
-  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  enter_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
   for (p = 0; p < SUPERPAGE_MAX; p++)
     {
       pa = p << L4_SUPERPAGESHIFT;
@@ -599,7 +599,7 @@ rmgr_free_mem_all_component(CORBA_Object _dice_corba_obj,
   for (p = 0x40000000; p < 0xC0000000; p += L4_SUPERPAGESIZE)
     memmap_free_superpage(p, tid->id.task);
 
-  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  leave_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
   return 0; /* success */
 }
 
@@ -615,7 +615,7 @@ rmgr_reserve_mem_component(CORBA_Object _dice_corba_obj,
     printf("ROOT: reserve_mem sender=" l4util_idfmt "\n",
 	l4util_idstr(*_dice_corba_obj));
 
-  enter_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  enter_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
 
   size = l4_round_page(size);
   if (align < L4_LOG2_PAGESIZE)
@@ -631,7 +631,7 @@ rmgr_reserve_mem_component(CORBA_Object _dice_corba_obj,
   if (a != -1)
     *addr = a;
 
-  leave_memmap_functions(RMGR_LTHREAD_SUPER, rmgr_pager_id);
+  leave_memmap_functions(RMGR_INTERNAL_LTHREAD_SUPER, _rmgr_pager_id);
 
   return a != -1;
 }

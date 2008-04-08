@@ -112,7 +112,7 @@ $(OBJ_DIR)/% $(OBJ_DIR)/%/html:$(SRC_DIR)/%.cfg
 INSTALLDIR_HTML		?= $(DROPS_STDDIR)/doc/html
 INSTALLFILE_HTML	?= $(CP) -ap $(1) $(2)
 INSTALLDIR_HTML_LOCAL	?= $(OBJ_BASE)/doc/html
-INSTALLFILE_HTML_LOCAL	?= $(foreach f,$(wildcard $(call absfilename,$(1))),$(LN) -sf $(f) $(2); )
+INSTALLFILE_HTML_LOCAL	?= for f in $(wildcard $(call absfilename,$(1))); do $(LN) -sf $$f $(2); done
 
 INSTALLDIR		= $(INSTALLDIR_HTML)
 INSTALLFILE		= $(INSTALLFILE_HTML)

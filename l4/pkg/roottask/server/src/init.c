@@ -433,9 +433,9 @@ init_rmgr(void)
   l4_umword_t dummy;
 
   /* set myself (my thread id) */
-  myself = rmgr_pager_id = rmgr_super_id = l4_myself();
-  rmgr_pager_id.id.lthread = RMGR_LTHREAD_PAGER;
-  rmgr_super_id.id.lthread = RMGR_LTHREAD_SUPER;
+  myself = _rmgr_pager_id = _rmgr_super_id = l4_myself();
+  _rmgr_pager_id.id.lthread = RMGR_INTERNAL_LTHREAD_PAGER;
+  _rmgr_super_id.id.lthread = RMGR_INTERNAL_LTHREAD_SUPER;
 
   /* set my_pager */
   my_preempter = my_pager = L4_INVALID_ID;
@@ -1390,6 +1390,30 @@ setup_symbols_and_lines(l4_addr_t mod_start, l4_threadid_t t)
     putchar('\n');
 }
 
+static void
+setup_names(void)
+{
+  int i;
+
+  if (l4_version != VERSION_FIASCO
+      || !l4sigma0_kip_kernel_has_feature("thread_names"))
+    return;
+
+  fiasco_register_thread_name(_rmgr_super_id, "root.service");
+  fiasco_register_thread_name(_rmgr_pager_id, "root.pager");
+
+  for (i = 0; i < RMGR_IRQ_MAX; i++)
+    {
+      char buffer[11];
+      l4_threadid_t id = _rmgr_super_id;
+      id.id.lthread = LTHREAD_NO_IRQ(i);
+      snprintf(buffer, sizeof(buffer), "root.irq%02X", i);
+      buffer[sizeof(buffer)-1] = 0;
+      fiasco_register_thread_name(id, buffer);
+    }
+
+}
+
 /**
  * support for loading tasks from boot modules and allocating memory for them.
  **/
@@ -1532,7 +1556,10 @@ start_tasks(void)
 	  t = l4_task_new(t, bootquota_get(task_no)->mcp,
 			  (l4_umword_t) sp, tramp_entry, myself);
 
-	  setup_task(t.id.task, t);
+	  if (l4_is_nil_id(t))
+	    printf("ROOT: Failed to create task\n");
+	  else
+	    setup_task(t.id.task, t);
 	}
     }
 
@@ -1565,6 +1592,7 @@ init(void)
   setup_symbols_and_lines((l4_addr_t)mb_mod[2].mod_start, myself);
   setup_task(TASKNO_ROOT, myself);
   setup_task(TASKNO_SIGMA0, my_pager);
+  setup_names();
 
   /* start the tasks loaded as modules */
   start_tasks();
