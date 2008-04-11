@@ -113,10 +113,13 @@ Syscalls::get_timesharing_param (L4_sched_param *param,
 {
   Mword s = state();
 
-  *preempter = _ext_preempter ? _ext_preempter->id() : L4_uid::Invalid;
+    {
+      Lock_guard<Cpu_lock> guard(&cpu_lock);
+      *preempter = (_ext_preempter && _ext_preempter->state()) ? _ext_preempter->id() : L4_uid::Invalid;
 
-  *ipc_partner = s & (Thread_polling | Thread_receiving) && partner() ?
-                      partner()->id() : L4_uid::Invalid;
+			*ipc_partner = s & (Thread_polling | Thread_receiving) && partner() && reinterpret_cast<Context*>(partner())->is_tcb_mapped() ?
+							       partner()->id() : L4_uid::Invalid;
+    } 
 
   if (s & Thread_dead)
     s = 0xf;

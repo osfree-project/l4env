@@ -121,7 +121,7 @@ Context::is_tcb_mapped() const
   Mword pagefault_if_0;
   asm volatile ("clc; mov (%2), %0	\n\t"
 		"setnc %b0		\n\t"
-		: "=acd" (pagefault_if_0) : "0"(0UL), "acdbSD" (&_state));
+		: "=acd" (pagefault_if_0) : "0"(0UL), "acdbSD" (this));
   return pagefault_if_0;
 }
 
