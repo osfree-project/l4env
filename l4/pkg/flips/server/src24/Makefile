@@ -3,7 +3,7 @@ L4DIR         ?= $(PKGDIR)/../..
 
 # L4VFS libs
 LIBS_l4vfs  = -ll4vfs_network_server-server -ll4vfs_select -ll4vfs_select_notify-server \
-              -lflips_l4vfs_server
+              -lflips24_l4vfs_server
 
 # FLIPS with loopback only
 TARGET = flips
