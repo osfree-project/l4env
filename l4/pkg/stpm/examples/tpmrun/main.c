@@ -18,6 +18,7 @@
  */
 
 #include <stdlib.h> //strtol
+#include <stdio.h>
 
 #include <l4/log/l4log.h>
 #include <l4/l4con/l4contxt.h>
@@ -463,7 +464,7 @@ static void command_loop()
 
         printf("\nStart quoting ... ");
 
-	error = quotePCRs(keyhandle, anything, anything2, quote, &quotelen,
+        error = quotePCRs(keyhandle, anything, anything2, quote, &quotelen,
                           pcrcomposite, sizeof(pcrcomposite), maxpcrs);
 
         if (error)
@@ -477,7 +478,7 @@ static void command_loop()
         break;
       case 'r':
         printf("Generating random numbers by TPM ...");
-	error = TPM_GetRandom(16, &foranything, anything);
+        error = TPM_GetRandom(16, &foranything, anything);
 
         if (error != 0)
           printf(" failed (error=%d)\n", error);
@@ -529,6 +530,7 @@ static void command_loop()
       default:
         printf("unknown command\n");
     }
+
   }
 }
 

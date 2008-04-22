@@ -14,7 +14,7 @@ SRC_C           = main.c createkey.c quote.c
 # list additional library paths and libraries here 
 LIBS            = -ltcg -ltcg_crypt -lcrypto_sha1_linux -lstpm-client \
                   -lcrypto_pad -lcrypto_rsaref2 \
-		  -lcontxt -lconstream-server
+                  -lcontxt -lconstream-server
 
 # we need some special dirs
 PRIVATE_INCDIR = $(PKGDIR)/include \
