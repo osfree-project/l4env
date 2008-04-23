@@ -38,6 +38,10 @@ static unsigned char quote      [1024]; //temp storage for quotes
 static unsigned int  quotelen;
 static pubkeydata    pubkey;            //temp storage for a pubkey
 static unsigned char pcrcomposite [1024];
+
+static const char * fp = "BMODFS";
+static const char * file = "keydata.hex";
+
 //#define _LOG_OUTPUT
 #ifdef _LOG_OUTPUT
 static char log [1024];
@@ -64,20 +68,28 @@ static void show_loaded_keys()
 static void show_help_info()
 {
   printf("h ... this help info\n");
-  printf("a ... set authentication of owner or SRK to be used\n");
+  printf("------- key creation  -------\n");
   printf("c ... create a new RSA key for signing in tmp buffer\n");
-  printf("e ... evict loaded key from TPM\n");
-  printf("E ... evict loaded key from TPM, TCGA 1.2 \n");
-  printf("i ... general information about TPM\n");
   printf("k ... list loaded keys\n");
+  printf("------- key loading   -------\n");
+  printf("f ... load a key from a file\n");
   printf("l ... load a key to TPM from tmp buffer\n");
   printf("L ... load a key to TPM from tmp buffer, TCGA 1.2\n");
-  printf("o ... take ownership of TPM\n");
-  printf("q ... quote of current pcrs with a loaded key\n");
+  printf("------- key eviction  -------\n");
+  printf("d ... dump key in tmp buffer to LOG\n");
+  printf("e ... evict loaded key from TPM\n");
+  printf("E ... evict loaded key from TPM, TCGA 1.2 \n");
+  printf("------- general       -------\n");
+  printf("i ... general information about TPM\n");
   printf("p ... print public key of loaded key\n");
+  printf("q ... quote of current pcrs with a loaded key\n");
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
+  printf("------- ownership     -------\n");
+  printf("a ... set authentication of owner or SRK to be used\n");
+  printf("o ... take ownership of TPM\n");
   printf("w ... clear owner of TPM\n");    
+  printf("------- miscellaneous -------\n");
   printf("x ... connect to another vTPM\n");    
 }
 
@@ -246,12 +258,16 @@ static void command_loop()
         printf("\nGenerating signing key as child of SRK ... ");
 
         error = createKey(&key, srk_auth, anything);
-        
+       
         if (error != 0)
           printf("failed (error=%d)\n", error);
         else
           printf("success. Key info stored in memory temporarily.\n");
 
+        break;
+      case 'd':
+        dumpkey(&key);
+        printf("success.\n");
         break;
       case 'e':
         memset(anything, 0, sizeof(anything));
@@ -280,6 +296,17 @@ static void command_loop()
         else
           printf(" success.\n");
 
+        break;
+      case 'f':
+        printf("Loading key from fileprovider %s, file %s ...", fp, file);
+
+        error = loadkeyfile(fp, file, &key);
+
+        if (error != 0)
+          printf(" failed (error=%d)\n", error);
+        else
+          printf(" success. Key stored in temporary memory.\n");
+        
         break;
       case 'l':
         printf("Loading key stored in memory to TPM ...");

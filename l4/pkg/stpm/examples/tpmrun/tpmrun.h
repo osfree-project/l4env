@@ -15,6 +15,7 @@
 #include <tcg/basic.h>    //TPM_GetCapability_Key_Handle
 
 int createKey(keydata * key, unsigned char * keyauth, unsigned char * newauth);
+
 int quotePCRs(unsigned int keyhandle,
               unsigned char * passhash,
               unsigned char * nouncehash,
@@ -23,6 +24,11 @@ int quotePCRs(unsigned int keyhandle,
               unsigned char * pcrs,
               unsigned int  pcrlen,
               unsigned int maxpcrs);
+
+void dumpkey(keydata * key);
+void redumpkey(const char * dumped, keydata * _key);
+
+int loadkeyfile(const char * servername, const char * filename, keydata * key);
 
 // TPM_RESOURCE_TYPE
 #define TPM_RT_KEY 0x00000001
