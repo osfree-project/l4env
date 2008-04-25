@@ -161,7 +161,10 @@ public:
     --(s->num_free);
 
     if (!s->free)
-      _full_slabs = List_item::push_front(_full_slabs, s);
+      {
+	_partial_slabs = List_item::remove(_partial_slabs, s);
+        _full_slabs = List_item::push_front(_full_slabs, s);
+      }
     else if (free == &_empty_slabs)
       _partial_slabs = List_item::push_front(_partial_slabs, s);
 
