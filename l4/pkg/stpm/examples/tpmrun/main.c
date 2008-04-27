@@ -154,23 +154,18 @@ static void show_quote()
 
 }
 
-static void command_loop()
+static unsigned long tpm_check()
 {
-  keydata key;
-  unsigned long foranything, keyhandle;
-  int error;
-  int c, i;
+	int error;
   int major, minor, version, rev;
   unsigned long maxpcrs = 16;
-  #ifdef _LOG_OUTPUT
-  char * log2;
-  #endif
+  unsigned long rpcrs;
 
   printf("Detecting version of TPM ...");
   error = TPM_GetCapability_Version(&major, &minor, &version, &rev);
 
   if (error)
-    printf(" failed (error=%d)\n", error); 
+    printf(" failed (error=%d)\n", error);
   else
   {
     printf(" found version: %d.%d.%d.%d ", major, minor, version, rev);
@@ -180,9 +175,9 @@ static void command_loop()
       {
         printf("... TPM specification 1.2\n");
         maxpcrs = 24;
-      }
-      else
+      } else {
         printf("... TPM specification 1.1\n");
+      }
     else
       printf("... unknown TPM specification version\n");
 
@@ -190,15 +185,33 @@ static void command_loop()
 
   printf("Detecting number of PCRs ...");
 
-  error = TPM_GetCapability_Pcrs(&foranything);
+  error = TPM_GetCapability_Pcrs(&rpcrs);
 
   if (error)
     printf(" failed (error=%d). Assume %lu PCR registers.\n", error, maxpcrs);
   else
   {
-    maxpcrs = foranything;
+    maxpcrs = rpcrs;
     printf(" success. %lu PCR registers reported by TPM.\n", maxpcrs);
   }
+
+  return maxpcrs;
+}
+
+static void command_loop()
+{
+  keydata key;
+  unsigned long foranything, keyhandle;
+  int error;
+  int c, i;
+  int major, minor, version, rev;
+  unsigned long maxpcrs; 
+  #ifdef _LOG_OUTPUT
+  char * log2;
+  #endif
+
+  // find out what for a TPM we have
+  maxpcrs = tpm_check();
 
   printf("\nWelcome ... press 'h' for a list of supported commands\n");
 
@@ -482,11 +495,10 @@ static void command_loop()
         //TODO
         anything2[0] = 'n';
         anything2[1] = 'o';
-        anything2[2] = 'u';
-        anything2[3] = 'n';
-        anything2[4] = 'c';
-        anything2[5] = 'e';
-        anything2[6] = 0;
+        anything2[2] = 'n';
+        anything2[3] = 'c';
+        anything2[4] = 'e';
+        anything2[5] = 0;
         sha1(anything2, strlen((char *)anything2), anything2);
 
         printf("\nStart quoting ... ");
@@ -543,15 +555,19 @@ static void command_loop()
       case 'x':
         memset(anything, 0, sizeof(anything));
 
-        printf("Name of vTPM to be used:");
+        printf("Name of (v)TPM to be used: ");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        printf("\n\nCheck for availability ... ");
 
         error = check_tpm_server((char *)anything, 1);
 
         if (error)
           printf(" failed (error=%d)\n", error);
         else
-          printf(" success. Now TPM commands will be sent to %s\n", anything);
+				{
+          printf(" success. Try to detect TPM version of '%s' ... \n\n", anything);
+					maxpcrs = tpm_check();
+				}
 
         break;
       default:

@@ -35,10 +35,11 @@ GLUE_TPM_TRANSMIT_FUNC(GetRandom, STPM,
 
 void tpm_log(int priority, const char *fmt, ...)
 {
-    va_list ap;
-    va_start(ap, fmt);
+  va_list ap;
+  va_start(ap, fmt);
+  if (priority < LOG_INFO)
     LOG_vprintf(fmt, ap);
-    va_end(ap);
+  va_end(ap);
 }
 
 void tpm_get_random_bytes(void *buf, size_t nbytes)
@@ -56,7 +57,7 @@ uint64_t tpm_get_ticks(void)
   l4_cpu_time_t tmp = old;
 
   old = l4_tsc_to_ns(l4_rdtsc()) / 1000;
-  LOG("timestamp diff %llu vs %llu", old - tmp, (old != 0 && old > tmp) ? old - tmp : 0 );
+
   return ((old > tmp) ? old - tmp : 0 );
 }
 

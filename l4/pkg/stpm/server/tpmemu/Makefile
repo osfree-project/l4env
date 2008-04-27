@@ -1,25 +1,26 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-DEPENDS_PKGS	= gmp
+DEPENDS_PKGS = gmp
 # rtc l4vfs
 
-TARGET		= tpmemu-l4
-SYSTEMS		= x86-l4v2
+TARGET  = tpmemu-l4
+SYSTEMS = x86-l4v2
+MODE    = l4env
 
 # the default relocation address. This may be superseded by a STATIC file.
 DEFAULT_RELOC	= 0x017C0000
 
 SERVERIDL	= stpm.idl
 
-TPM_DIRS        = $(PKGDIR)/contrib/tpmemulator/tpm \
-                  $(PKGDIR)/contrib/tpmemulator/crypto 
+TPM_DIRS  = $(PKGDIR)/contrib/tpmemulator/tpm \
+            $(PKGDIR)/contrib/tpmemulator/crypto 
 
-SRC_C           = server.c glue.c \
-                  $(foreach file, \
-                     $(foreach dir, $(TPM_DIRS), $(wildcard $(dir)/*.c)), \
-                     $(lastword $(subst /, ,$(file))) \
-                   )
+SRC_C     = server.c glue.c \
+             $(foreach file, \
+               $(foreach dir, $(TPM_DIRS), $(wildcard $(dir)/*.c)), \
+                 $(lastword $(subst /, ,$(file))) \
+              )
 LIBS		=  -lgmp -ltcg -lstpm-client
 
 #required to run tpmd with socket interface ...

@@ -27,25 +27,40 @@
 
 int l4libc_heapsize = 1024 * 1024;
 
+void *CORBA_alloc(unsigned long size){
+	return malloc(size);
+}
+void CORBA_free(void *addr){
+	free(addr);
+}
+
 int
 stpmif_transmit_component (CORBA_Object _dice_corba_obj,
                            const char *write_buf,
                            unsigned int write_count,
-			   char **read_buf,
-			   unsigned int *read_count,
+                           char **read_buf,
+                           unsigned int *read_count,
                            CORBA_Server_Environment *_dice_corba_env)
 {
 
   int res;
 
-  res = tpm_handle_command(write_buf, write_count, read_buf, read_count);
+  if (write_buf == NULL || read_buf == NULL || read_count == NULL)
+    return -L4_EINVAL;
+
+  res = tpm_handle_command((const unsigned char *)write_buf, write_count,
+                           (uint8_t **)read_buf, read_count);
   if (res < 0) {
     LOG_Error("tpm_handle_command failed.");
   }
 
-  *read_count = 0 < res ? res : 0;
+  if (res > 0)
+  {
+    *read_count = 0;
+    return res;
+  }
 
-  return res;
+  return *read_count;
 }
 
 CORBA_int
@@ -57,8 +72,6 @@ stpmif_abort_component(CORBA_Object _dice_corba_obj,
 
 int main(void)
 {
-  DICE_DECLARE_SERVER_ENV(env);
-
   if (names_register("vtpmemu") == 0)
   {
     LOG_Error("Registration error at nameserver\n");
@@ -76,7 +89,11 @@ int main(void)
   // clear 1
   // save 2
   // deactivated 3
-  tpm_emulator_init(2);
+  tpm_emulator_init(1);
+
+  DICE_DECLARE_SERVER_ENV(env);
+	env.malloc=CORBA_alloc;
+	env.free=CORBA_free;
 
   stpmif_server_loop(&env);
 }

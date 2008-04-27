@@ -38,8 +38,8 @@ int
 stpmif_transmit_component (CORBA_Object _dice_corba_obj,
                            const char *write_buf,
                            unsigned int write_count,
-			   char **read_buf,
-			   unsigned int *read_count,
+                           char **read_buf,
+                           unsigned int *read_count,
                            CORBA_Server_Environment *_dice_corba_env)
 {
 
