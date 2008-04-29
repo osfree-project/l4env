@@ -5,6 +5,11 @@ INTERFACE [arm]:
 #include "mem_layout.h"
 
 //---------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
+
+#include "cpu.h"
+
+//---------------------------------------------------------------------------
 IMPLEMENTATION [arm && armv5]:
 
 enum
@@ -13,7 +18,6 @@ enum
   Section_no_cache = 0x402,
   Section_local    = 0,
   Section_global   = 0,
-  Cp15_c1 = 0x0120f,
 };
 
 void
@@ -29,7 +33,6 @@ enum
   Section_no_cache = 0x0402,
   Section_local    = (1 << 17),
   Section_global   = 0,
-  Cp15_c1          = 0x803007,
 };
 
 void
@@ -121,7 +124,8 @@ extern "C" int bootstrap_main()
   map_hw(page_dir);
 
   unsigned domains      = 0x55555555; // client for all domains
-  unsigned control      = Cp15_c1;
+  unsigned control      = Config::cache_enabled
+                          ? Cpu::Cp15_c1_cache_enabled : Cpu::Cp15_c1_cache_disabled;
   //unsigned control        = 0x01003;
   //unsigned control      = 0x00063;
 

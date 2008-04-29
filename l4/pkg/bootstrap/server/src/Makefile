@@ -41,23 +41,27 @@ SRC_CC_amd64	+= support_x86.cc
 SRC_C_x86	+= serial.c base_critical.c
 SRC_C_amd64	+= serial.c base_critical.c
 SRC_CC_arm     	+= $(SUPPORT_CC_arm-$(ARM_PLATFORM_TYPE))
+SRC_S_arm     	+= $(SUPPORT_S_arm-$(ARM_PLATFORM_TYPE))
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 
 MOD_ADDR         = 0x02000000
-SRC_S		:= crt0.S
+SRC_S		+= crt0.S
 ifeq ($(ARCH),arm)
 ifeq ($(ARM_PLATFORM_TYPE),)
 $(error For ARM architecture builds, ARM_PLATFORM_TYPE must be set to some valid platform name)
 endif
-DRV_LIBS	+= -larm_uart
-CPPFLAGS	+= -DARCH_arm_$(ARM_PLATFORM_TYPE)
+
+DRV_LIBS          += -larm_uart
+CPPFLAGS          += -DARCH_arm_$(ARM_PLATFORM_TYPE)
+ifneq ($(wildcard $(SRC_DIR)/Makeconf.$(ARM_PLATFORM_TYPE)),)
+MAKECONF_PLATFORM  =  $(SRC_DIR)/Makeconf.$(ARM_PLATFORM_TYPE)
+-include $(MAKECONF_PLATFORM)
+endif
 endif
 CRT0		 =
 LDSCRIPT	 = bootstrap.ld
 LDNMAGIC	 =
-
--include $(SRC_DIR)/Makeconf.$(ARM_PLATFORM_TYPE)
 
 vpath serial.c        $(SRC_DIR)/ARCH-x86
 vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
@@ -210,7 +214,7 @@ $(TARGET): $(LDSCRIPT) $(OBJS_$(TARGET))
 
 startup.o: $(STARTUP_C_dep)
 
-$(LDSCRIPT): $(LDSCRIPT).in $(SRC_DIR)/Makefile $(BOOTSTRAP_LD_dep)
+$(LDSCRIPT): $(LDSCRIPT).in $(SRC_DIR)/Makefile $(MAKECONF_PLATFORM) $(BOOTSTRAP_LD_dep)
 	@$(GEN_MESSAGE)
 	$(VERBOSE)cpp -P $(CPPFLAGS) -DLINKADDR=$(DEFAULT_RELOC_$(ARCH)) $< $@;
 

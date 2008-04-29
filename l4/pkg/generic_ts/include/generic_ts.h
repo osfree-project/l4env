@@ -151,6 +151,11 @@ l4ts_exit(void) __attribute__((noreturn));
 int
 l4ts_dump_tasks(void);
 
+/**
+ * \brief Return server ID.
+ */
+l4_threadid_t
+l4ts_server(void);
 
 L4_INLINE int
 l4ts_connected(void)

@@ -1,7 +1,7 @@
 #ifndef __TYPES_H__
 #define __TYPES_H__
 
-#include "l4/sys/consts.h"
+#include <l4/sys/consts.h>
 
 #define MODS_MAX 64
 #define CMDLINE_MAX 1024

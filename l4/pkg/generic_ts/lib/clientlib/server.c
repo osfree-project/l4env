@@ -33,3 +33,9 @@ l4ts_connect(void)
   dont_try_again = 1;
   return l4_is_nil_id(l4ts_server_id) ? -L4_ENOTFOUND : 0;
 }
+
+l4_threadid_t
+l4ts_server(void)
+{
+  return l4ts_server_id;
+}

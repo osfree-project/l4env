@@ -47,6 +47,8 @@ public:
   static bool const VMEM_ALLOC_TEST = false;
 #endif
 
+  static const bool cache_enabled = true;
+
 };
 
 //---------------------------------------------------------------------------

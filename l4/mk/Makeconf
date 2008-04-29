@@ -249,7 +249,7 @@ endif
 
 include $(L4DIR)/mk/config.inc
 
-ifneq ($(HAVE_LDSO),)
+ifeq ($(HAVE_LDSO),y)
 # MAKEDEP-call:
 # arg1 - compiler binary name
 # arg2 - [opt] compiler target. Will be written as target within the

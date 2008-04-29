@@ -199,7 +199,7 @@ l4_ipc_wait_next_period(l4_threadid_t *src,
      "a" (L4_IPC_NIL_DESCRIPTOR),
      "c" (timeout),
      [msg_desc] "ir"(((int)rcv_msg) | L4_IPC_OPEN_IPC),
-     "D" (tag | L4_IPC_FLAG_NEXT_PERIOD) /* no absolute timeout */
+     "D" (L4_IPC_FLAG_NEXT_PERIOD) /* no absolute timeout */
      );
   return L4_IPC_ERROR(*result);
 }

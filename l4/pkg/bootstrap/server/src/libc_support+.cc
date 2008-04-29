@@ -77,7 +77,8 @@ void __main(void)
   platform_init();
 
   startup(0, 0, 0);
-  while(1);
+  while(1)
+    ;
 }
 #endif
 

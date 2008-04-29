@@ -2,6 +2,10 @@
 
 mainmenu "Fiasco configuration"
 
+config KERNELVERSION
+	string
+	option env="KERNELVERSION"
+
 menu "Target configuration"
 
 choice
@@ -44,8 +48,7 @@ endchoice
 # PF_INCLUDE
 
 config ABI_V2
-	bool
-	default y
+	def_bool y
 
 config CAN_ARM_CPU_SA1100
 	bool
@@ -568,20 +571,16 @@ config EXPERIMENTAL
 	  Use with caution!
 
 config PERF_CNT
-	bool
-	default y if JDB && (IA32 || AMD64)
+	def_bool y if JDB && (IA32 || AMD64)
 
 config BIT32
-	bool
-	default y if ARM || IA32
+	def_bool y if ARM || IA32
 
 config BIT64
-	bool
-	default y if AMD64
+	def_bool y if AMD64
 
 config ARMv6
-	bool
-	default y if ARM_1176 || ARM_MPCORE
+	def_bool y if ARM_1176 || ARM_MPCORE
 
 config WARN_LEVEL
 	int
@@ -614,5 +613,4 @@ config ABI
 	default "v2"
 
 config DECEIT_BIT_DISABLES_SWITCH
-	bool
-	default y
+	def_bool y

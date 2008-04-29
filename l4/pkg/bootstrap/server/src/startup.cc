@@ -297,7 +297,22 @@ move_modules(l4util_mb_info_t *mbi, unsigned long modaddr)
       if (start == end)
 	continue;
 
-      printf("  move module %d start %lx -> %lx\n",i, start, start+offset);
+#ifdef VERBOSE_LOAD
+      unsigned char c[5];
+      c[0] = *(unsigned char*)(start + 0);
+      c[1] = *(unsigned char*)(start + 1);
+      c[2] = *(unsigned char*)(start + 2);
+      c[3] = *(unsigned char*)(start + 3);
+      c[4] = 0;
+      c[0] = c[0] < 32 ? '.' : c[0];
+      c[1] = c[1] < 32 ? '.' : c[1];
+      c[2] = c[2] < 32 ? '.' : c[2];
+      c[3] = c[3] < 32 ? '.' : c[3];
+      printf("  move module %d start %lx (%s) -> %lx\n", i, start, c, start + offset);
+#else
+      printf("  move module %d start %lx -> %lx\n",      i, start, start + offset);
+#endif
+
       Region *overlap = regions.find(Region(start + offset, end + offset));
       if (overlap)
 	{
@@ -369,7 +384,25 @@ add_elf_regions(l4util_mb_info_t *mbi, l4_umword_t module,
                     &error_msg, &entry);
 
   if (r)
-    panic("\nThis is an invalid binary, fix it.");
+    {
+#ifdef VERBOSE_LOAD
+      int i;
+      printf("\n%p: ", exec_task.mod_start);
+      for (i = 0; i < 16; ++i)
+        {
+	  printf("%02x", *(unsigned char *)exec_task.mod_start);
+	  if (i % 4 == 3)
+	    printf(" ");
+	}
+      printf("  ");
+      for (i = 0; i < 16; ++i)
+        {
+	  unsigned char c = *(unsigned char *)exec_task.mod_start;
+	  printf("%c", c < 32 ? '.' : c);
+	}
+#endif
+      panic("\n\nThis is an invalid binary, fix it.");
+    }
 }
 
 
