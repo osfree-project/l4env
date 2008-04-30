@@ -1,6 +1,6 @@
 # scan the L4 global configuration file
 L4DIR	?= ../../..
-include $(L4DIR)/mk/Makeconf
+#include $(L4DIR)/mk/Makeconf
 
 TOOL = ../src/preprocess
 
@@ -67,6 +67,13 @@ drop_multi1_extra  = drop_multi1-ext.cc
 drop_multi2_src    = dropsection dropsection-ext
 drop_multi2_flags  = -s -e "bax aba ext"
 drop_multi2_extra  = drop_multi2-ext.cc
+
+ifdef_src          = ifdef
+ifdef_flags        = -s -e "true"
+
+ifdef1_src         = ifdef1
+ifdef1_flags       = -s -e "true"
+ifdef1_extra       = ifdef1-more.cpp
 
 random.cpp: combine.pl
 	perl $< > $@.new

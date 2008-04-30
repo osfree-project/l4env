@@ -116,6 +116,7 @@ my $doing_inlines = $opt_i;
 my $verbose = $opt_v;
 my $doing_linenumbers = (! $opt_l) && (! $opt_L);
 my $wno_inline = $opt_w;
+my $status = 0;
 
 my $parts_re = '';
 my %parts = ( '{' => '(',
@@ -474,6 +475,7 @@ sub match_e_opt
   my $cp = '';
 
   my $t = '\(\)&|,\{\}!-';
+  my $orig_tag = $tag;
 
   while ($tag =~ /^\s*([$t]|(?:[^\s$t]+))\s*(.*?)$/)
     {
@@ -491,7 +493,7 @@ sub match_e_opt
 
   if (($verbose || $opt_d) && (!defined $match || !$match)) 
     {
-      print "Drop SECTION: [$tag] from".
+      print "Drop SECTION: [$orig_tag] from".
 	" file ${ARGV}\n";
     }
 
@@ -535,6 +537,7 @@ sub parse_file
 		      (?:$s \[ $s ([A-Za-z0-9_,\{\}!\s&|\(\)-]+) $s \] $s)? : )
 	       /$1/sx)
 	    {
+	      check_empty_ifstack();
 	      $skip_to_next_section = 0;
 	      $current_section = $2;
 	      if ($opt_e ne '' || $current_section eq "IMPLEMENTATION")
@@ -798,6 +801,7 @@ sub read_more ()	# Read one more line of code. Stow away
     {
       if (eof(INPUT))			# Reset line numbering.
 	{
+	  check_empty_ifstack();
 	  $lineno = 0;
 	  do 
 	    {
@@ -909,7 +913,7 @@ sub ignoring
 {
   foreach my $i (@ifstack)
     {
-      if ($i == 1)
+      if ($i->{value} == 1)
 	{
 	  return 1;
 	}
@@ -927,29 +931,30 @@ sub handle_preproc
 
   if (/^$s\#\s*if\s+0${s}$/)
     {
-      push @ifstack, 1;
+      push @ifstack, { value => 1, file => ${ARGV}, line => $lineno };
       $verbose && print "IF 0: " . ignoring() . "\n";
       return;
     }
   elsif (@ifstack && /^$s\#\s*if(def|ndef)?\s/)
     {
-      push @ifstack, 0;
+      push @ifstack, { value => 0, file => ${ARGV}, line => $lineno };
       $verbose && print "IF: " . ignoring() . "\n";
       return if ignoring();
     }
   elsif (@ifstack && /^$s\#\s*(else|elif)/)
     {
       my $ignoring = ignoring();
-      pop @ifstack;
-      push @ifstack, -$ignoring;
-      $verbose && print "ELSE/ELIF: " . ignoring() . "\n";
+      my $i = pop @ifstack;
+      $i->{value} = -$i->{value};
+      push @ifstack, $i;
+      $verbose && print "ELSE/ELIF: " . ignoring() . " ($ignoring)\n";
       return if $ignoring;
     }
   elsif (@ifstack && /^$s\#\s*endif/)
     {
       my $ignoring = pop @ifstack;
       $verbose && print "ENDIF: " . ignoring() . "\n";
-      return if ignoring() || $ignoring;
+      return if ignoring() || $ignoring->{value};
     }
   elsif (/^$s\#\s*include${s}([\"<][^\">]+[\">])/)
     {
@@ -967,6 +972,27 @@ sub handle_preproc
   
   # XXX: For now, treat preprocessor stuff besides #include, #if 0 as code.
   handle_source_code ();
+}
+
+sub dump_ifstack
+{
+  my $indent = '';
+  foreach my $i (@ifstack)
+    {
+      print "$indent$i->{value}: $i->{file}:$i->{line}\n";
+      $indent .= '  ';
+    }
+}
+
+sub check_empty_ifstack
+{
+  if ($#ifstack >= 0)
+  {
+    my $i = pop @ifstack;
+    print STDERR "${ARGV}:${lineno}: missing endif for $i->{file}:$i->{line}\n";
+    die;
+    $status = -1;
+  }
 }
 
 sub handle_source_code
