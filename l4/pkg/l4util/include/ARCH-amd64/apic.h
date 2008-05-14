@@ -69,12 +69,12 @@ extern unsigned long apic_timer_divisor;
 
 extern unsigned long l4_scaler_apic_to_ms;
 
-extern void apic_show_registers(void);
-extern int  apic_check_working(void);
-extern void apic_activate_by_io(void);
-extern void apic_timer_set_divisor(int divisor);
+L4_CV void apic_show_registers(void);
+L4_CV int  apic_check_working(void);
+L4_CV void apic_activate_by_io(void);
+L4_CV void apic_timer_set_divisor(int divisor);
 
-extern unsigned long l4_calibrate_apic(void);
+L4_CV unsigned long l4_calibrate_apic(void);
 
 EXTERN_C_END
 

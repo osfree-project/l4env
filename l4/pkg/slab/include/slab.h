@@ -25,6 +25,7 @@
 #define _L4SLAB_SLAB_H
 
 /* L4env includes */
+#include <l4/sys/linkage.h>
 #include <l4/sys/l4int.h>
 #include <l4/env/cdefs.h>
 
@@ -58,8 +59,8 @@ typedef struct l4slab_cache l4slab_cache_t;
  * cache. It must return a pointer to a memory area with the size of
  * cache->slab_size and which is slab_size aligned.
  */
-typedef void * (* l4slab_grow_fn_t) (l4slab_cache_t * cache,
-                                     void ** data);
+typedef L4_CV void * (* l4slab_grow_fn_t) (l4slab_cache_t * cache,
+                                           void ** data);
 
 /**
  * \brief   Cache release callback function
@@ -73,8 +74,8 @@ typedef void * (* l4slab_grow_fn_t) (l4slab_cache_t * cache,
  * slabs which are no longer needed by the cache. Slab have a size of
  * cache->slab_size!
  */
-typedef void (* l4slab_release_fn_t) (l4slab_cache_t * cache,
-                                      void * buffer, void * data);
+typedef L4_CV void (* l4slab_release_fn_t) (l4slab_cache_t * cache,
+                                            void * buffer, void * data);
 
 /**
  * Slab cache descriptor
@@ -142,7 +143,7 @@ __BEGIN_DECLS;
  * on demand by the cache if the grow callback function is specified.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4slab_cache_init(l4slab_cache_t * cache, l4_size_t size,
                   unsigned int max_free, l4slab_grow_fn_t grow_fn,
                   l4slab_release_fn_t release_fn);
@@ -159,7 +160,7 @@ l4slab_cache_init(l4slab_cache_t * cache, l4_size_t size,
  * otherwise it has no effect.
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4slab_destroy(l4slab_cache_t * cache);
 
 /*****************************************************************************/
@@ -172,7 +173,7 @@ l4slab_destroy(l4slab_cache_t * cache);
  * \return pointer to object, NULL if allocation failed.
  */
 /*****************************************************************************/
-void *
+L4_CV void *
 l4slab_alloc(l4slab_cache_t * cache);
 
 /*****************************************************************************/
@@ -184,7 +185,7 @@ l4slab_alloc(l4slab_cache_t * cache);
  * \param   objp         Pointer to object
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4slab_free(l4slab_cache_t * cache, void * objp);
 
 /*****************************************************************************/
@@ -200,7 +201,7 @@ l4slab_free(l4slab_cache_t * cache, void * objp);
  * cache->slab_size-sized and slab_size aligned in memory.
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4slab_add_slab(l4slab_cache_t * cache, void * buffer, void * data);
 
 /*****************************************************************************/
@@ -212,7 +213,7 @@ l4slab_add_slab(l4slab_cache_t * cache, void * buffer, void * data);
  * \param   data         Application data pointer
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4slab_set_data(l4slab_cache_t * cache, void * data);
 
 /*****************************************************************************/
@@ -226,7 +227,7 @@ l4slab_set_data(l4slab_cache_t * cache, void * data);
  *         data pointer set.
  */
 /*****************************************************************************/
-void *
+L4_CV void *
 l4slab_get_data(l4slab_cache_t * cache);
 
 /*****************************************************************************/
@@ -238,7 +239,7 @@ l4slab_get_data(l4slab_cache_t * cache);
  * \param   dump_free    Dump free list of slabs
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4slab_dump_cache(l4slab_cache_t * cache, int dump_free);
 
 /*****************************************************************************/
@@ -249,7 +250,7 @@ l4slab_dump_cache(l4slab_cache_t * cache, int dump_free);
  * \param   cache        Cache descriptor
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4slab_dump_cache_free(l4slab_cache_t * cache);
 
 __END_DECLS;

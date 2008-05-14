@@ -48,7 +48,7 @@ typedef l4_int32_t l4_prio_t;
  *                       on l4thread_create() / l4thread_create_long(), it is 
  *                       passed to the new thread in this data pointer.
  */
-typedef void (* l4thread_fn_t) (void * data);
+typedef L4_CV void (* l4thread_fn_t) (void * data);
 
 /**
  * Exit functions (see l4thread_on_exit()).
@@ -57,7 +57,7 @@ typedef void (* l4thread_fn_t) (void * data);
  * \param   thread       Thread which exists 
  * \param   data         Data pointer
  */
-typedef void (* l4thread_exit_fn_t) (l4thread_t thread, void * data);
+typedef L4_CV void (* l4thread_exit_fn_t) (l4thread_t thread, void * data);
 
 /**
  * Exit functions descriptor, see #L4THREAD_EXIT_FN
@@ -190,6 +190,8 @@ extern const l4_addr_t l4thread_tcb_table_addr;
  */
 extern const char *l4thread_basename;
 
+extern unsigned l4thread_target_cpu;
+
 /*****************************************************************************
  *** prototypes
  *****************************************************************************/
@@ -234,7 +236,7 @@ __BEGIN_DECLS;
  * When \c func returns, the created thread will exit.
  */
 /*****************************************************************************/ 
-l4thread_t 
+L4_CV l4thread_t 
 l4thread_create(l4thread_fn_t func, void * data, l4_uint32_t flags);
 
 /*****************************************************************************/
@@ -270,7 +272,7 @@ l4thread_create(l4thread_fn_t func, void * data, l4_uint32_t flags);
  * When \c func returns, the created thread will exit.
  */
 /*****************************************************************************/ 
-l4thread_t 
+L4_CV l4thread_t 
 l4thread_create_named(l4thread_fn_t func, const char*name,
 		      void * data, l4_uint32_t flags);
 
@@ -329,7 +331,7 @@ l4thread_create_named(l4thread_fn_t func, const char*name,
  * When \c func returns, the created thread will exit.
  */
 /*****************************************************************************/ 
-l4thread_t 
+L4_CV l4thread_t 
 l4thread_create_long(l4thread_t thread, l4thread_fn_t func,
 		     const char * name,
 		     l4_addr_t stack_pointer, l4_size_t stack_size,
@@ -352,7 +354,7 @@ l4thread_create_long(l4thread_t thread, l4thread_fn_t func,
  * l4thread_create_long().
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_started(void * data);
 
 /*****************************************************************************/
@@ -366,7 +368,7 @@ l4thread_started(void * data);
  *          #NULL if invalid thread id
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4thread_startup_return(l4thread_t thread);
 
 /*****************************************************************************/
@@ -391,7 +393,7 @@ l4thread_startup_return(l4thread_t thread);
  * threads which are not created by the thread library.
  */
 /*****************************************************************************/ 
-l4thread_t
+L4_CV l4thread_t
 l4thread_setup(l4_threadid_t l4_id,  const char * name, l4_addr_t stack_low,
 	       l4_addr_t stack_high);
 
@@ -426,7 +428,7 @@ l4thread_shutdown(l4thread_t thread);
  * that it does not return.
  */
 /*****************************************************************************/ 
-void
+L4_CV void
 l4thread_exit(void) __attribute__((noreturn));
 
 /*****************************************************************************/
@@ -449,7 +451,7 @@ l4thread_exit(void) __attribute__((noreturn));
  * #L4THREAD_EXIT_FN macros.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_on_exit(l4thread_exit_desc_t * name, void * data);
 
 /*****************************************************************************
@@ -466,7 +468,7 @@ l4thread_on_exit(l4thread_exit_desc_t * name, void * data);
  * Sleep for \a t milliseconds.
  */
 /*****************************************************************************/ 
-void
+L4_CV void
 l4thread_sleep(l4_uint32_t t);
 
 /*****************************************************************************/
@@ -480,7 +482,7 @@ l4thread_sleep(l4_uint32_t t);
  * L4 kernel, common values are 1 or 2 milliseconds.
  */
 /*****************************************************************************/ 
-void 
+L4_CV void 
 l4thread_usleep(l4_uint32_t t);
 
 /*****************************************************************************/
@@ -491,7 +493,7 @@ l4thread_usleep(l4_uint32_t t);
  * Sleep forever.
  */
 /*****************************************************************************/ 
-void
+L4_CV void
 l4thread_sleep_forever(void);
 
 /*****************************************************************************
@@ -511,7 +513,7 @@ l4thread_sleep_forever(void);
  * Return the L4 priority of thread \a thread.
  */
 /*****************************************************************************/ 
-l4_prio_t 
+L4_CV l4_prio_t 
 l4thread_get_prio(l4thread_t thread);
 
 /*****************************************************************************/
@@ -528,7 +530,7 @@ l4thread_get_prio(l4thread_t thread);
  * Set the L4 priority of \a thread to \a prio.
  */
 /*****************************************************************************/ 
-int 
+L4_CV int 
 l4thread_set_prio(l4thread_t thread, l4_prio_t prio);
 
 /*****************************************************************************
@@ -543,7 +545,7 @@ l4thread_set_prio(l4thread_t thread, l4_prio_t prio);
  * \return  New data key, -#L4_ENOKEY if no key available.
  */
 /*****************************************************************************/ 
-int 
+L4_CV int 
 l4thread_data_allocate_key(void);
 
 /*****************************************************************************/
@@ -554,7 +556,7 @@ l4thread_data_allocate_key(void);
  * \param   key          data key 
  */
 /*****************************************************************************/ 
-void 
+L4_CV void 
 l4thread_data_release_key(int key);
 
 /*****************************************************************************/
@@ -568,7 +570,7 @@ l4thread_data_release_key(int key);
  * \return  0 on success, -#L4_EINVAL if invalid or unused data key.
  */
 /*****************************************************************************/ 
-int 
+L4_CV int 
 l4thread_data_set_current(int key, void * data);
 
 /*****************************************************************************/
@@ -581,7 +583,7 @@ l4thread_data_set_current(int key, void * data);
  * \return  Data pointer, NULL if invalid or unused data key.
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4thread_data_get_current(int key);
 
 /*****************************************************************************/
@@ -596,7 +598,7 @@ l4thread_data_get_current(int key);
  * \return  0 on success, -#L4_EINVAL if invalid or unused data key / thread.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_data_set(l4thread_t thread, int key, void * data);
 
 /*****************************************************************************/
@@ -610,7 +612,7 @@ l4thread_data_set(l4thread_t thread, int key, void * data);
  * \return  Data pointer, NULL if invalid or unused data key / thread.
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4thread_data_get(l4thread_t thread, int key);
 
 /*****************************************************************************
@@ -630,7 +632,7 @@ l4thread_data_get(l4thread_t thread, int key);
  * Check if the threads \a t1 and \a t2 are equal.
  */
 /*****************************************************************************/ 
-L4_INLINE int
+L4_CV L4_INLINE int
 l4thread_equal(l4thread_t t1, l4thread_t t2);
 
 /*****************************************************************************/
@@ -643,7 +645,7 @@ l4thread_equal(l4thread_t t1, l4thread_t t2);
  * Return id of the thread calling the function.
  */
 /*****************************************************************************/ 
-l4thread_t 
+L4_CV l4thread_t 
 l4thread_myself(void);
 
 /*****************************************************************************/
@@ -659,7 +661,7 @@ l4thread_myself(void);
  * Return the L4 thread id of the thread \a thread.
  */
 /*****************************************************************************/ 
-l4_threadid_t 
+L4_CV l4_threadid_t 
 l4thread_l4_id(l4thread_t thread);
 
 /*****************************************************************************/
@@ -684,7 +686,7 @@ l4thread_id(l4_threadid_t id);
  *          exists.
  */
 /*****************************************************************************/ 
-l4thread_t 
+L4_CV l4thread_t 
 l4thread_get_parent(void);
 
 /*****************************************************************************
@@ -703,7 +705,7 @@ l4thread_get_parent(void);
  *          - -#L4_EINVAL invalid thread id
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_lock(l4thread_t thread);
 
 /*****************************************************************************/
@@ -717,7 +719,7 @@ l4thread_lock(l4thread_t thread);
  *          - -#L4_EINVAL invalid thread id
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_unlock(l4thread_t thread);
 
 /*****************************************************************************/
@@ -730,7 +732,7 @@ l4thread_unlock(l4thread_t thread);
  *          - -#L4_EINVAL  current thread not found in thread table
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_lock_myself(void);
 
 /*****************************************************************************/
@@ -742,7 +744,7 @@ l4thread_lock_myself(void);
  *          - -#L4_EINVAL  current thread not found in thread table
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_unlock_myself(void);
 
 /*****************************************************************************
@@ -762,7 +764,7 @@ l4thread_unlock_myself(void);
  *          - -#L4_EINVAL  invalid thread id
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_get_stack(l4thread_t thread, l4_addr_t * low, l4_addr_t * high);
 
 /*****************************************************************************/
@@ -777,7 +779,7 @@ l4thread_get_stack(l4thread_t thread, l4_addr_t * low, l4_addr_t * high);
  *          - -#L4_EINVAL  current thread not found in thread table
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_get_stack_current(l4_addr_t * low, l4_addr_t * high);
 
 /*****************************************************************************/
@@ -786,7 +788,7 @@ l4thread_get_stack_current(l4_addr_t * low, l4_addr_t * high);
  * \ingroup api_misc 
  */
 /*****************************************************************************/ 
-void
+L4_CV void
 l4thread_dump_threads(void);
 
 /*****************************************************************************
@@ -802,7 +804,7 @@ l4thread_dump_threads(void);
  * routine of a task, application threads must not use it.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4thread_init(void);
 
 __END_DECLS;
@@ -823,7 +825,7 @@ l4thread_id(l4_threadid_t id)
 /*****************************************************************************
  *** l4thread_equal
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4thread_equal(l4thread_t t1, l4thread_t t2)
 {
   return (t1 == t2) ? 1 : 0;

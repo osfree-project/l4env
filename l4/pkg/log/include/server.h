@@ -27,7 +27,7 @@ extern "C" {
  * If you use the logserver, but you do not want the lib to call
  * the nameserver for resolving names, you can set the id directly.
  */
-extern void LOG_server_setid(l4_threadid_t id);
+L4_CV void LOG_server_setid(l4_threadid_t id);
 
 /*!\brief Open a binary output channel
  *
@@ -64,7 +64,7 @@ extern void LOG_server_setid(l4_threadid_t id);
  * \see  LOG_channel_write(), LOG_channel_close().
  * \note This function is only available when using the logserver!
  */
-extern int LOG_channel_open(int channel, l4_fpage_t fpage);
+L4_CV int LOG_channel_open(int channel, l4_fpage_t fpage);
 
 /*!\brief Send data to a binary output channel
  *
@@ -92,7 +92,7 @@ extern int LOG_channel_open(int channel, l4_fpage_t fpage);
  *
  * \see  LOG_channel_open(), LOG_channel_flush(), LOG_channel_close().
  * \note This function is only available when using the logserver! */
-extern int LOG_channel_write(int id, unsigned off, unsigned size);
+L4_CV int LOG_channel_write(int id, unsigned off, unsigned size);
 
 
 /*!\brief Wait until data is sent by the logserver
@@ -110,7 +110,7 @@ extern int LOG_channel_write(int id, unsigned off, unsigned size);
  * \see  LOG_channel_write.
  * \note This function is only available when using the logserver!
  */
-extern int LOG_channel_flush(int id);
+L4_CV int LOG_channel_flush(int id);
 
 
 /*!\brief Close a binary output channel
@@ -130,7 +130,7 @@ extern int LOG_channel_flush(int id);
  * \see  LOG_channel_open(), LOG_channel_write(), LOG_channel_flush().
  * \note This function is only available when using the logserver!
  */
-extern int LOG_channel_close(int id);
+L4_CV int LOG_channel_close(int id);
 
 #ifdef __cplusplus
 }

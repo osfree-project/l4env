@@ -40,9 +40,9 @@ int l4ts_connect(void)
 	 * parent. Else, we use the chief task ID and make an assumption about
 	 * the task server thread's ID.
 	 */
-	n = l4_nchief(rmgr_id, &l4ts_server_id);
-	if (l4_tasknum_equal(rmgr_id, l4ts_server_id))
-		l4ts_server_id = rmgr_id;
+	n = l4_nchief(rmgr_service_id(), &l4ts_server_id);
+	if (l4_tasknum_equal(rmgr_service_id(), l4ts_server_id))
+		l4ts_server_id = rmgr_service_id();
 	else
 		l4ts_server_id.id.lthread = TASKSERVER_PARENT_TID;
 

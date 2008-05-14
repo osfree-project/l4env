@@ -48,7 +48,7 @@ extern void LOG_init(const char *tag);
 #else
 #define LOG_init(arg) LOG_init_is_deprecated=0
 /* LOG_setup_tag is called by setup code, don't call this from your program. */
-extern void LOG_setup_tag(void);
+L4_CV void LOG_setup_tag(void);
 #endif
 
 
@@ -59,21 +59,21 @@ extern void LOG_setup_tag(void);
  * points to a putchar-loop, in server-mode a string-ipc-function will
  * be used.
  */
-extern void (*LOG_outstring)(const char*log_message);
+extern L4_CV void (*LOG_outstring)(const char*log_message);
 
 /*!\brief Log-output function printing to the fiasco tracebuffer
  *
  * This specific version of a text output function uses the fiasco
  * tracebuffer as output channel.
  */
-extern void LOG_outstring_fiasco_tbuf(const char*log_message);
+L4_CV void LOG_outstring_fiasco_tbuf(const char*log_message);
 
 /*!\brief flush all buffered data.
  *
  * This function ensures that all data logged so far is actually printed.
  * If used with the logserver, the logserver flushs all its buffered data.
  */
-extern void LOG_flush(void);
+L4_CV void LOG_flush(void);
 
 /*!\brief an allways-defined DEBUG flag
  */
@@ -83,15 +83,15 @@ extern void LOG_flush(void);
 #define LOG_DEBUG 0
 #endif
 
-extern void LOG_log(const char*function, const char*format,...);
-extern void LOG_logl(const char*file, int line, const char*function,
-		     const char*format,...);
-extern void LOG_logL(const char*file, int line, const char*function,
-		     const char*format,...);
+L4_CV void LOG_log(const char*function, const char*format,...);
+L4_CV void LOG_logl(const char*file, int line, const char*function,
+	            const char*format,...);
+L4_CV void LOG_logL(const char*file, int line, const char*function,
+		    const char*format,...);
 
 #ifndef L4BID_RELEASE_MODE
 /* format_check: just for the compiler to check the format & args */
-extern void LOG_format_check(const char*format,...)
+L4_CV void LOG_format_check(const char*format,...)
   __attribute__((format(printf,1,2)));
 
 #define STRINGIFY_HELPER(nr)		#nr

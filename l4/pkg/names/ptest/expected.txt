@@ -11,6 +11,7 @@ names_de| Querying ABCGEFG FAILED!!! (but expected)
 names_de| Unregistering ABCGEFG FAILED!!! (but expected)
 names_de| Requesting dump from names:
 names   | dumping names server:
+names   | taskid 2.00 name sigma0
 names   | taskid 5.00 name stdlogV05
 names   | taskid 5.01 name log.flush
 names   | taskid 5.02 name log.flushsig

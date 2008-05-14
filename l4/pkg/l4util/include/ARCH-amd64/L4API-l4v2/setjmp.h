@@ -53,7 +53,7 @@ typedef union{
  *
  * \see setjmp(3)
  */
-extern int l4_thread_setjmp(l4_thread_jmp_buf env);
+L4_CV int l4_thread_setjmp(l4_thread_jmp_buf env);
 
 /*!\brief inter-thread longjmp
  *
@@ -68,7 +68,7 @@ extern int l4_thread_setjmp(l4_thread_jmp_buf env);
  * \see  longjmp(3)
  * \note In contrast to longjmp(3), this function returns.
  */
-void l4_thread_longjmp(l4_threadid_t thread, l4_thread_jmp_buf env, int val);
+L4_CV void l4_thread_longjmp(l4_threadid_t thread, l4_thread_jmp_buf env, int val);
 
 EXTERN_C_END
 

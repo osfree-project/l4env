@@ -19,13 +19,13 @@ EXTERN_C_BEGIN
 /** Deliver next random number
  * \return random number
  */
-l4_uint32_t
+L4_CV l4_uint32_t
 l4util_rand(void);
 
 /** Initialize random number generator
  * \param seed value to initialize
  */
-void
+L4_CV void
 l4util_srand (l4_uint32_t seed);
 
 EXTERN_C_END

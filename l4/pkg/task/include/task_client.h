@@ -12,6 +12,8 @@
  * GNU General Public License 2. Please see the COPYING file for details.     *
  ******************************************************************************/
 
+#include <l4/sys/linkage.h>
+
 /** Callbacks available for task creators.
  *
  * Every callback function receives the parameters of the instrumented function
@@ -27,20 +29,20 @@
  * By default CALLBACK_CONTINUE is used.
  * */
 typedef struct {
-	long (*client_alloc_callback)(unsigned int taskno, l4_taskid_t *task, char *status);
-	long (*client_free_callback)(const l4_taskid_t *task, char *status);
-	long (*client_exit_callback)(char *status);
-	long (*client_create_callback)(l4_taskid_t *task, l4_addr_t eip, l4_addr_t esp,
-	                               l4_uint32_t mcp, const l4_taskid_t *pager,
-	                               const l4_taskid_t *caphandler, l4_int32_t prio,
-	                               const char *name, l4_uint32_t flags, char *status);
-	long (*client_kill_callback)(l4_taskid_t *task, l4_uint8_t options, char *status);
+	L4_CV long (*client_alloc_callback)(unsigned int taskno, l4_taskid_t *task, char *status);
+	L4_CV long (*client_free_callback)(const l4_taskid_t *task, char *status);
+	L4_CV long (*client_exit_callback)(char *status);
+	L4_CV long (*client_create_callback)(l4_taskid_t *task, l4_addr_t eip, l4_addr_t esp,
+	                                     l4_uint32_t mcp, const l4_taskid_t *pager,
+	                                     const l4_taskid_t *caphandler, l4_int32_t prio,
+	                                     const char *name, l4_uint32_t flags, char *status);
+	L4_CV long (*client_kill_callback)(l4_taskid_t *task, l4_uint8_t options, char *status);
 } l4task_client_callbacks;
 
 #define CALLBACK_SKIP		0   /**< callback success, skip calling server */
 #define CALLBACK_CONTINUE	1   /**< callback success, but continue calling server */
 
 /* Register a set of callback functions */
-int l4task_client_register_hooks(l4task_client_callbacks cb);
+L4_CV int l4task_client_register_hooks(l4task_client_callbacks cb);
 
 #endif

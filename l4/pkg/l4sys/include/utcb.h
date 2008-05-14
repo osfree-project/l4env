@@ -83,7 +83,7 @@ L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on);
  *
  * \returns UTCB
  */
-l4_utcb_t *l4sys_utcb_get(void);
+L4_CV l4_utcb_t *l4sys_utcb_get(void);
 
 /**************************************************************************
  * Implementations

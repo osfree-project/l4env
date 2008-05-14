@@ -33,7 +33,7 @@ __BEGIN_DECLS;
  * of the other functions is called.
  */
 /*****************************************************************************/ 
-void
+L4_CV void
 l4blk_init(void);
 
 /*****************************************************************************/
@@ -59,7 +59,7 @@ l4blk_init(void);
  * - call the driver to open new instances of the command and wait threads
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_open_driver(const char * name, l4blk_driver_t * driver, 
                   l4blk_setup_notify_callback_fn_t cb);
   
@@ -76,7 +76,7 @@ l4blk_open_driver(const char * name, l4blk_driver_t * driver,
  * Close driver instance.
  */
 /*****************************************************************************/ 
-int 
+L4_CV int
 l4blk_close_driver(l4blk_driver_t driver);
 
 /*****************************************************************************/
@@ -89,14 +89,14 @@ l4blk_close_driver(l4blk_driver_t driver);
  * \return  Thread id of command thread, L4_INVALID_ID if invalid driver handle
  */
 /*****************************************************************************/ 
-l4_threadid_t 
+L4_CV l4_threadid_t
 l4blk_get_driver_thread(l4blk_driver_t driver);
 
 /*****************************************************************************/
 /**
  * \brief   Create real-time stream.
  * \ingroup api_stream
- * 
+ *
  * \param   driver       Driver handle
  * \param   device       Device id
  * \param   bandwidth    Stream bandwidth (bytes/s) 
@@ -115,7 +115,7 @@ l4blk_get_driver_thread(l4blk_driver_t driver);
  * it reserves the requeired resources and returns a valid stream handle.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_create_stream(l4blk_driver_t driver, l4_uint32_t device,
                     l4_uint32_t bandwidth, l4_uint32_t period, 
                     l4_uint32_t blk_size, float q, l4_uint32_t meta_int, 
@@ -134,7 +134,7 @@ l4blk_create_stream(l4blk_driver_t driver, l4_uint32_t device,
  * Close real-time stream, release all resources assigned to the stream.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_close_stream(l4blk_driver_t driver, l4blk_stream_t stream);
 
 /*****************************************************************************/
@@ -150,8 +150,9 @@ l4blk_close_stream(l4blk_driver_t driver, l4blk_stream_t stream);
  * \return  Time of first period on success, error code otherwise.
  */
 /*****************************************************************************/ 
-int l4blk_start_stream(l4blk_driver_t driver, l4blk_stream_t stream, 
-                       l4_uint32_t time, l4_uint32_t request_no);
+L4_CV int
+l4blk_start_stream(l4blk_driver_t driver, l4blk_stream_t stream, 
+                   l4_uint32_t time, l4_uint32_t request_no);
 
 /*****************************************************************************/
 /**
@@ -165,7 +166,7 @@ int l4blk_start_stream(l4blk_driver_t driver, l4blk_stream_t stream,
  * Send the request to the driver an block until it is finished.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_do_request(l4blk_request_t * request);
 
 /*****************************************************************************/
@@ -188,7 +189,7 @@ l4blk_do_request(l4blk_request_t * request);
  *   l4blk_get_status() function
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_put_request(l4blk_request_t * request);
 
 /*****************************************************************************/
@@ -208,7 +209,7 @@ l4blk_put_request(l4blk_request_t * request);
  *          - -#L4_EINVAL        invalid request structure
  */
 /*****************************************************************************/ 
-int 
+L4_CV int
 l4blk_get_status(l4blk_request_t * request);
 
 /*****************************************************************************/
@@ -225,7 +226,7 @@ l4blk_get_status(l4blk_request_t * request);
  * the error reason if the request status was set to #L4BLK_ERROR.
  */
 /*****************************************************************************/ 
-int 
+L4_CV int
 l4blk_get_error(l4blk_request_t * request);
 
 /*****************************************************************************/
@@ -246,7 +247,7 @@ l4blk_get_error(l4blk_request_t * request);
  * parameters. The possible commands depend on the used driver.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_ctrl(l4blk_driver_t driver, l4_uint32_t cmd, void * in, int in_size, 
            void * out, int out_size);
 
@@ -260,7 +261,7 @@ l4blk_ctrl(l4blk_driver_t driver, l4_uint32_t cmd, void * in, int in_size,
  * \return  Number of disks connected to the driver, error code (< 0) if failed
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_ctrl_get_num_disks(l4blk_driver_t driver);
 
 /*****************************************************************************/
@@ -274,7 +275,7 @@ l4blk_ctrl_get_num_disks(l4blk_driver_t driver);
  * \return  Disk size in blocks (1KB), error code (< 0) if failed
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_ctrl_get_disk_size(l4blk_driver_t driver, l4_uint32_t dev);
 
 /*****************************************************************************/
@@ -291,7 +292,7 @@ l4blk_ctrl_get_disk_size(l4blk_driver_t driver, l4_uint32_t dev);
  * \return 0 on success, error code if failed
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4blk_ctrl_get_stream_period(l4blk_driver_t driver, l4blk_stream_t stream, 
                              l4_uint32_t * period_len, 
                              l4_uint32_t * period_offs);

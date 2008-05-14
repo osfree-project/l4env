@@ -143,7 +143,7 @@ int
 Jdb::int3_extension()
 {
   Address      addr = entry_frame->ip();
-  Address_type user = entry_frame->cs() == 2 ? ADDR_USER : ADDR_KERNEL;
+  Address_type user = (entry_frame->cs() & 3) ? ADDR_USER : ADDR_KERNEL;
   Unsigned8    todo = peek ((Unsigned8 *) addr, user);
 
   if (todo == 0x3c && peek ((Unsigned8 *) (addr+1), user) == 13)

@@ -26,7 +26,7 @@ EXTERN_C_BEGIN
  * \retval -2		IRQ attachment failed
  * \retval >0		IPC error of initial communication with IRQ thread
  */
-extern int l4serial_init(int tid, int comport);
+L4_CV int l4serial_init(int tid, int comport);
 
 /*!\brief Send a string to the selected serial port
  *
@@ -39,7 +39,7 @@ extern int l4serial_init(int tid, int comport);
  * \retval -3		someone else is sending a string
  * \retval >0		IPC error
  */
-extern int l4serial_outstring(const char*addr, unsigned len);
+L4_CV int l4serial_outstring(const char*addr, unsigned len);
 
 /*!\brief Read a character from the serial line, blocking
  *
@@ -47,7 +47,7 @@ extern int l4serial_outstring(const char*addr, unsigned len);
  * \retval -1		lib not initialized
  * \retval -2		IPC error
  */
-extern int l4serial_readbyte(void);
+L4_CV int l4serial_readbyte(void);
 
 EXTERN_C_END
 #endif

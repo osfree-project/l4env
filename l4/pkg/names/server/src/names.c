@@ -27,6 +27,7 @@
 #include <l4/util/getopt.h>
 #include <l4/util/l4_macros.h>
 #include <l4/sigma0/kip.h>
+#include <l4/sigma0/sigma0.h>
 
 #include <l4/log/l4log.h>
 #include <l4/log/server.h>
@@ -480,7 +481,7 @@ parse_args(int argc, char* argv[])
 int
 main(int argc, char* argv[])
 {
-  l4_threadid_t me = l4_myself();
+  l4_threadid_t t, me = l4_myself();
   /* first: use the own output function, because we do not know who is the
             logserver. */
   logsrv_outfunc = LOG_outstring;
@@ -509,6 +510,12 @@ main(int argc, char* argv[])
       l4events_init();
     }
 #endif
+
+  /* Register other services before names */
+  t = l4sigma0_id();
+  if (!server_names_register(&me, "sigma0", &t, 0))
+    printf("Failed to register 'sigma0'\n");
+
 
   DEBUGMSG(2)
     printf("Entering server loop.\n");

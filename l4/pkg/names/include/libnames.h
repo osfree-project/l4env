@@ -20,16 +20,16 @@
 
 EXTERN_C_BEGIN
 
-int names_register(const char* name);
-int names_register_thread_weak(const char* name, l4_threadid_t id);
-int names_unregister(const char* name);
-int names_unregister_thread(const char* name, l4_threadid_t id);
-int names_query_name(const char* name, l4_threadid_t* id);
-int names_query_id(const l4_threadid_t id, char* name, const int length);
-int names_waitfor_name(const char* name, l4_threadid_t* id, const int timeout);
-int names_query_nr(int nr, char* name, int length, l4_threadid_t *id);
-int names_unregister_task(l4_threadid_t tid);
-int names_dump(void);
+L4_CV int names_register(const char* name);
+L4_CV int names_register_thread_weak(const char* name, l4_threadid_t id);
+L4_CV int names_unregister(const char* name);
+L4_CV int names_unregister_thread(const char* name, l4_threadid_t id);
+L4_CV int names_query_name(const char* name, l4_threadid_t* id);
+L4_CV int names_query_id(const l4_threadid_t id, char* name, const int length);
+L4_CV int names_waitfor_name(const char* name, l4_threadid_t* id, const int timeout);
+L4_CV int names_query_nr(int nr, char* name, int length, l4_threadid_t *id);
+L4_CV int names_unregister_task(l4_threadid_t tid);
+L4_CV int names_dump(void);
 
 EXTERN_C_END
 

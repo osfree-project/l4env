@@ -35,7 +35,7 @@ l4ts_connected(void);
  * \brief Force connecting to task server.
  * \return		0 on success
  *			-L4_ENOTFOUND	server not found. */
-int
+L4_CV int
 l4ts_connect(void);
 
 /**
@@ -44,7 +44,7 @@ l4ts_connect(void);
  * \retval taskid	allocated task ID.
  * \return		0 on success
  *			error code otherwise. */
-int
+L4_CV int
 l4ts_allocate_task(unsigned int taskno, l4_taskid_t *taskid);
 
 /**
@@ -54,7 +54,7 @@ l4ts_allocate_task(unsigned int taskno, l4_taskid_t *taskid);
  * \return              0 on success
  *                      error code otherwise
  */
-int
+L4_CV int
 l4ts_allocate_task2(unsigned int taskno, l4_taskid_t *taskid);
 
 /**
@@ -70,7 +70,7 @@ l4ts_allocate_task2(unsigned int taskno, l4_taskid_t *taskid);
  *			future changes)
  * \param flags		(currently unused)
  */
-int
+L4_CV int
 l4ts_create_task(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
                  l4_uint32_t mcp, const l4_taskid_t *pager, l4_int32_t prio,
                  const char *resname, l4_uint32_t flags);
@@ -90,7 +90,7 @@ l4ts_create_task(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
  *                     future changes)
  * \param flags        (currently unused)
  */
-int
+L4_CV int
 l4ts_create_task2(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
                   l4_uint32_t mcp, const l4_taskid_t *pager,
                   const l4_taskid_t *caphandler, l4_quota_desc_t kquota,
@@ -99,13 +99,13 @@ l4ts_create_task2(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
 /**
  * \brief Free a task number.
  * \param taskid	ID of the task to free. */
-int
+L4_CV int
 l4ts_free_task(const l4_taskid_t *taskid);
 
 /**
  * \brief Free a task number and return chief rights.
  * \param taskid	ID of the task to free. */
-int
+L4_CV int
 l4ts_free2_task(const l4_taskid_t *taskid);
 
 
@@ -118,49 +118,49 @@ l4ts_free2_task(const l4_taskid_t *taskid);
  * \brief Delete a task.
  * \param taskid	ID of the task to kill.
  * \param options */
-int
+L4_CV int
 l4ts_kill_task(l4_taskid_t taskid, l4_uint8_t options);
 
 /**
  * \brief Delete a task.
  * \param taskid	ID of the task to kill. */
-int
+L4_CV int
 l4ts_kill_task_recursive(l4_taskid_t taskid);
 
 /**
  * \brief Convert a task number to a task ID.
  * \param taskno	Corresponding task ID. */
-int
+L4_CV int
 l4ts_owner(l4_taskid_t taskid, l4_taskid_t owner);
 
 /**
  * \brief Convert a task number to a task ID.
  * \param taskno	Corresponding task ID. */
-int
+L4_CV int
 l4ts_taskno_to_taskid(l4_uint32_t taskno, l4_taskid_t *taskid);
 
 /**
  * \brief Exit the caller.
  */
-int
+L4_CV int
 l4ts_exit(void) __attribute__((noreturn));
 
 /**
  * \brief Dump all registered tasks.
  */
-int
+L4_CV int
 l4ts_dump_tasks(void);
 
 /**
  * \brief Return server ID.
  */
-l4_threadid_t
+L4_CV l4_threadid_t
 l4ts_server(void);
 
 L4_INLINE int
 l4ts_connected(void)
 {
-  if (EXPECT_FALSE(l4_is_nil_id(l4ts_server_id)))
+  if (EXPECT_FALSE(l4_is_nil_id(l4ts_server())))
     {
       if (l4ts_connect() != 0)
 	return 0;

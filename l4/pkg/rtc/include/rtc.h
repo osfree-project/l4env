@@ -14,6 +14,7 @@
 #ifndef L4_RTC_RTC_H
 #define L4_RTC_RTC_H
 
+#include <l4/sys/linkage.h>
 #include <l4/sys/l4int.h>
 
 /**
@@ -22,7 +23,7 @@
  *
  * \return 0 on success, <0 on error
  * */
-int l4rtc_get_seconds_since_1970(l4_uint32_t *seconds);
+L4_CV int l4rtc_get_seconds_since_1970(l4_uint32_t *seconds);
 
 /**
  * Deliver the offset between real time and system's uptime in seconds.
@@ -31,7 +32,7 @@ int l4rtc_get_seconds_since_1970(l4_uint32_t *seconds);
  *
  * \return 0 on success, <0 on error
  * */
-int l4rtc_get_offset_to_realtime(l4_uint32_t *offset);
+L4_CV int l4rtc_get_offset_to_realtime(l4_uint32_t *offset);
 
 /**
  * Deliver the scaler 2^32 / (tsc clocks per usec). This value is needed by
@@ -39,7 +40,7 @@ int l4rtc_get_offset_to_realtime(l4_uint32_t *offset);
  *
  * \return 0 on success, <0 on error
  */
-int l4rtc_get_linux_tsc_scaler(l4_uint32_t *scaler);
+L4_CV int l4rtc_get_linux_tsc_scaler(l4_uint32_t *scaler);
 
 #endif
 

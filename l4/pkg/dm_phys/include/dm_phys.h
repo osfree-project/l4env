@@ -67,7 +67,7 @@ __BEGIN_DECLS;
  * Call DMphys to create a new dataspace.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_memphys_open(int pool, l4_addr_t addr, l4_size_t size, l4_addr_t align,
 		  l4_uint32_t flags, const char * name,
 		  l4dm_dataspace_t * ds);
@@ -111,7 +111,7 @@ l4dm_memphys_open(int pool, l4_addr_t addr, l4_size_t size, l4_addr_t align,
  *          flag #L4DM_COW is ignored.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_memphys_copy(const l4dm_dataspace_t * ds, l4_offs_t src_offs,
                   l4_offs_t dst_offs, l4_size_t num, int dst_pool,
 		  l4_addr_t dst_addr, l4_size_t dst_size,
@@ -137,7 +137,7 @@ l4dm_memphys_copy(const l4dm_dataspace_t * ds, l4_offs_t src_offs,
  *          - -#L4_EINVAL_OFFS offset points beyond end of dataspace
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_memphys_pagesize(const l4dm_dataspace_t * ds, l4_offs_t offs,
                       l4_size_t size, int pagesize, int * ok);
 
@@ -154,7 +154,7 @@ l4dm_memphys_pagesize(const l4dm_dataspace_t * ds, l4_offs_t offs,
  * \return 1 if dataspace can be mapped with given pagesize, 0 if not
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize);
 
 /*****************************************************************************/
@@ -171,7 +171,7 @@ l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize);
  *          - -#L4_EIPC    Dataspace manager call failed
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_memphys_poolsize(int pool, l4_size_t * size, l4_size_t * free);
 
 /*****************************************************************************/
@@ -180,7 +180,7 @@ l4dm_memphys_poolsize(int pool, l4_size_t * size, l4_size_t * free);
  * \ingroup api_debug
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4dm_memphys_show_memmap(void);
 
 /*****************************************************************************/
@@ -189,7 +189,7 @@ l4dm_memphys_show_memmap(void);
  * \ingroup api_debug
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4dm_memphys_show_pools(void);
 
 /*****************************************************************************/
@@ -200,7 +200,7 @@ l4dm_memphys_show_pools(void);
  * \param   pool         Memory pool number
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4dm_memphys_show_pool_areas(int pool);
 
 /*****************************************************************************/
@@ -211,7 +211,7 @@ l4dm_memphys_show_pool_areas(int pool);
  * \param   pool         Memory pool number
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4dm_memphys_show_pool_free(int pool);
 
 /*****************************************************************************/
@@ -222,7 +222,7 @@ l4dm_memphys_show_pool_free(int pool);
  * \param   show_free     Show slab cache free lists
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4dm_memphys_show_slabs(int show_free);
 
 /*****************************************************************************/
@@ -233,7 +233,7 @@ l4dm_memphys_show_slabs(int show_free);
  * \return  DMphys id, #L4_INVALID_ID if not found.
  */
 /*****************************************************************************/
-l4_threadid_t
+L4_CV l4_threadid_t
 l4dm_memphys_find_dmphys(void);
 
 __END_DECLS;

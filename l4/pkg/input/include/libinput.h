@@ -26,6 +26,7 @@
 #ifndef __INPUT_INCLUDE_LIBINPUT_H_
 #define __INPUT_INCLUDE_LIBINPUT_H_
 
+#include <l4/sys/linkage.h>
 #include <l4/input/macros.h>
 
 #ifdef __cplusplus
@@ -54,13 +55,13 @@ struct l4input {
  * -# on each event occurrence \a handler is called and no local event
  * buffering is done.
  */
-int l4input_init(int prio, void (*handler)(struct l4input *));
+L4_CV int l4input_init(int prio, void (*handler)(struct l4input *));
 
 /** Query event status.
  *
  * \return 0 if there are no pending events; !0 otherwise
  */
-int l4input_ispending(void);
+L4_CV int l4input_ispending(void);
 
 /** Get events.
  *
@@ -71,13 +72,13 @@ int l4input_ispending(void);
  *
  * Returns up to \a count events into buffer.
  */
-int l4input_flush(void *buffer, int count);
+L4_CV int l4input_flush(void *buffer, int count);
 
 /** Program PC speaker
  *
  * \param tone      tone value (0 switches off)
  */
-int l4input_pcspkr(int tone);
+L4_CV int l4input_pcspkr(int tone);
 
 #ifdef __cplusplus
 }

@@ -275,7 +275,7 @@ typedef l4_int8_t l4events_pr_t;
  * \return 1 if event server was found; 0 otherwise
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4events_init(void);
 
 /*****************************************************************************/
@@ -295,7 +295,7 @@ l4events_init(void);
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_register(const l4events_ch_t event_ch, 
      		  const l4events_pr_t priority);
 
@@ -309,7 +309,7 @@ l4events_register(const l4events_ch_t event_ch,
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_unregister(const l4events_ch_t event_ch);
 
 /*****************************************************************************/
@@ -320,7 +320,7 @@ l4events_unregister(const l4events_ch_t event_ch);
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_unregister_all(void);
 
 /*****************************************************************************/
@@ -336,7 +336,7 @@ l4events_unregister_all(void);
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_send(const l4events_ch_t event_ch, 
     	            l4events_event_t *event,
 	            l4events_nr_t *event_nr,
@@ -359,7 +359,7 @@ l4events_send(const l4events_ch_t event_ch,
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_receive(l4events_ch_t *event_ch, 
     		 l4events_event_t *event,
 		 l4events_nr_t *event_nr,
@@ -383,7 +383,7 @@ l4events_receive(l4events_ch_t *event_ch,
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_give_ack_and_receive(l4events_ch_t *event_ch,
 				l4events_event_t *event,
 				l4events_nr_t *event_nr,
@@ -401,7 +401,7 @@ l4events_give_ack_and_receive(l4events_ch_t *event_ch,
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4events_dump(void);
 
 /*!\brief callback function type definition
@@ -410,7 +410,7 @@ l4events_dump(void);
  * \retval 2	received event
  *
  */
-typedef void (*l4events_recv_function_t)(l4events_ch_t, l4events_event_t *);
+typedef L4_CV void (*l4events_recv_function_t)(l4events_ch_t, l4events_event_t *);
 
 /*****************************************************************************/
 /*!\ingroup clientlibapi
@@ -422,7 +422,7 @@ typedef void (*l4events_recv_function_t)(l4events_ch_t, l4events_event_t *);
  *        received event
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4events_wait(int threadno, l4events_ch_t event_ch,
 	      l4events_recv_function_t function);
 
@@ -438,7 +438,7 @@ l4events_wait(int threadno, l4events_ch_t event_ch,
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_get_ack(l4events_nr_t *event_nr, l4_timeout_t timeout);
 
 /*****************************************************************************/
@@ -456,7 +456,7 @@ l4events_get_ack(l4events_nr_t *event_nr, l4_timeout_t timeout);
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_get_ack_open(l4events_nr_t *event_nr, l4_threadid_t *id,
     		      l4_umword_t *w1, l4_umword_t *w2, l4_timeout_t timeout);
 
@@ -471,7 +471,7 @@ l4events_get_ack_open(l4events_nr_t *event_nr, l4_threadid_t *id,
  *			\ref return-makros for possible return values
  */
 /*****************************************************************************/
-long
+L4_CV long
 l4events_give_ack(l4events_nr_t event_nr);
 
 asm(".globl l4events_err_strings_sym; .type l4events_err_strings_sym,%object");

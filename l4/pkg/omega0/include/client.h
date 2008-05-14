@@ -59,8 +59,8 @@ typedef union omega0_request_t{
 /*!\brief Omega0 alien handler type
  *\ingroup clientapi
  */
-typedef void(*omega0_alien_handler_t)(l4_threadid_t alien, l4_umword_t d0,
-                                      l4_umword_t d1);
+typedef L4_CV void(*omega0_alien_handler_t)(l4_threadid_t alien, l4_umword_t d0,
+                                            l4_umword_t d1);
 extern omega0_alien_handler_t omega0_alien_handler;
 
 // constants for creating OMEGA0_RQ
@@ -84,7 +84,7 @@ extern omega0_alien_handler_t omega0_alien_handler;
  * \retval >=0			success: handle
  * \retval <0			error
  */
-extern int omega0_attach(omega0_irqdesc_t desc);
+L4_CV int omega0_attach(omega0_irqdesc_t desc);
 
 /*!\brief Detach from an irq line.
  *\ingroup clientapi
@@ -93,7 +93,7 @@ extern int omega0_attach(omega0_irqdesc_t desc);
  * \retval 0			success
  * \retval <0			error
  */
-extern int omega0_detach(omega0_irqdesc_t desc);
+L4_CV int omega0_detach(omega0_irqdesc_t desc);
 
 /*!\brief Pass the right to attach to an IRQ line to another thread.
  *\ingroup clientapi
@@ -104,7 +104,7 @@ extern int omega0_detach(omega0_irqdesc_t desc);
  * \retval 0			success
  * \retval <0			error
  */
-extern int omega0_pass(omega0_irqdesc_t desc, l4_threadid_t new_driver);
+L4_CV int omega0_pass(omega0_irqdesc_t desc, l4_threadid_t new_driver);
 
 /*!\brief Request for certain actions.
  *\ingroup clientapi
@@ -119,7 +119,7 @@ extern int omega0_pass(omega0_irqdesc_t desc, l4_threadid_t new_driver);
  * \retval >0			If the wait option was set, indicates
  *				the irq line.
  */
-extern int omega0_request(int handle, omega0_request_t action);
+L4_CV int omega0_request(int handle, omega0_request_t action);
 
 
 /*!\brief Request for certain actions with timeout.
@@ -136,8 +136,8 @@ extern int omega0_request(int handle, omega0_request_t action);
  * \retval >0			If the wait option was set, indicates
  *				the irq line.
  */
-extern int omega0_request_timeout(int handle, omega0_request_t action,
-				  l4_timeout_t timeout);
+L4_CV int omega0_request_timeout(int handle, omega0_request_t action,
+				 l4_timeout_t timeout);
 
 
 /*!\brief Iterator: return the first available irq line.
@@ -146,7 +146,7 @@ extern int omega0_request_timeout(int handle, omega0_request_t action,
  * \retval 0			no irq lines are available
  * \retval >0			first existing irq line.
  */
-extern int omega0_first(void);
+L4_CV int omega0_first(void);
 
 /*!\brief Iterator: return next available irq line.
  *
@@ -155,7 +155,7 @@ extern int omega0_first(void);
  * \retval 0			no more lines are available
  * \retval >0			next existing irq line.
  */
-extern int omega0_next(int irq_num);
+L4_CV int omega0_next(int irq_num);
 
 /*!\brief Set an alien IPC handler
  *\ingroup clientapi
@@ -167,7 +167,7 @@ extern int omega0_next(int irq_num);
  * a short IPC without any mappings. The alien handler receives the
  * alien thread id and the 2 (two) dwords.
  */
-extern omega0_alien_handler_t omega0_set_alien_handler(
+L4_CV omega0_alien_handler_t omega0_set_alien_handler(
     omega0_alien_handler_t handler);
 
 EXTERN_C_END

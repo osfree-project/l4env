@@ -13,11 +13,11 @@ struct l4util_buffer_head
   char          *buffer;
 };
 
-int l4util_queue_dequeue(struct l4util_buffer_head **buffer);
+L4_CV int l4util_queue_dequeue(struct l4util_buffer_head **buffer);
 
-int l4util_queue_init(int queue_threadno,
-		      void *(*malloc_func)(l4_uint32_t size),
-		      l4_uint32_t max_rcv);
+L4_CV int l4util_queue_init(int queue_threadno,
+			    void *(*malloc_func)(l4_uint32_t size),
+			    l4_uint32_t max_rcv);
 
 EXTERN_C_END
 

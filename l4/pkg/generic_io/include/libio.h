@@ -47,7 +47,7 @@ EXTERN_C_BEGIN
  * aligned.
  */
 /*****************************************************************************/
-int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t drv_type);
+L4_CV int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t drv_type);
 
 /*****************************************************************************/
 /**
@@ -57,7 +57,7 @@ int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t drv_type);
  * \return Pointer to info page, 0 if unavailable.
  */
 /*****************************************************************************/
-l4io_info_t *l4io_info_page(void);
+L4_CV l4io_info_t *l4io_info_page(void);
 
 /*****************************************************************************/
 /**
@@ -70,8 +70,8 @@ l4io_info_t *l4io_info_page(void);
  * \return Pointer to device structure, 0 if not found
  */
 /*****************************************************************************/
-l4io_desc_device_t *l4io_desc_lookup_device(const char *name,
-                                            l4io_info_t *iopage);
+L4_CV l4io_desc_device_t *l4io_desc_lookup_device(const char *name,
+                                                  l4io_info_t *iopage);
 
 /*****************************************************************************/
 /**
@@ -86,7 +86,8 @@ l4io_desc_device_t *l4io_desc_lookup_device(const char *name,
  * \return -1 if nothing found, index otherwise
  */
 /*****************************************************************************/
-int l4io_desc_lookup_resource(l4io_desc_device_t *d, unsigned long type, int i);
+L4_CV int l4io_desc_lookup_resource(l4io_desc_device_t *d,
+                                    unsigned long type, int i);
 
 /*****************************************************************************/
 /**
@@ -101,7 +102,8 @@ int l4io_desc_lookup_resource(l4io_desc_device_t *d, unsigned long type, int i);
  * \return virtual address of mapped region; 0 on error
  */
 /*****************************************************************************/
-l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags);
+L4_CV l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len,
+                                        int flags);
 
 /*****************************************************************************/
 /**
@@ -114,7 +116,7 @@ l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags);
  * \return virtual address of mapped region; 0 on error
  */
 /*****************************************************************************/
-l4_addr_t l4io_request_mem_region_name(const char *name, const int index);
+L4_CV l4_addr_t l4io_request_mem_region_name(const char *name, const int index);
 
 /*****************************************************************************/
 /**
@@ -127,7 +129,7 @@ l4_addr_t l4io_request_mem_region_name(const char *name, const int index);
  * \return IRQ number; -1 on error
  */
 /*****************************************************************************/
-int l4io_get_irq_name(const char *name, const int index);
+L4_CV int l4io_get_irq_name(const char *name, const int index);
 
 /******************************************************************************/
 /**
@@ -141,8 +143,8 @@ int l4io_get_irq_name(const char *name, const int index);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_search_mem_region(l4_addr_t addr,
-                           l4_addr_t *start, l4_size_t *len);
+L4_CV int l4io_search_mem_region(l4_addr_t addr,
+                                 l4_addr_t *start, l4_size_t *len);
 
 /******************************************************************************/
 /**
@@ -155,7 +157,7 @@ int l4io_search_mem_region(l4_addr_t addr,
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_release_mem_region(l4_addr_t start, l4_size_t len);
+L4_CV int l4io_release_mem_region(l4_addr_t start, l4_size_t len);
 
 /*****************************************************************************/
 /**
@@ -168,7 +170,7 @@ int l4io_release_mem_region(l4_addr_t start, l4_size_t len);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_request_region(l4_uint16_t start, l4_uint16_t len);
+L4_CV int l4io_request_region(l4_uint16_t start, l4_uint16_t len);
 
 /*****************************************************************************/
 /**
@@ -181,7 +183,7 @@ int l4io_request_region(l4_uint16_t start, l4_uint16_t len);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_release_region(l4_uint16_t start, l4_uint16_t len);
+L4_CV int l4io_release_region(l4_uint16_t start, l4_uint16_t len);
 
 /*****************************************************************************/
 /**
@@ -193,7 +195,7 @@ int l4io_release_region(l4_uint16_t start, l4_uint16_t len);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_request_dma(unsigned int channel);
+L4_CV int l4io_request_dma(unsigned int channel);
 
 /*****************************************************************************/
 /**
@@ -205,7 +207,7 @@ int l4io_request_dma(unsigned int channel);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_release_dma(unsigned int channel);
+L4_CV int l4io_release_dma(unsigned int channel);
 
 /******************************************************************************/
 /**
@@ -220,8 +222,8 @@ int l4io_release_dma(unsigned int channel);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_pci_find_slot(unsigned int bus, unsigned int slot,
-                       l4io_pci_dev_t * pci_dev);
+L4_CV int l4io_pci_find_slot(unsigned int bus, unsigned int slot,
+                             l4io_pci_dev_t * pci_dev);
 
 /*****************************************************************************/
 /**
@@ -237,8 +239,8 @@ int l4io_pci_find_slot(unsigned int bus, unsigned int slot,
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_pci_find_device(unsigned short vendor, unsigned short device,
-                         l4io_pdev_t start, l4io_pci_dev_t * pci_dev);
+L4_CV int l4io_pci_find_device(unsigned short vendor, unsigned short device,
+                               l4io_pdev_t start, l4io_pci_dev_t * pci_dev);
 
 /*****************************************************************************/
 /**
@@ -253,8 +255,8 @@ int l4io_pci_find_device(unsigned short vendor, unsigned short device,
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_pci_find_class(unsigned long dev_class,
-                        l4io_pdev_t start, l4io_pci_dev_t * pci_dev);
+L4_CV int l4io_pci_find_class(unsigned long dev_class,
+                              l4io_pdev_t start, l4io_pci_dev_t * pci_dev);
 
 /*****************************************************************************/
 /**
@@ -266,7 +268,7 @@ int l4io_pci_find_class(unsigned long dev_class,
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_pci_enable(l4io_pdev_t pdev);
+L4_CV int l4io_pci_enable(l4io_pdev_t pdev);
 
 /*****************************************************************************/
 /**
@@ -278,7 +280,7 @@ int l4io_pci_enable(l4io_pdev_t pdev);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_pci_disable(l4io_pdev_t pdev);
+L4_CV int l4io_pci_disable(l4io_pdev_t pdev);
 
 /*****************************************************************************/
 /**
@@ -288,7 +290,7 @@ int l4io_pci_disable(l4io_pdev_t pdev);
  * \param  pdev  PCI device handle
  */
 /*****************************************************************************/
-void l4io_pci_set_master(l4io_pdev_t pdev);
+L4_CV void l4io_pci_set_master(l4io_pdev_t pdev);
 
 /*****************************************************************************/
 /**
@@ -301,7 +303,7 @@ void l4io_pci_set_master(l4io_pdev_t pdev);
  * \return old PM state
  */
 /*****************************************************************************/
-int l4io_pci_set_pm(l4io_pdev_t pdev, int state);
+L4_CV int l4io_pci_set_pm(l4io_pdev_t pdev, int state);
 
 /*****************************************************************************/
 /**
@@ -317,9 +319,9 @@ int l4io_pci_set_pm(l4io_pdev_t pdev, int state);
  *
  * @{ */
 /*****************************************************************************/
-int l4io_pci_readb_cfg(l4io_pdev_t pdev, int pos, l4_uint8_t * val);
-int l4io_pci_readw_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t * val);
-int l4io_pci_readl_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t * val);
+L4_CV int l4io_pci_readb_cfg(l4io_pdev_t pdev, int pos, l4_uint8_t * val);
+L4_CV int l4io_pci_readw_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t * val);
+L4_CV int l4io_pci_readl_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t * val);
 
 /** @} */
 /*****************************************************************************/
@@ -335,9 +337,9 @@ int l4io_pci_readl_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t * val);
  *
  * @{ */
 /*****************************************************************************/
-int l4io_pci_writeb_cfg(l4io_pdev_t pdev, int pos, l4_uint8_t val);
-int l4io_pci_writew_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t val);
-int l4io_pci_writel_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t val);
+L4_CV int l4io_pci_writeb_cfg(l4io_pdev_t pdev, int pos, l4_uint8_t val);
+L4_CV int l4io_pci_writew_cfg(l4io_pdev_t pdev, int pos, l4_uint16_t val);
+L4_CV int l4io_pci_writel_cfg(l4io_pdev_t pdev, int pos, l4_uint32_t val);
 /** @} */
 
 EXTERN_C_END

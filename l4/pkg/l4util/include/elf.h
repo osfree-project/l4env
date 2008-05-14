@@ -757,4 +757,34 @@ typedef struct {
 #define STT_LOPROC	13	/**< proc specific */
 #define STT_HIPROC	15	/**< proc specific */
 
+/* Some helpers */
+static inline int l4util_elf_check_magic(ElfW(Ehdr) *hdr);
+static inline int l4util_elf_check_arch(ElfW(Ehdr) *hdr);
+static inline ElfW(Phdr) *l4util_elf_phdr(ElfW(Ehdr) *hdr);
+
+
+/* Implemeantions */
+static inline
+int l4util_elf_check_magic(ElfW(Ehdr) *hdr)
+{
+  return    hdr->e_ident[EI_MAG0] == ELFMAG0
+         && hdr->e_ident[EI_MAG1] == ELFMAG1
+         && hdr->e_ident[EI_MAG2] == ELFMAG2
+         && hdr->e_ident[EI_MAG3] == ELFMAG3;
+}
+
+static inline
+int l4util_elf_check_arch(ElfW(Ehdr) *hdr)
+{
+  return    hdr->e_ident[EI_CLASS] == L4_ARCH_EI_CLASS
+         && hdr->e_ident[EI_DATA]  == L4_ARCH_EI_DATA
+         && hdr->e_machine         == L4_ARCH_E_MACHINE;
+}
+
+static inline
+ElfW(Phdr) *l4util_elf_phdr(ElfW(Ehdr) *hdr)
+{
+  return (ElfW(Phdr) *)((char *)hdr + hdr->e_phoff);
+}
+
 #endif /* _L4_EXEC_ELF_H */

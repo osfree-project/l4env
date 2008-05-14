@@ -46,14 +46,14 @@ struct nitpicker_view;
  * \param[in] np  Nitpicker buffer
  * \return        Pointer to a view description or NULL on failure
  */
-struct nitpicker_view* nitpicker_view_create(struct nitpicker_buffer *npb);
+L4_CV struct nitpicker_view* nitpicker_view_create(struct nitpicker_buffer *npb);
 
 
 /*** DESTROY A VIEW ***
  *
  * param[in] npv  View to destroy
  */
-void nitpicker_view_destroy(struct nitpicker_view *npv);
+L4_CV void nitpicker_view_destroy(struct nitpicker_view *npv);
 
 
 /*** CHECK IF A BUFFER IS VAILD ***
@@ -61,7 +61,7 @@ void nitpicker_view_destroy(struct nitpicker_view *npv);
  * \param[in] npv  View
  * \return         0 on success or negative error code
  */
-int nitpicker_view_is_valid(const struct nitpicker_view *npv);
+L4_CV int nitpicker_view_is_valid(const struct nitpicker_view *npv);
 
 
 /*** SET A VIEWS POSITION AND SIZE ON THE ASSOCIATED BUFFER ***
@@ -74,12 +74,12 @@ int nitpicker_view_is_valid(const struct nitpicker_view *npv);
  * \param[in] do_redraw  Mark view to be redrawn
  * \return               0 on success or negative error code
  */
-int nitpicker_view_set_view_port(struct nitpicker_view *npv,
-                                 int buffer_x, int buffer_y,
-                                 int x, int y,
-                                 unsigned int width,
-                                 unsigned int height,
-                                 int do_redraw);
+L4_CV int nitpicker_view_set_view_port(struct nitpicker_view *npv,
+                                       int buffer_x, int buffer_y,
+                                       int x, int y,
+                                       unsigned int width,
+                                       unsigned int height,
+                                       int do_redraw);
 
 
 /*** SET A VIEW'S POSITION IN THE VIEW STACK ***
@@ -90,9 +90,9 @@ int nitpicker_view_set_view_port(struct nitpicker_view *npv,
  * \param[in] do_redraw  Mark view to be redrawn
  * \return               0 on success or negative error code
  */
-int nitpicker_view_stack(struct nitpicker_view *npv,
-                         struct nitpicker_view *neighbor,
-                         nitpicker_stack_position_t stack_pos, int do_redraw);
+L4_CV int nitpicker_view_stack(struct nitpicker_view *npv,
+                               struct nitpicker_view *neighbor,
+                               nitpicker_stack_position_t stack_pos, int do_redraw);
 
 
 /*** SET A VIEW'S TITLE ***
@@ -101,7 +101,7 @@ int nitpicker_view_stack(struct nitpicker_view *npv,
  * \param[in] title  New title
  * \return           0 on success or negative error code
  */
-int nitpicker_view_set_title(struct nitpicker_view *npv, const char *title);
+L4_CV int nitpicker_view_set_title(struct nitpicker_view *npv, const char *title);
 
 
 /*** SET A VIEW AS THE BACKGROUND VIEW ***
@@ -109,7 +109,7 @@ int nitpicker_view_set_title(struct nitpicker_view *npv, const char *title);
  * \param[in] npv  View
  * \return         0 on success or negative error code
  */
-int nitpicker_view_make_background(struct nitpicker_view *npv);
+L4_CV int nitpicker_view_make_background(struct nitpicker_view *npv);
 
 
 EXTERN_C_END

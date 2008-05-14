@@ -20,23 +20,23 @@
 
 /** Init of contxt library.
  * \ingroup contxt_if
- * 
- * \param   max_sbuf_size  ... max IPC string buffer
- * \param   scrbuf_lines   ... number of additional screenbuffer lines 
  *
- * This is the init-function of libcontxt. It opens a console and allocates 
+ * \param   max_sbuf_size  ... max IPC string buffer
+ * \param   scrbuf_lines   ... number of additional screenbuffer lines
+ *
+ * This is the init-function of libcontxt. It opens a console and allocates
  * the screen history buffer using malloc(). This functions must be called
  * before the other functions for text output may be used. */
-int contxt_init(long max_sbuf_size, int scrbuf_lines);
+L4_CV int contxt_init(long max_sbuf_size, int scrbuf_lines);
 
 /** Close contxt library.
  * \ingroup contxt_if
- * 
+ *
  * \return  0 on success (close a console)
  *          PANIC otherwise
  *
  * Close the libcontxt console. */
-int contxt_close(void);
+L4_CV int contxt_close(void);
 
 #endif
 

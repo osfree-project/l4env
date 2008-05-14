@@ -13,11 +13,13 @@
 #ifndef __PACKET_DEBUG_H
 #define __PACKET_DEBUG_H
 
+#include <l4/sys/linkage.h>
+
 /* Print information about a specific packet.
  *
  * \param packet    pointer to the beginning of the packet's
  *                  ethernet header
  */
-void packet_debug(unsigned char *packet);
+L4_CV void packet_debug(unsigned char *packet);
 
 #endif

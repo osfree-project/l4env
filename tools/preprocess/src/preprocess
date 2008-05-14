@@ -1495,6 +1495,7 @@ sub print_classdecl($)
     }
 }
 
+my $parengroup;
 sub print_funcdef($)
 {
   my $function = $_[0];
@@ -1528,7 +1529,6 @@ sub print_funcdef($)
 
   # Remove default arguments from argument list
   my $args = $function->{args};
-  my $parengroup;
   $parengroup = qr{		# Matches correctly-nested groups of parens
 		      \(
 		      (?:

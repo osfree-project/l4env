@@ -29,6 +29,7 @@
 #define __L4ENV_INCLUDE_ERRNO_H
 
 /* L4/L4Env includes */
+#include <l4/sys/linkage.h>
 #include <l4/env/cdefs.h>
 
 /*****************************************************************************
@@ -232,7 +233,7 @@ extern const char * l4env_err_unknown;
  * registerd/used.
  */
 /*****************************************************************************/
-extern int
+L4_CV int
 l4env_err_register_fn(l4env_err_fn_desc_t * fn_desc);
 
 /*****************************************************************************/
@@ -255,7 +256,7 @@ l4env_err_register_fn(l4env_err_fn_desc_t * fn_desc);
  * array, nor returns any of the registered functions a valid error-string.
  */
 /*****************************************************************************/
-extern int
+L4_CV int
 l4env_err_register_desc(l4env_err_desc_t * desc);
 
 /*****************************************************************************/
@@ -282,7 +283,7 @@ l4env_err_register_desc(l4env_err_desc_t * desc);
  *       their negated form.
  */
 /*****************************************************************************/
-extern const char *
+L4_CV const char *
 l4env_strerror(int code);
 
 /*!\brief  Print an error message containing an l4env error string

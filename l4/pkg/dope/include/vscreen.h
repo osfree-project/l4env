@@ -27,7 +27,7 @@
  * result of the VScreen widget's map function can directly be passed
  * into this function. (as done by vscr_get_fb)
  */
-extern void *vscr_map_smb(char *smb_ident);
+L4_CV void *vscr_map_smb(char *smb_ident);
 
 
 /*** RETURN LOCAL ADDRESS OF THE FRAMEBUFFER OF THE SPECIFIED VSCREEN ***
@@ -36,7 +36,7 @@ extern void *vscr_map_smb(char *smb_ident);
  * \param vscr_name  name of the VScreen widget
  * \return           address of the VScreen buffer in the local address space
  */
-extern void *vscr_get_fb(int app_id, const char *vscr_name);
+L4_CV void *vscr_get_fb(int app_id, const char *vscr_name);
 
 
 /*** RELEASE VSCREEN BUFFER FROM LOCAL ADDRESS SPACE ***
@@ -44,7 +44,7 @@ extern void *vscr_get_fb(int app_id, const char *vscr_name);
  * \param fb_adr   start address of the vscreen buffer
  * \return         0 on success
  */
-extern int vscr_free_fb(void *fb_adr);
+L4_CV int vscr_free_fb(void *fb_adr);
 
 
 /*************************
@@ -56,7 +56,7 @@ extern int vscr_free_fb(void *fb_adr);
  * \param vscr_ident  identifier of the widget's server
  * \return            id to be used for the vscr_server-functions
  */
-extern void *vscr_connect_server(char *vscr_ident);
+L4_CV void *vscr_connect_server(char *vscr_ident);
 
 
 /*** GET SERVER ID OF THE SPECIFIED VSCREEN WIDGET ***
@@ -65,14 +65,14 @@ extern void *vscr_connect_server(char *vscr_ident);
  * \param vscr_name  name of the VScreen widget
  * \return           id to be used for the vscr_server-functions
  */
-extern void *vscr_get_server_id(int app_id, const char *vscr_name);
+L4_CV void *vscr_get_server_id(int app_id, const char *vscr_name);
 
 
 /*** CLOSE CONNECTION TO VSCREEN SERVER ***
  *
  * \param vscr_server_id  id of the vscreen widget server to disconnect from
  */
-extern void  vscr_release_server_id(void *vscr_server_id);
+L4_CV void  vscr_release_server_id(void *vscr_server_id);
 
 
 /*** WAIT FOR SYNCHRONISATION ***
@@ -80,7 +80,7 @@ extern void  vscr_release_server_id(void *vscr_server_id);
  * This function waits until the current drawing period of this
  * widget is finished.
  */
-extern void  vscr_server_waitsync(void *vscr_server_id);
+L4_CV void  vscr_server_waitsync(void *vscr_server_id);
 
 
 /*** REFRESH RECTANGULAR WIDGET AREA ASYNCHRONOUSLY ***
@@ -90,6 +90,6 @@ extern void  vscr_server_waitsync(void *vscr_server_id);
  * dope_cmd call of vscr.refresh() is its deterministic execution
  * time and its nonblocking way of operation.
  */
-extern void  vscr_server_refresh(void *vscr_server_id, int x, int y, int w, int h);
+L4_CV void  vscr_server_refresh(void *vscr_server_id, int x, int y, int w, int h);
 
 

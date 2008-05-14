@@ -24,6 +24,13 @@
 #define FASTCALL(x)	x
 #define fastcall
 
+/**
+ * Define calling convention.
+ * \ingroup api_types_compiler
+ * \hideinitializer
+ */
+#define L4_CV
+
 #ifdef __PIC__
 # define LONG_CALL
 #else

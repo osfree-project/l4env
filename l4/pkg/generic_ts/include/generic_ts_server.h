@@ -6,7 +6,7 @@
 /**
  * \brief server should reply to a client
  */
-void
+L4_CV void
 l4ts_do_kill_reply(l4_threadid_t *src, l4_threadid_t* client);
 
 #endif

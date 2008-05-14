@@ -1,0 +1,50 @@
+# -*- Makefile -*-
+
+PKGDIR		?= ../..
+L4DIR		?= $(PKGDIR)/../..
+
+SRCDIR		= $(PKGDIR)/lib/src
+CONTRIB		= $(PKGDIR)/contrib
+
+MODE		= l4env_minimal
+
+SYSTEMS     	= x86
+
+INSTALL_TARGET = libgmp.a
+
+all::
+
+# libgmp.a is a symlink, but real dependency tracking is done in the
+# generated Makefile.
+.PHONY: libgmp.a
+libgmp.a: Makefile
+	$(VERBOSE)$(MAKE)
+	$(VERBOSE)test .libs/$@ -ef $@ || ln -sf .libs/$@
+
+Makefile: configure
+	CC="$(CC)" CFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" \
+	 ./configure $(if $(SYSTEM_TARGET),--host=$(patsubst %-,%,$(SYSTEM_TARGET))) --enable-static --disable-shared --without-readline --with-l4-include="$(DROPS_STDDIR)/include/l4"
+
+ifneq ($(SYSTEM),)
+clean::
+	$(VERBOSE)find \( -name '*.o' -o -name '*.lo' -o -name '*.la' -o -name '*.a' \) -exec rm '{}' \;
+	$(VERBOSE)rm -rf .libs _libs
+endif
+
+# symlink the local modifications
+do_locallinks:
+	$(VERBOSE)$(SRCDIR)/link_sources.sh $(SRCDIR)
+	$(VERBOSE)touch $@
+
+# symlink the sources from the contrib-dir
+do_contriblinks: do_locallinks
+	$(VERBOSE)$(SRCDIR)/link_sources.sh $(CONTRIB)
+	$(VERBOSE)touch $@
+
+configure: do_contriblinks do_locallinks
+ifeq ($(GEN_CONFIGURE_IN), 1)
+	$(VERBOSE)aclocal
+	$(VERBOSE)autoconf
+endif
+
+include $(L4DIR)/mk/lib.mk

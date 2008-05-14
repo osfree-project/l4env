@@ -184,14 +184,14 @@ enum l4io_mem_flags
 
 
 /** Returns first device descriptor in infopage or 0 */
-static inline l4io_desc_device_t * l4io_desc_first_device(l4io_info_t *info)
+L4_CV static inline l4io_desc_device_t * l4io_desc_first_device(l4io_info_t *info)
 {
 	return info->devices->num_resources ? info->devices : 0;
 }
 
 
 /** Returns subsequent device descriptor in infopage or 0 */
-static inline l4io_desc_device_t * l4io_desc_next_device(l4io_desc_device_t *dev)
+L4_CV static inline l4io_desc_device_t * l4io_desc_next_device(l4io_desc_device_t *dev)
 {
 	dev = (l4io_desc_device_t *) &dev->resources[dev->num_resources];
 	return dev->num_resources ? dev : 0;

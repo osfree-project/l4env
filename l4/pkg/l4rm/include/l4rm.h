@@ -137,8 +137,8 @@ typedef struct l4rm_vm_range
  *                                  registered an appropriate exception handler
  *         - #L4RM_REPLY_NO_REPLY   Send no reply, this blocks the source thread
  */
-typedef int (*l4rm_pf_callback_fn_t)(l4_addr_t addr, l4_addr_t eip,
-                                     l4_threadid_t src);
+typedef L4_CV int (*l4rm_pf_callback_fn_t)(l4_addr_t addr, l4_addr_t eip,
+                                           l4_threadid_t src);
 
 /**
  * Callback function type for unknown faults
@@ -158,9 +158,9 @@ typedef int (*l4rm_pf_callback_fn_t)(l4_addr_t addr, l4_addr_t eip,
  *                                  registered an appropriate exception handler
  *         - #L4RM_REPLY_NO_REPLY   Send no reply, this blocks the source thread
  */
-typedef int (*l4rm_unknown_fault_callback_fn_t)(l4_msgtag_t tag,
-                                                l4_utcb_t *utcb,
-                                                l4_threadid_t src);
+typedef L4_CV int (*l4rm_unknown_fault_callback_fn_t)(l4_msgtag_t tag,
+                                                      l4_utcb_t *utcb,
+                                                      l4_threadid_t src);
 
 /*****************************************************************************
  *** global configuration data
@@ -180,7 +180,7 @@ extern const l4_addr_t l4rm_heap_start_addr;
  * \internal
  * Find suitable address for attach / reserve
  */
-#define L4RM_ADDR_FIND     0xFFFFFFFF
+#define L4RM_ADDR_FIND     ~0UL
 
 
 /**
@@ -217,7 +217,7 @@ __BEGIN_DECLS;
  * \return  0 on success, -1 if initialization failed
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_init(int have_l4env, l4rm_vm_range_t used[], int num_used);
 
 /*****************************************************************************/
@@ -228,7 +228,7 @@ l4rm_init(int have_l4env, l4rm_vm_range_t used[], int num_used);
  * \return  Id of region mapper thread.
  */
 /*****************************************************************************/
-l4_threadid_t
+L4_CV l4_threadid_t
 l4rm_region_mapper_id(void);
 
 /*****************************************************************************/
@@ -239,7 +239,7 @@ l4rm_region_mapper_id(void);
  * Used in l4env_startup (l4env).
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4rm_service_loop(void) __attribute__((noreturn));
 
 /*****************************************************************************
@@ -280,7 +280,7 @@ l4rm_service_loop(void) __attribute__((noreturn));
  * (\a ds_offs, \a ds_offs + \a size) to that region.
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_attach(const l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
 	    l4_uint32_t flags, void ** addr);
 
@@ -309,7 +309,7 @@ l4rm_attach(const l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
  * Attach dataspace to region at \a addr.
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_attach_to_region(const l4dm_dataspace_t * ds, const void * addr,
                       l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags);
 
@@ -348,7 +348,7 @@ l4rm_attach_to_region(const l4dm_dataspace_t * ds, const void * addr,
  * reserved by l4rm_area_reserve().
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_size_t size,
 		 l4_offs_t ds_offs, l4_uint32_t flags, void ** addr);
 
@@ -378,7 +378,7 @@ l4rm_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_size_t size,
  * Attach dataspace to region at \a addr in area \a area.
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
 			   const void * addr, l4_size_t size,
 			   l4_offs_t ds_offs, l4_uint32_t flags);
@@ -398,7 +398,7 @@ l4rm_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
  * Detach dataspace which is attached to address \a addr.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_detach(const void * addr);
 
 /*****************************************************************************
@@ -438,7 +438,7 @@ l4rm_detach(const void * addr);
  *          - -#L4_EIPC       error calling region mapper
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_setup(l4_size_t size, l4_uint32_t area, int type, l4_uint32_t flags,
                 l4_threadid_t pager, l4_addr_t * addr);
 
@@ -475,7 +475,7 @@ l4rm_area_setup(l4_size_t size, l4_uint32_t area, int type, l4_uint32_t flags,
  *          - -#L4_EIPC       error calling region mapper
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
                        int type, l4_uint32_t flags, l4_threadid_t pager);
 
@@ -494,7 +494,7 @@ l4rm_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
  * Clear region which was set up with l4rm_area_setup_region().
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_area_clear_region(l4_addr_t addr);
 
 /*****************************************************************************
@@ -530,7 +530,7 @@ l4rm_area_clear_region(l4_addr_t addr);
  * the appropriate area id.
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_reserve(l4_size_t size, l4_uint32_t flags,
 		  l4_addr_t * addr, l4_uint32_t * area);
 
@@ -552,7 +552,7 @@ l4rm_area_reserve(l4_size_t size, l4_uint32_t flags,
  * Reserve area at \a addr.
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_reserve_region(l4_addr_t addr, l4_size_t size,
 			 l4_uint32_t flags, l4_uint32_t * area);
 
@@ -569,7 +569,7 @@ l4rm_area_reserve_region(l4_addr_t addr, l4_size_t size,
  * Release area.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_area_release(l4_uint32_t area);
 
 /*****************************************************************************/
@@ -584,7 +584,7 @@ l4rm_area_release(l4_uint32_t area);
  *                         area
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_area_release_addr(const void * ptr);
 
 /*****************************************************************************/
@@ -599,7 +599,7 @@ l4rm_area_release_addr(const void * ptr);
  *          - -#L4_EINVAL  invalid address, address belongs to no used region
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_set_userptr(const void * addr, void * ptr);
 
 /*****************************************************************************/
@@ -612,7 +612,7 @@ l4rm_set_userptr(const void * addr, void * ptr);
  * \return  stored user pointer or 0 if none
  */
 /*****************************************************************************/
-void *
+L4_CV void *
 l4rm_get_userptr(const void * addr);
 
 
@@ -657,7 +657,7 @@ l4rm_get_userptr(const void * addr);
  * and reserved regions.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
             l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager);
 
@@ -687,7 +687,7 @@ l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
  * See l4rm_lookup() for comments.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_lookup_region(const void * addr, l4_addr_t * map_addr,
                    l4_size_t * map_size, l4dm_dataspace_t * ds,
                    l4_offs_t * offset, l4_threadid_t * pager);
@@ -704,7 +704,7 @@ l4rm_lookup_region(const void * addr, l4_addr_t * map_addr,
  * \param   callback     Callback function, set to #NULL to remove callback
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4rm_set_unkown_pagefault_callback(l4rm_pf_callback_fn_t callback);
 
 /*****************************************************************************/
@@ -715,7 +715,7 @@ l4rm_set_unkown_pagefault_callback(l4rm_pf_callback_fn_t callback);
  * \param   callback     Callback function, set to #NULL to remove callback
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4rm_set_unkown_fault_callback(l4rm_unknown_fault_callback_fn_t callback);
 
 /*****************************************************************************/
@@ -724,7 +724,7 @@ l4rm_set_unkown_fault_callback(l4rm_unknown_fault_callback_fn_t callback);
  * \ingroup api_vm
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4rm_enable_pagefault_exceptions(void);
 
 /*****************************************************************************/
@@ -733,7 +733,7 @@ l4rm_enable_pagefault_exceptions(void);
  * \ingroup api_vm
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4rm_disable_pagefault_exceptions(void);
 
 /*****************************************************************************
@@ -746,7 +746,7 @@ l4rm_disable_pagefault_exceptions(void);
  * \ingroup api_debug
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4rm_show_region_list(void);
 
 /*****************************************************************************
@@ -775,7 +775,7 @@ l4rm_show_region_list(void);
  *          - -#L4_ENOMAP  no region found
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_attach_to_region(const l4dm_dataspace_t *ds, const void *addr,
 			     l4_size_t size, l4_offs_t ds_offs,
 			     l4_uint32_t flags);
@@ -800,7 +800,7 @@ l4rm_direct_attach_to_region(const l4dm_dataspace_t *ds, const void *addr,
  *          - -#L4_ENOMAP  no region found
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area,
                         l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags,
                         void ** addr);
@@ -825,7 +825,7 @@ l4rm_direct_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area,
  *          - -#L4_ENOMAP  no region found
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
 				  const void * addr, l4_size_t size,
                                   l4_offs_t ds_offs, l4_uint32_t flags);
@@ -863,7 +863,7 @@ l4rm_direct_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
  *          - -#L4_EIPC       error calling region mapper
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_setup(l4_size_t size, l4_uint32_t area, int type,
                        l4_uint32_t flags, l4_threadid_t pager,
                        l4_addr_t * addr);
@@ -887,7 +887,7 @@ l4rm_direct_area_setup(l4_size_t size, l4_uint32_t area, int type,
  *          - -#L4_EINVAL     invalid area / type
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
                               int type, l4_uint32_t flags, l4_threadid_t pager);
 
@@ -906,7 +906,7 @@ l4rm_direct_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
  *          - -#L4_ENOMEM     out of memory allocating descriptors
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_reserve(l4_size_t size, l4_uint32_t flags, l4_addr_t * addr,
 			 l4_uint32_t * area);
 
@@ -925,7 +925,7 @@ l4rm_direct_area_reserve(l4_size_t size, l4_uint32_t flags, l4_addr_t * addr,
  *          - -#L4_ENOMEM  out of memory allocating descriptors
  */
 /*****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size,
                                 l4_uint32_t flags, l4_uint32_t * area);
 
@@ -939,7 +939,7 @@ l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size,
  * \brief Really attach dataspace to region
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
                l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags);
 
@@ -949,7 +949,7 @@ l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
  * \brief Really setup vm area
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_do_area_setup(l4_addr_t * addr, l4_size_t size, l4_uint32_t area,
                    int type, l4_uint32_t flags, l4_threadid_t pager);
 
@@ -959,7 +959,7 @@ l4rm_do_area_setup(l4_addr_t * addr, l4_size_t size, l4_uint32_t area,
  * \brief Really mark address area reserved.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4rm_do_reserve(l4_addr_t * addr, l4_size_t size, l4_uint32_t flags,
                 l4_uint32_t * area);
 
@@ -972,7 +972,7 @@ __END_DECLS;
 /*****************************************************************************
  *** l4rm_attach
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_attach(const l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
 	    l4_uint32_t flags, void ** addr)
 {
@@ -985,7 +985,7 @@ l4rm_attach(const l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
 /*****************************************************************************
  *** l4rm_attach_to_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_attach_to_region(const l4dm_dataspace_t * ds, const void * addr,
                       l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags)
 {
@@ -998,7 +998,7 @@ l4rm_attach_to_region(const l4dm_dataspace_t * ds, const void * addr,
 /*****************************************************************************
  *** l4rm_area_attach
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_size_t size,
 		 l4_offs_t ds_offs, l4_uint32_t flags, void ** addr)
 {
@@ -1010,7 +1010,7 @@ l4rm_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_size_t size,
 /*****************************************************************************
  *** l4rm_area_attach_to_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
 			   const void * addr, l4_size_t size, l4_offs_t ds_offs,
 			   l4_uint32_t flags)
@@ -1024,7 +1024,7 @@ l4rm_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
 /*****************************************************************************
  *** l4rm_direct_attach_to_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_attach_to_region(const l4dm_dataspace_t *ds, const void *addr,
 			     l4_size_t size, l4_offs_t ds_offs,
 			     l4_uint32_t flags)
@@ -1037,7 +1037,7 @@ l4rm_direct_attach_to_region(const l4dm_dataspace_t *ds, const void *addr,
 /*****************************************************************************
  *** l4rm_direct_area_attach
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area,
                         l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags,
                         void ** addr)
@@ -1051,7 +1051,7 @@ l4rm_direct_area_attach(const l4dm_dataspace_t * ds, l4_uint32_t area,
 /*****************************************************************************
  *** l4rm_direct_area_attach_to_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
 				  const void * addr, l4_size_t size,
 				  l4_offs_t ds_offs, l4_uint32_t flags)
@@ -1065,7 +1065,7 @@ l4rm_direct_area_attach_to_region(const l4dm_dataspace_t * ds, l4_uint32_t area,
 /*****************************************************************************
  *** l4rm_area_setup
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_setup(l4_size_t size, l4_uint32_t area, int type, l4_uint32_t flags,
                 l4_threadid_t pager, l4_addr_t * addr)
 {
@@ -1077,7 +1077,7 @@ l4rm_area_setup(l4_size_t size, l4_uint32_t area, int type, l4_uint32_t flags,
 /*****************************************************************************
  *** l4rm_area_setup_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
                        int type, l4_uint32_t flags, l4_threadid_t pager)
 {
@@ -1088,7 +1088,7 @@ l4rm_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
 /*****************************************************************************
  *** l4rm_area_setup
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_setup(l4_size_t size, l4_uint32_t area, int type,
                        l4_uint32_t flags, l4_threadid_t pager, l4_addr_t * addr)
 {
@@ -1101,7 +1101,7 @@ l4rm_direct_area_setup(l4_size_t size, l4_uint32_t area, int type,
 /*****************************************************************************
  *** l4rm_area_setup_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
                               int type, l4_uint32_t flags, l4_threadid_t pager)
 {
@@ -1113,7 +1113,7 @@ l4rm_direct_area_setup_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
 /*****************************************************************************
  *** l4rm_area_reserve
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_reserve(l4_size_t size, l4_uint32_t flags, l4_addr_t * addr,
 		  l4_uint32_t * area)
 {
@@ -1125,7 +1125,7 @@ l4rm_area_reserve(l4_size_t size, l4_uint32_t flags, l4_addr_t * addr,
 /*****************************************************************************
  *** l4rm_area_reserve_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_area_reserve_region(l4_addr_t addr, l4_size_t size, l4_uint32_t flags,
 			 l4_uint32_t * area)
 {
@@ -1136,7 +1136,7 @@ l4rm_area_reserve_region(l4_addr_t addr, l4_size_t size, l4_uint32_t flags,
 /*****************************************************************************
  *** l4rm_direct_area_reserve
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_reserve(l4_size_t size, l4_uint32_t flags, l4_addr_t * addr,
                          l4_uint32_t * area)
 {
@@ -1148,7 +1148,7 @@ l4rm_direct_area_reserve(l4_size_t size, l4_uint32_t flags, l4_addr_t * addr,
 /*****************************************************************************
  *** l4rm_direct_area_reserve_region
  *****************************************************************************/
-L4_INLINE int
+L4_CV L4_INLINE int
 l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size,
                                 l4_uint32_t flags, l4_uint32_t * area)
 {

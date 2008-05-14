@@ -573,27 +573,10 @@ app_pager_thread(void *data)
 		      dw1, dw2);
 		}
 #ifdef ARCH_x86
-	      else if ((l4_msgtag_is_page_fault(tag)
-                        || l4_msgtag_is_io_page_fault(tag))
-                       && (dw1 >= 0x40000000) && !(app->flags & APP_NOSIGMA0))
-		{
-                    if (l4_is_io_page_fault(dw1))
-                      {
-                        resolve_iopf_rmgr(app, &dw1, &dw2, &reply,
-					  &skip_reply);
-                      }
-                    else
-                      {
-                        /* sigma0 protocol: adapter space requested. */
-                        dbg_adap_pf("PF (%c) %08lx in adapter space. "
-				    "Forwarding to ROOT.",
-                                    dw1 & 2 ? 'w' : 'r', dw1 & ~3);
-
-                        /* forward pf in adapter space to ROOT */
-                        forward_pf_rmgr(app, &dw1, &dw2, &reply,
-					L4_LOG2_SUPERPAGESIZE);
-                      }
-		}
+	      else if (l4_msgtag_is_io_page_fault(tag)
+	               && l4_is_io_page_fault(dw1)
+                       && !(app->flags & APP_NOSIGMA0))
+                  resolve_iopf_rmgr(app, &dw1, &dw2, &reply, &skip_reply);
 #endif /* ARCH_x86 */
 	      else if (l4_msgtag_is_page_fault(tag)
                        && pf_in_app(dw1, app, &aa))

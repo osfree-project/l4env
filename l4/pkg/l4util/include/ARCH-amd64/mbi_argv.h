@@ -19,7 +19,7 @@
 
 EXTERN_C_BEGIN
 
-void l4util_mbi_to_argv(l4_mword_t flag, l4util_mb_info_t *mbi);
+L4_CV void l4util_mbi_to_argv(l4_mword_t flag, l4util_mb_info_t *mbi);
 
 extern int  l4util_argc;
 extern char *l4util_argv[];

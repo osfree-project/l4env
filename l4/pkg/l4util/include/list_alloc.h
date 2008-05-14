@@ -29,25 +29,25 @@ EXTERN_C_BEGIN
  * \param first   list identifier
  * \param block   address of unused memory block
  * \param size    size of memory block */
-void      l4la_free(l4la_free_t **first, void *block, l4_size_t size);
+L4_CV void      l4la_free(l4la_free_t **first, void *block, l4_size_t size);
 
 /** Allocate memory from pool.
  * \param first   list identifier
  * \param size    length of memory block to allocate
  * \param align   alignment */
-void*     l4la_alloc(l4la_free_t **first, l4_size_t size, unsigned align);
+L4_CV void*     l4la_alloc(l4la_free_t **first, l4_size_t size, unsigned align);
 
 /** Show all list members.
  * \param first   list identifier */
-void      l4la_dump(l4la_free_t **first);
+L4_CV void      l4la_dump(l4la_free_t **first);
 
 /** Init memory pool.
  * \param first   list identifier */
-void      l4la_init(l4la_free_t **first);
+L4_CV void      l4la_init(l4la_free_t **first);
 
 /** Show available memory in pool.
  * \param first   list identifier */
-l4_size_t l4la_avail(l4la_free_t **first);
+L4_CV l4_size_t l4la_avail(l4la_free_t **first);
 
 EXTERN_C_END
 

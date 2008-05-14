@@ -66,7 +66,7 @@ __BEGIN_DECLS;
  * see l4dm_map().
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_map_pages(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
                l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs,
                l4_uint32_t flags, l4_addr_t * fpage_addr,
@@ -98,7 +98,7 @@ l4dm_map_pages(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
  * wrapper than l4dm_map_pages since we don't worry about the receive window.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_map_ds(const l4dm_dataspace_t *ds, l4_offs_t offs,
             l4_addr_t addr, l4_size_t size, l4_uint32_t flags);
 
@@ -138,7 +138,7 @@ l4dm_map_ds(const l4dm_dataspace_t *ds, l4_offs_t offs,
  *                     larger VM region.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_map(const void * ptr, l4_size_t size, l4_uint32_t flags);
 
 /*****************************************************************************/
@@ -155,7 +155,7 @@ l4dm_map(const void * ptr, l4_size_t size, l4_uint32_t flags);
  *                         close a dataspace
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_close(const l4dm_dataspace_t * ds);
 
 /*****************************************************************************/
@@ -205,7 +205,7 @@ l4dm_close_all(l4_threadid_t dsm_id, l4_threadid_t client, l4_uint32_t flags);
  * rights.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_share(const l4dm_dataspace_t * ds,
            l4_threadid_t client, l4_uint32_t rights);
 
@@ -254,7 +254,7 @@ l4dm_revoke(const l4dm_dataspace_t * ds,
  * Check if the caller has the specified access rights for the dataspace.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_check_rights(const l4dm_dataspace_t * ds, l4_uint32_t rights);
 
 /*****************************************************************************/
@@ -272,7 +272,7 @@ l4dm_check_rights(const l4dm_dataspace_t * ds, l4_uint32_t rights);
  *                        transfer the ownership
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner);
 
 /*****************************************************************************/
@@ -300,7 +300,7 @@ l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner);
  * Create a copy of the whole dataspace.
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_copy(const l4dm_dataspace_t * ds, l4_uint32_t flags, const char * name,
           l4dm_dataspace_t * copy);
 
@@ -354,7 +354,7 @@ l4dm_copy_long(const l4dm_dataspace_t * ds, l4_offs_t src_offs,
  *          - -#L4_EIPC    IPC error calling dataspace manager
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_ds_set_name(const l4dm_dataspace_t * ds, const char * name);
 
 /*****************************************************************************/
@@ -370,7 +370,7 @@ l4dm_ds_set_name(const l4dm_dataspace_t * ds, const char * name);
  *          - -#L4_EIPC    IPC error calling dataspace manager
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_ds_get_name(const l4dm_dataspace_t * ds, char * name);
 
 /*****************************************************************************/
@@ -381,7 +381,7 @@ l4dm_ds_get_name(const l4dm_dataspace_t * ds, char * name);
  * \param   ds           Dataspace id
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4dm_ds_show(const l4dm_dataspace_t * ds);
 
 /*****************************************************************************/
@@ -401,7 +401,7 @@ l4dm_ds_show(const l4dm_dataspace_t * ds);
  *          - -#L4_EIPC IPC error calling dataspace manager
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_ds_list(l4_threadid_t dsm_id, l4_threadid_t owner, l4_uint32_t flags);
 
 /*****************************************************************************/
@@ -417,7 +417,7 @@ l4dm_ds_list(l4_threadid_t dsm_id, l4_threadid_t owner, l4_uint32_t flags);
  *          - -#L4_EIPC IPC error calling dataspace manager
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4dm_ds_list_all(l4_threadid_t dsm_id);
 
 __END_DECLS;

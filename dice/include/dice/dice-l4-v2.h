@@ -5,6 +5,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/utcb.h>
+#include <l4/sys/linkage.h>
 
 #if defined(DICE_TRACE_SERVER) || defined(DICE_TRACE_CLIENT) || defined(DICE_TRACE_MSGBUF)
 #include <l4/log/l4log.h>
@@ -145,5 +146,7 @@ namespace dice
     DICE_SEND_DOPE(buf).md.fpage_received = 0; \
     } while (0)
 #define DICE_SET_SEND_FPAGE(buf)     DICE_SEND_DOPE(buf).md.fpage_received = 1					     
+
+#define DICE_CV L4_CV
 
 #endif // __DICE_L4_V2_H__

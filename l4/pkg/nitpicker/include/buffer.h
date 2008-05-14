@@ -37,16 +37,16 @@ struct nitpicker_buffer;
  * \param[in] height  Height of the new buffer.
  * \return            Pointer to a buffer description or NULL on failure.
  */
-struct nitpicker_buffer* nitpicker_buffer_create(struct nitpicker *np,
-                                                 unsigned int      width,
-                                                 unsigned int      height);
+L4_CV struct nitpicker_buffer* nitpicker_buffer_create(struct nitpicker *np,
+                                                       unsigned int      width,
+                                                       unsigned int      height);
 
 
 /*** DESTROY A BUFFER ***
  *
  * \param[in] npb  Buffer to destroy
  */
-void nitpicker_buffer_destroy(struct nitpicker_buffer *npb);
+L4_CV void nitpicker_buffer_destroy(struct nitpicker_buffer *npb);
 
 
 /*** CHECK IF A BUFFER IS VAILD ***
@@ -54,7 +54,7 @@ void nitpicker_buffer_destroy(struct nitpicker_buffer *npb);
  * \param[in] npb  Buffer
  * \return         1 if buffer is valid, 0 otherwise
  */
-int nitpicker_buffer_is_valid(const struct nitpicker_buffer *npb);
+L4_CV int nitpicker_buffer_is_valid(const struct nitpicker_buffer *npb);
 
 
 /*** REFRESH A BUFFER'S VISUAL APPEARENCE ***
@@ -62,7 +62,7 @@ int nitpicker_buffer_is_valid(const struct nitpicker_buffer *npb);
  * \param[in] npb  Buffer
  * \return         0 on success or negative error code
  */
-int nitpicker_buffer_refresh(struct nitpicker_buffer *npb);
+L4_CV int nitpicker_buffer_refresh(struct nitpicker_buffer *npb);
 
 
 /*** REFRESH A BUFFERS VISUAL APPEARENCE IN A SPECIFIED AREA ***
@@ -74,9 +74,9 @@ int nitpicker_buffer_refresh(struct nitpicker_buffer *npb);
  * \param[in] height  Area's height
  * \return            0 on success or negative error code
  */
-int nitpicker_buffer_refresh_at(struct nitpicker_buffer *npb,
-                                unsigned int x, unsigned int y,
-                                unsigned int width, unsigned int height);
+L4_CV int nitpicker_buffer_refresh_at(struct nitpicker_buffer *npb,
+                                      unsigned int x, unsigned int y,
+                                      unsigned int width, unsigned int height);
 
 
 /*** RETURN A BUFFERS SIZE ***
@@ -86,8 +86,8 @@ int nitpicker_buffer_refresh_at(struct nitpicker_buffer *npb,
  * \param[out] height  Area's height
  * \return             0 on success or negative error code
  */
-int nitpicker_buffer_get_size(struct nitpicker_buffer *npb,
-                              unsigned int *width, unsigned int *height);
+L4_CV int nitpicker_buffer_get_size(struct nitpicker_buffer *npb,
+                                    unsigned int *width, unsigned int *height);
 
 
 /*** RETURN A BUFFERS PIXEL FORMAT ***
@@ -96,8 +96,8 @@ int nitpicker_buffer_get_size(struct nitpicker_buffer *npb,
  * \param[out] format  Buffer's pixel format
  * \return             0 on success or negative error code
  */
-int nitpicker_buffer_get_format(struct nitpicker_buffer *npb,
-                                nitpicker_pixel_format_t *format);
+L4_CV int nitpicker_buffer_get_format(struct nitpicker_buffer *npb,
+                                      nitpicker_pixel_format_t *format);
 
 
 /*** RETURN A BUFFERS MEMORY ADDRESS ***
@@ -108,7 +108,7 @@ int nitpicker_buffer_get_format(struct nitpicker_buffer *npb,
  * This function returns the lowest address of the buffer's memory.
  * You can use it to get the offset for drawing into the buffer.
  */
-void* nitpicker_buffer_get_address(struct nitpicker_buffer *npb);
+L4_CV void* nitpicker_buffer_get_address(struct nitpicker_buffer *npb);
 
 
 EXTERN_C_END

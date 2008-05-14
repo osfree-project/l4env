@@ -31,7 +31,7 @@ EXTERN_C_BEGIN
  *
  * \return  L4 thread id of the roottask pager.
  */
-l4_threadid_t rmgr_pager_id(void);
+L4_CV l4_threadid_t rmgr_pager_id(void);
 
 /**
  * \brief   Get the L4 thread id of the roottask service.
@@ -39,7 +39,7 @@ l4_threadid_t rmgr_pager_id(void);
  *
  * \return  L4 thread id of the roottask service.
  */
-l4_threadid_t rmgr_service_id(void);
+L4_CV l4_threadid_t rmgr_service_id(void);
 
 /**
  * \brief   Initialize the roottask lib.
@@ -49,7 +49,7 @@ l4_threadid_t rmgr_service_id(void);
  *
  * Sets up the client lib and tests the availability of the roottask service.
  */
-int rmgr_init(void);
+L4_CV int rmgr_init(void);
 
 /**
  * \brief   Move a task into an allocated small space.
@@ -60,7 +60,7 @@ int rmgr_init(void);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_set_small_space(l4_threadid_t dest, int num);
+L4_CV int rmgr_set_small_space(l4_threadid_t dest, int num);
 
 /**
  * \brief   Set the priority of a thread
@@ -76,7 +76,7 @@ int rmgr_set_small_space(l4_threadid_t dest, int num);
  * \retval 16		L4_IPC_ENOT_EXISTENT: IPC error.
  *			Probably rmgr_init() was not called.
  */
-int rmgr_set_prio(l4_threadid_t dest, int num);
+L4_CV int rmgr_set_prio(l4_threadid_t dest, int num);
 
 /**
  * \brief   Query prio without rmgr involvement.
@@ -87,7 +87,7 @@ int rmgr_set_prio(l4_threadid_t dest, int num);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_get_prio(l4_threadid_t dest, int *num);
+L4_CV int rmgr_get_prio(l4_threadid_t dest, int *num);
 
 /**
  * \brief   Request roottask to transfer right for a task to the caller.
@@ -97,7 +97,7 @@ int rmgr_get_prio(l4_threadid_t dest, int *num);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_get_task(int num);
+L4_CV int rmgr_get_task(int num);
 
 /**
  * \brief   Pass right for a task back to roottask.
@@ -107,7 +107,7 @@ int rmgr_get_task(int num);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_free_task(int num);
+L4_CV int rmgr_free_task(int num);
 
 /**
  * \brief   Free all L4 tasks occupied for a specific task.
@@ -117,7 +117,7 @@ int rmgr_free_task(int num);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_free_task_all(l4_threadid_t client);
+L4_CV int rmgr_free_task_all(l4_threadid_t client);
 
 /**
  * \brief   Get right to receive from specified IRQ
@@ -127,7 +127,7 @@ int rmgr_free_task_all(l4_threadid_t client);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_get_irq(int num);
+L4_CV int rmgr_get_irq(int num);
 
 /**
  * \brief   Return right to receive from IRQ back to roottask.
@@ -137,7 +137,7 @@ int rmgr_get_irq(int num);
  *
  * \return  0 on success, 1 otherwise
  */
-int rmgr_free_irq(int num);
+L4_CV int rmgr_free_irq(int num);
 
 /**
  * \brief   Free all IRQs occupied for a task
@@ -147,7 +147,7 @@ int rmgr_free_irq(int num);
  *
  * \return  0 on success, 1 otherwise
  */
-int rmgr_free_irq_all(l4_threadid_t client);
+L4_CV int rmgr_free_irq_all(l4_threadid_t client);
 
 /**
  * \brief   Dump the memory allocation map for all its clients.
@@ -155,7 +155,7 @@ int rmgr_free_irq_all(l4_threadid_t client);
  *
  * \return  0 on success, 1 otherwise
  */
-int rmgr_dump_mem(void);
+L4_CV int rmgr_dump_mem(void);
 
 /**
  * \brief   Request the first physical page (roottask does not hand out \
@@ -166,7 +166,7 @@ int rmgr_dump_mem(void);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_get_page0(void *address);
+L4_CV int rmgr_get_page0(void *address);
 
 /**
  * \brief   Request the task ID of the boot modules named by modname.
@@ -177,7 +177,7 @@ int rmgr_get_page0(void *address);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_get_task_id(const char *module_name, l4_threadid_t *thread_id);
+L4_CV int rmgr_get_task_id(const char *module_name, l4_threadid_t *thread_id);
 
 /**
  * \brief   Set the task ID of a module
@@ -188,7 +188,7 @@ int rmgr_get_task_id(const char *module_name, l4_threadid_t *thread_id);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_set_task_id(const char *module_name, l4_threadid_t thread_id);
+L4_CV int rmgr_set_task_id(const char *module_name, l4_threadid_t thread_id);
 
 /**
  * \brief   Create an L4 task
@@ -202,9 +202,9 @@ int rmgr_set_task_id(const char *module_name, l4_threadid_t thread_id);
  *
  * \return  a valid task ID on success, L4_NIL_ID otherwise
  */
-l4_taskid_t rmgr_task_new(l4_taskid_t dest, l4_umword_t mcp_or_new_chief,
-			  l4_umword_t esp, l4_umword_t eip,
-			  l4_threadid_t pager);
+L4_CV l4_taskid_t rmgr_task_new(l4_taskid_t dest, l4_umword_t mcp_or_new_chief,
+                                l4_umword_t esp, l4_umword_t eip,
+                                l4_threadid_t pager);
 
 /**
  * \brief   Create an L4 task with capability handler
@@ -220,12 +220,12 @@ l4_taskid_t rmgr_task_new(l4_taskid_t dest, l4_umword_t mcp_or_new_chief,
  *
  * \return  a valid task ID on success, L4_NIL_ID otherwise
  */
-l4_taskid_t rmgr_task_new_long(l4_taskid_t dest,
-                               l4_umword_t mcp_or_new_chief,
-                               l4_umword_t esp, l4_umword_t eip,
-                               l4_threadid_t pager,
-                               l4_threadid_t caphandler,
-                               l4_quota_desc_t kquota);
+L4_CV l4_taskid_t rmgr_task_new_long(l4_taskid_t dest,
+                                     l4_umword_t mcp_or_new_chief,
+                                     l4_umword_t esp, l4_umword_t eip,
+                                     l4_threadid_t pager,
+                                     l4_threadid_t caphandler,
+                                     l4_quota_desc_t kquota);
 
 /**
  * \brief   Create an L4 task with capability handler
@@ -240,11 +240,11 @@ l4_taskid_t rmgr_task_new_long(l4_taskid_t dest,
  *
  * \return  a valid task ID on success, L4_NIL_ID otherwise
  */
-l4_taskid_t rmgr_task_new_with_prio(l4_taskid_t dest,
-				    l4_umword_t mcp_or_new_chief,
-				    l4_umword_t esp, l4_umword_t eip,
-				    l4_threadid_t pager,
-				    l4_sched_param_t sched_param);
+L4_CV l4_taskid_t rmgr_task_new_with_prio(l4_taskid_t dest,
+				          l4_umword_t mcp_or_new_chief,
+				          l4_umword_t esp, l4_umword_t eip,
+				          l4_threadid_t pager,
+				          l4_sched_param_t sched_param);
 
 /**
  * \brief   Free an I/O memory page
@@ -254,7 +254,7 @@ l4_taskid_t rmgr_task_new_with_prio(l4_taskid_t dest,
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_free_fpage(l4_fpage_t fp);
+L4_CV int rmgr_free_fpage(l4_fpage_t fp);
 
 /**
  * \brief   Free a memory page.
@@ -264,7 +264,7 @@ int rmgr_free_fpage(l4_fpage_t fp);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_free_page(l4_umword_t address);
+L4_CV int rmgr_free_page(l4_umword_t address);
 
 /**
  * \brief   Free all memory a task
@@ -274,7 +274,7 @@ int rmgr_free_page(l4_umword_t address);
  *
  * \return  0 on success, 1 otherwise.
  */
-int rmgr_free_mem_all(l4_threadid_t client);
+L4_CV int rmgr_free_mem_all(l4_threadid_t client);
 
 /**
  * \brief   reserve some memory chunk in an area
@@ -288,9 +288,9 @@ int rmgr_free_mem_all(l4_threadid_t client);
  * 
  * \return  ~0U if no area was found
  */
-l4_umword_t rmgr_reserve_mem(l4_umword_t size, l4_umword_t align,
-			     l4_umword_t flags, l4_umword_t range_low,
-			     l4_umword_t range_high);
+L4_CV l4_umword_t rmgr_reserve_mem(l4_umword_t size, l4_umword_t align,
+			           l4_umword_t flags, l4_umword_t range_low,
+			           l4_umword_t range_high);
 
 /**
  * \brief   elevates the calling process to PL0
@@ -304,7 +304,7 @@ l4_umword_t rmgr_reserve_mem(l4_umword_t size, l4_umword_t align,
  * This interface is for internal use only. Its unsafe, unstable, 
  * unsupported, and undocumented.
  */
-int rmgr_privctrl(l4_umword_t cmd, l4_umword_t param);
+L4_CV int rmgr_privctrl(l4_umword_t cmd, l4_umword_t param);
 
 EXTERN_C_END
 

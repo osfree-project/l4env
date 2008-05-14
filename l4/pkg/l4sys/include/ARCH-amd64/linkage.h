@@ -15,4 +15,11 @@
 #define FASTCALL(x)     x
 #define fastcall
 
+/**
+ * Define calling convention.
+ * \ingroup api_types_compiler
+ * \hideinitializer
+ */
+#define L4_CV
+
 #endif /* ! __L4__SYS__ARCH_AMD64__LINKAGE_H__ */

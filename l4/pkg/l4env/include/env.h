@@ -235,7 +235,7 @@ __BEGIN_DECLS;
  *         - -L4_ENODATA  value not set
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4env_request_service(l4_uint32_t key,
 		      l4_threadid_t * service);
 
@@ -253,7 +253,7 @@ l4env_request_service(l4_uint32_t key,
  *         - -L4_ENODATA  value not set
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4env_request_config_u32(l4_uint32_t key,
 			 l4_addr_t * cfg);
 
@@ -272,7 +272,7 @@ l4env_request_config_u32(l4_uint32_t key,
  *         - -L4_ENODATA  value not set
  */
 /*****************************************************************************/
-int
+L4_CV int
 l4env_request_config_string(l4_uint32_t key,
 			    char * str,
 			    int max_len);
@@ -286,7 +286,7 @@ l4env_request_config_string(l4_uint32_t key,
  *         available (i.e, the application was not started by our loader)
  */
 /*****************************************************************************/
-l4env_infopage_t *
+L4_CV l4env_infopage_t *
 l4env_get_infopage(void);
 
 /*****************************************************************************/
@@ -299,7 +299,7 @@ l4env_get_infopage(void);
  * Set sigma0 id (used by startup code).
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4env_set_sigma0_id(l4_threadid_t id);
 
 /*****************************************************************************/
@@ -310,7 +310,7 @@ l4env_set_sigma0_id(l4_threadid_t id);
  * \param  id            Dataspace manager id
  */
 /*****************************************************************************/
-void
+L4_CV void
 l4env_set_default_dsm(l4_threadid_t id);
 
 /*****************************************************************************/
@@ -320,7 +320,7 @@ l4env_set_default_dsm(l4_threadid_t id);
  * \return Dataspace manager id, L4_INVALID_ID if no dataspace manager found
  */
 /*****************************************************************************/
-l4_threadid_t
+L4_CV l4_threadid_t
 l4env_get_default_dsm(void);
 
 /*****************************************************************************/
@@ -330,7 +330,7 @@ l4env_get_default_dsm(void);
  * \return parent ID or L4_NIL_ID
  */
 /*****************************************************************************/
-l4_threadid_t
+L4_CV l4_threadid_t
 l4env_get_parent(void);
 
 /*****************************************************************************/
@@ -340,7 +340,7 @@ l4env_get_parent(void);
  * \return true if L4Env startup done, false if not (yet)
  */
 /*****************************************************************************/
-unsigned
+L4_CV unsigned
 l4env_startup_done(void);
 
 __END_DECLS;

@@ -1607,6 +1607,13 @@ decl_specifier_seq :
 	    if ($1)
 		$$->push_back($1);
 	}
+	|
+	  maybeattribute decl_specifier
+	{
+	    $$ = new vector<CFETypeSpec*>();
+	    if ($2)
+		$$->push_back($2);
+	}
 	| FRIEND decl_specifier
 	{
 	    $$ = new vector<CFETypeSpec*>();

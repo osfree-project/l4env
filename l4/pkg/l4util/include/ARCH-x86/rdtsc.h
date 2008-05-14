@@ -133,14 +133,14 @@ l4_calibrate_tsc (void);
  *         function of the Linux kernel.
  * \ingroup rdtsc
  */
-l4_uint32_t
+L4_CV l4_uint32_t
 l4_tsc_init (int constraint);
 
 /** Get CPU frequency in Hz
  * \ingroup rdtsc
  * \return frequency in Hz
  */
-l4_uint32_t
+L4_CV l4_uint32_t
 l4_get_hz (void);
 
 EXTERN_C_END

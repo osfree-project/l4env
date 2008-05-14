@@ -14,6 +14,7 @@
 #ifndef __UIP_ORE_H
 #define __UIP_ORE_H
 
+#include <l4/sys/linkage.h>
 #include <arpa/inet.h>
 
 //!\brief Configuration for the uIP library.
@@ -33,7 +34,7 @@ typedef struct uip_ore_config
      * NOTE: buf is invalid after returning from this function, so you
      *       need to make a copy if necessary.
      */
-    void (*recv_callback)(const void *buf, const unsigned size, unsigned port);    
+    L4_CV void (*recv_callback)(const void *buf, const unsigned size, unsigned port);    
     
     /*!\brief  Send acknowledgement received. 
      *
@@ -47,7 +48,7 @@ typedef struct uip_ore_config
      * \param addr  address of the buffer that has been acknowledged/dropped.
      * \param port  port this packet was sent through
      */
-    void (*ack_callback)(void *addr, unsigned port);
+    L4_CV void (*ack_callback)(void *addr, unsigned port);
     
     /*!\brief Retransmit of message necessary. 
      *
@@ -59,29 +60,29 @@ typedef struct uip_ore_config
      * \param size  size of packet
      * \param port  port to resend to
      */
-    void (*rexmit_callback)(void *addr, unsigned size, unsigned port);
+    L4_CV void (*rexmit_callback)(void *addr, unsigned size, unsigned port);
     
     /*!\brief Connection established.
      *
      * \param ip    IP address remote host
      * \param port  remote port
      */
-    void (*connect_callback)(const struct in_addr ip, unsigned port);
+    L4_CV void (*connect_callback)(const struct in_addr ip, unsigned port);
     
     /*!\brief Connection has been aborted. 
      * \param port  remote port
      */
-    void (*abort_callback)(unsigned port);
+    L4_CV void (*abort_callback)(unsigned port);
 
     /*!\brief Connection timed out. 
      * \param port  remote port
      */
-    void (*timeout_callback)(unsigned port);
+    L4_CV void (*timeout_callback)(unsigned port);
 
     /*!\brief Connection closed. 
      * \param port  remote port
      */
-    void (*close_callback)(unsigned port);
+    L4_CV void (*close_callback)(unsigned port);
 
     /*!\brief Periodic poll callback. 
      *
@@ -89,18 +90,18 @@ typedef struct uip_ore_config
      * you want to do something upon this period, this is the callback to
      * do so.
      */
-    void (*poll_callback)(void);
+    L4_CV void (*poll_callback)(void);
 } uip_ore_config;
 
 /*!\brief Config function for the uip_ore library.
  * \param conf  configuration data
  */
-void uip_ore_initialize(uip_ore_config *conf);
+L4_CV void uip_ore_initialize(uip_ore_config *conf);
 
 /*!\brief Thread function for the uip-ore library. The library needs to run in a 
  * new thread. 
  */
-void uip_ore_thread(void *arg);
+L4_CV void uip_ore_thread(void *arg);
 
 /*!\brief Send a packet. 
  *
@@ -119,7 +120,7 @@ void uip_ore_thread(void *arg);
  * \param   buf     send buffer
  * \param   size    buffer size
  */
-void uip_ore_send(const char *buf, unsigned size, unsigned port);
+L4_CV void uip_ore_send(const char *buf, unsigned size, unsigned port);
 
 /*!\brief Connect to a given IP and port number.
  *
@@ -129,12 +130,12 @@ void uip_ore_send(const char *buf, unsigned size, unsigned port);
  * \return  0   connecting
  * \return  !=0 error
  */
-int uip_ore_connect(struct in_addr ip, unsigned port);
+L4_CV int uip_ore_connect(struct in_addr ip, unsigned port);
 
 /*!\brief Close connection on a given local port.
  *
  * \param port  local port number
  */
-void uip_ore_close(unsigned port);
+L4_CV void uip_ore_close(unsigned port);
 
 #endif

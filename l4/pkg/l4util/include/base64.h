@@ -27,7 +27,7 @@ EXTERN_C_BEGIN
  *
  *  base-64-encode string \a infile adding padding as per spec
  */
-void base64_encode( const char *infile, unsigned int in_size, char **outfile);
+L4_CV void base64_encode( const char *infile, unsigned int in_size, char **outfile);
  
 /*!
  * \brief decode base-64-encoded string \a infile
@@ -39,7 +39,7 @@ void base64_encode( const char *infile, unsigned int in_size, char **outfile);
  *
  *  base-64-decode string \a infile discarding padding, line breaks and noise
  */
-void base64_decode(const char *infile, unsigned int in_size, char **outfile);
+L4_CV void base64_decode(const char *infile, unsigned int in_size, char **outfile);
 
 EXTERN_C_END
 

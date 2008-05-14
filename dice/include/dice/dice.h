@@ -142,6 +142,10 @@ void CORBA_free(void *ptr);
 #endif /* __cplusplus */
 #endif /* !DICE_DECLARE_SERVER_ENV */
 
+#ifndef DICE_CV
+#define DICE_CV
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

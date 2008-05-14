@@ -25,43 +25,43 @@ typedef struct slmap_t
  * function prototypes
  */
 
-slmap_t*
+L4_CV slmap_t*
 map_new_entry(void* key, unsigned key_size, void *data);
 
-slmap_t*
+L4_CV slmap_t*
 map_new_sentry(char* key, void* data);
 
-slmap_t*
+L4_CV slmap_t*
 map_append(slmap_t* list, slmap_t* new_entry);
 
-slmap_t*
+L4_CV slmap_t*
 map_remove(slmap_t* list, slmap_t* entry);
 
-void
+L4_CV void
 map_free_entry(slmap_t** entry);
 
-static inline void
+L4_CV static inline void
 map_free(slmap_t** list);
 
-static inline unsigned char
+L4_CV static inline unsigned char
 map_is_empty(slmap_t* list);
 
-slmap_t*
+L4_CV slmap_t*
 map_get_at(slmap_t* list, int n);
 
-slmap_t*
+L4_CV slmap_t*
 map_add(slmap_t* list, slmap_t* new_entry);
 
-void
+L4_CV void
 map_insert_after(slmap_t* after, slmap_t* new_entry);
 
-static inline int
+L4_CV static inline int
 map_elements(slmap_t* list);
 
-slmap_t*
+L4_CV slmap_t*
 map_find(slmap_t* list, void* key, unsigned key_size);
 
-slmap_t*
+L4_CV slmap_t*
 map_sfind(slmap_t* list, const char* key);
 
 /*

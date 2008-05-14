@@ -78,8 +78,9 @@ int l4sigma0_map_mem(l4_threadid_t pager,
  *
  * @return the error code, where 0 is OK (see l4sigma0_map_errstr()).
  */
-int l4sigma0_map_iomem(l4_threadid_t pager, l4_addr_t phys,
-		       l4_addr_t virt, l4_addr_t size, int cached);
+L4_CV int
+l4sigma0_map_iomem(l4_threadid_t pager, l4_addr_t phys,
+		   l4_addr_t virt, l4_addr_t size, int cached);
 /**
  * @brief Request an arbitrary free page of RAM.
  * @ingroup sigma0
@@ -91,17 +92,18 @@ int l4sigma0_map_iomem(l4_threadid_t pager, l4_addr_t phys,
  * @param pager    unsually the thread id of sigma0.
  * @param map_area the base address of the local virtual memory area where the
  *                 page should be mapped.
- * @param log2_map_size the sizf of the requested page log 2 (the size in 
- *                      bytes is 2^log2_map_size. This must be at least the 
- *                      minimal page size. By specifing larger sizes the 
+ * @param log2_map_size the sizf of the requested page log 2 (the size in
+ *                      bytes is 2^log2_map_size. This must be at least the
+ *                      minimal page size. By specifing larger sizes the
  *                      largest possible hardware page size will be used.
  * @retval base    physical address of the page received (i.e., the send base
  *                 of the received mapping if any).
- * 
+ *
  * @return 0 if OK, error code else (see l4sigma0_map_errstr()).
  */
-int l4sigma0_map_anypage(l4_threadid_t pager, l4_addr_t map_area,
-			 unsigned log2_map_size, l4_addr_t *base);
+L4_CV int
+l4sigma0_map_anypage(l4_threadid_t pager, l4_addr_t map_area,
+                     unsigned log2_map_size, l4_addr_t *base);
 
 /**
  * @brief Request Fiasco trace buffer.
@@ -116,7 +118,8 @@ int l4sigma0_map_anypage(l4_threadid_t pager, l4_addr_t map_area,
  *
  * @return 0 on success, !0 else (see l4sigma0_map_errstr()).
  */
-int l4sigma0_map_tbuf(l4_threadid_t pager, l4_addr_t virt);
+L4_CV int
+l4sigma0_map_tbuf(l4_threadid_t pager, l4_addr_t virt);
 
 /**
  * @brief Request sigma0 to dump internal debug information.
@@ -127,7 +130,8 @@ int l4sigma0_map_tbuf(l4_threadid_t pager, l4_addr_t virt);
  *
  * @param pager the sigma0 thread id.
  */
-void l4sigma0_debug_dump(l4_threadid_t pager);
+L4_CV void
+l4sigma0_debug_dump(l4_threadid_t pager);
 
 /**
  * @brief Return L4 thread ID of sigma0 server
@@ -135,7 +139,8 @@ void l4sigma0_debug_dump(l4_threadid_t pager);
  *
  * @return L4 thread ID of the sigma0 server.
  */
-l4_threadid_t l4sigma0_id(void);
+L4_CV l4_threadid_t
+l4sigma0_id(void);
 
 /**
  * @brief Get a user readable error messages for the return codes.

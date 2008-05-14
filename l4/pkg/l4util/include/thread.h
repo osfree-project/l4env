@@ -26,20 +26,20 @@ EXTERN_C_BEGIN
  * \param stack      initial value of stack pointer
  * \return thread id of created stack
  */
-l4_threadid_t
+L4_CV l4_threadid_t
 l4util_create_thread (int thread_no, void (*function)(void), void *stack);
 
 /** Attach to hardware interrupt.
  * \ingroup thread
  * \param irq        number of IRQ to attach to
  */
-l4_threadid_t
+L4_CV l4_threadid_t
 l4util_attach_interrupt (int irq);
 
 /** Detach from hardware interrupt
  * \ingroup thread
  */
-void
+L4_CV void
 l4util_detach_interrupt (void);
 
 EXTERN_C_END

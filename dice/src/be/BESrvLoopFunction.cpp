@@ -493,7 +493,7 @@ CBESrvLoopFunction::WriteObjectInitialization(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteFunctionAttributes(CBEFile& pFile)
 {
-	pFile << " __attribute__((noreturn))";
+	pFile << " __attribute__((noreturn)) DICE_CV";
 }
 
 /** \brief writes the return statement of this function

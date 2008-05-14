@@ -32,21 +32,16 @@ exec_load_elf(exec_handler_func_t *handler,
 
   /* Read the ELF header.  */
 
-  if ((x->e_ident[EI_MAG0] != ELFMAG0) ||
-      (x->e_ident[EI_MAG1] != ELFMAG1) ||
-      (x->e_ident[EI_MAG2] != ELFMAG2) ||
-      (x->e_ident[EI_MAG3] != ELFMAG3))
+  if (!l4util_elf_check_magic(x))
     return *error_msg="no ELF executable", -1;
 
   /* Make sure the file is of the right architecture.  */
-  if ((x->e_ident[EI_CLASS] != L4_ARCH_EI_CLASS) ||
-      (x->e_ident[EI_DATA] != L4_ARCH_EI_DATA) ||
-      (x->e_machine != L4_ARCH_E_MACHINE))
+  if (!l4util_elf_check_arch(x))
     return *error_msg="wrong ELF architecture", -1;
 
   *entry = (l4_addr_t) x->e_entry;
 
-  phdr   = (ElfW(Phdr)*)(((char*)x) + x->e_phoff);
+  phdr   = l4util_elf_phdr(x);
 
   for (i = 0; i < x->e_phnum; i++)
     {

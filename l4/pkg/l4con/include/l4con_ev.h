@@ -17,6 +17,8 @@
 #ifndef _L4CON_L4CON_EV_H
 #define _L4CON_L4CON_EV_H
 
+#include <l4/sys/linkage.h>
+
 /* we use the original 'libinput' event definitions */
 /* except: */
 
@@ -29,7 +31,7 @@
 #define EV_CON_BACKGROUND  2		/**< tells client that it looses
 					     the framebuffer */
 
-int l4con_map_keyinput_to_ascii(unsigned value, unsigned shift);
+L4_CV int l4con_map_keyinput_to_ascii(unsigned value, unsigned shift);
 
 #endif
 

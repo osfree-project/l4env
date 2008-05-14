@@ -33,7 +33,7 @@ EXTERN_C_BEGIN
  * After all program sections are registered at the L4 region manager and
  * all sections are relocated, initialize the L4 environment. Finally call
  * multiboot_main() or main() depending on which function is available. */
-void
+L4_CV void
 l4env_init(void);
 
 /** Init loader libary
@@ -43,10 +43,10 @@ l4env_init(void);
  * page the sections later (after the region mapper pager thread is started.
  *
  * \param infopage	L4 environment infopage */
-void
+L4_CV void
 l4loader_init(void *infopage);
 
-void
+L4_CV void
 l4loader_attach_relocateable(void *infopage);
 
 EXTERN_C_END

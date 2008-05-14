@@ -16,6 +16,8 @@
 #ifndef __DOPE_INCLUDE_DOPELIB_H_
 #define __DOPE_INCLUDE_DOPELIB_H_
 
+#include <l4/sys/linkage.h>
+
 #define EVENT_TYPE_UNDEFINED    0
 #define EVENT_TYPE_COMMAND      1
 #define EVENT_TYPE_MOTION       2
@@ -60,11 +62,11 @@ typedef union dopelib_event_union {
 
 
 /*** INITIALISE DOpE LIBRARY ***/
-extern long  dope_init(void);
+L4_CV long  dope_init(void);
 
 
 /*** DEINITIALISE DOpE LIBRARY ***/
-extern void  dope_deinit(void);
+L4_CV void  dope_deinit(void);
 
 
 /*** REGISTER DOpE CLIENT APPLICATION ***
@@ -72,7 +74,7 @@ extern void  dope_deinit(void);
  * \param appname  name of the DOpE application
  * \return         DOpE application id
  */
-extern long  dope_init_app(const char *appname);
+L4_CV long  dope_init_app(const char *appname);
 
 
 /*** UNREGISTER DOpE CLIENT APPLICATION ***
@@ -80,7 +82,7 @@ extern long  dope_init_app(const char *appname);
  * \param app_id  DOpE application to unregister
  * \return        0 on success
  */
-extern long  dope_deinit_app(long app_id);
+L4_CV long  dope_deinit_app(long app_id);
 
 
 /*** EXECUTE DOpE COMMAND ***
@@ -89,7 +91,7 @@ extern long  dope_deinit_app(long app_id);
  * \param cmd     command to execute
  * \return        0 on success
  */
-extern int dope_cmd(long app_id, const char *cmd);
+L4_CV int dope_cmd(long app_id, const char *cmd);
 
 
 /*** EXECUTE DOpE FORMAT STRING COMMAND ***
@@ -98,7 +100,8 @@ extern int dope_cmd(long app_id, const char *cmd);
  * \param cmdf    command to execute specified as format string
  * \return        0 on success
  */
-extern int dope_cmdf(long app_id, const char *cmdf, ...);
+L4_CV int dope_cmdf(long app_id, const char *cmdf, ...)
+  __attribute__((format (printf, 2, 3)));
 
 
 /*** EXECUTE DOpE COMMAND AND REQUEST RESULT ***
@@ -109,7 +112,7 @@ extern int dope_cmdf(long app_id, const char *cmdf, ...);
  * \param cmd       command to execute
  * \return          0 on success
  */
-extern int dope_req(long app_id, char *dst, int dst_size, const char *cmd);
+L4_CV int dope_req(long app_id, char *dst, int dst_size, const char *cmd);
 
 
 /*** REQUEST RESULT OF A DOpE COMMAND SPECIFIED AS FORMAT STRING ***
@@ -120,7 +123,8 @@ extern int dope_req(long app_id, char *dst, int dst_size, const char *cmd);
  * \param cmd       command to execute - specified as format string
  * \return          0 on success
  */
-extern int dope_reqf(long app_id, char *dst, int dst_size, const char *cmdf, ...);
+L4_CV int dope_reqf(long app_id, char *dst, int dst_size, const char *cmdf, ...)
+  __attribute__((format (printf, 4, 5)));
 
 
 /*** BIND AN EVENT TO A DOpE WIDGET ***
@@ -131,8 +135,8 @@ extern int dope_reqf(long app_id, char *dst, int dst_size, const char *cmdf, ...
  * \param callback    callback function to be called for incoming events
  * \param arg         additional argument for the callback function
  */
-extern void dope_bind(long app_id,const char *var, const char *event_type,
-                      void (*callback)(dope_event *,void *), void *arg);
+L4_CV void dope_bind(long app_id,const char *var, const char *event_type,
+                     void (*callback)(dope_event *,void *), void *arg);
 
 
 /*** BIND AN EVENT TO A DOpE WIDGET SPECIFIED AS FORMAT STRING ***
@@ -144,15 +148,15 @@ extern void dope_bind(long app_id,const char *var, const char *event_type,
  * \param arg         additional argument for the callback function
  * \param ...         format string arguments
  */
-extern void dope_bindf(long id, const char *varfmt, const char *event_type,
-                       void (*callback)(dope_event *,void *), void *arg,...);
+L4_CV void dope_bindf(long id, const char *varfmt, const char *event_type,
+                      void (*callback)(dope_event *,void *), void *arg,...);
 
 
 /*** ENTER DOPE EVENTLOOP ***
  *
  * \param app_id  DOpE application id
  */
-extern void dope_eventloop(long app_id);
+L4_CV void dope_eventloop(long app_id);
 
 
 /*** RETURN NUMBER OF PENDING EVENTS ***
@@ -160,7 +164,7 @@ extern void dope_eventloop(long app_id);
  * \param app_id  DOpE application id
  * \return        number of pending events
  */
-int dope_events_pending(int app_id);
+L4_CV int dope_events_pending(int app_id);
 
 
 /*** PROCESS ONE SINGLE DOpE EVENT ***
@@ -171,7 +175,7 @@ int dope_events_pending(int app_id);
  *
  * \param app_id  DOpE application id
  */
-extern void dope_process_event(long app_id);
+L4_CV void dope_process_event(long app_id);
 
 
 /*** INJECT ARTIFICIAL EVENT INTO EVENT QUEUE ***
@@ -179,8 +183,8 @@ extern void dope_process_event(long app_id);
  * This function can be used to serialize events streams from multiple
  * threads into one DOpE event queue.
  */
-extern void dope_inject_event(long app_id, dope_event *ev,
-                              void (*callback)(dope_event *,void *), void *arg);
+L4_CV void dope_inject_event(long app_id, dope_event *ev,
+                             void (*callback)(dope_event *,void *), void *arg);
 
 
 /*** REQUEST KEY OR BUTTON STATE ***
@@ -189,7 +193,7 @@ extern void dope_inject_event(long app_id, dope_event *ev,
  * \param keycode  keycode of the requested key
  * \return         1 if key is currently pressed
  */
-extern long dope_get_keystate(long app_id, long keycode);
+L4_CV long dope_get_keystate(long app_id, long keycode);
 
 
 /*** REQUEST CURRENT ASCII KEYBOARD STATE ***
@@ -198,6 +202,6 @@ extern long dope_get_keystate(long app_id, long keycode);
  * \param keycode  keycode of the requested key
  * \return         ASCII value of the currently pressed key combination
  */
-extern char dope_get_ascii(long app_id, long keycode);
+L4_CV char dope_get_ascii(long app_id, long keycode);
 
 #endif /* __DOPE_INCLUDE_DOPELIB_H_ */

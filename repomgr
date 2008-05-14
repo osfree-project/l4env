@@ -189,6 +189,7 @@ my %modules =
                       l4/pkg/dsi
                       l4/pkg/dsi_example
                       l4/pkg/flips
+                      l4/pkg/gmp
                       l4/pkg/ipreg
                       l4/pkg/l4ide
                       l4/pkg/l4vfs

@@ -42,25 +42,25 @@ struct nitpicker;
 /*
  * function callback type for the event handler
  */
-typedef void (*nitpicker_event_func)(unsigned long token,
-                                     int type,
-                                     int keycode,
-                                     int rx, int ry,
-                                     int ax, int ay);
+typedef L4_CV void (*nitpicker_event_func)(unsigned long token,
+                                           int type,
+                                           int keycode,
+                                           int rx, int ry,
+                                           int ax, int ay);
 
 
 /*** OPEN A CONNECTION TO NITPICKER SERVER ***
  *
  * \return Pointer to a connection description or NULL on failure
  */
-struct nitpicker *nitpicker_open(void);
+L4_CV struct nitpicker *nitpicker_open(void);
 
 
 /*** CLOSE A CONNECTION ***
  *
  * \param[in] np  Pointer to the connection to close
  */
-void nitpicker_close(struct nitpicker *np);
+L4_CV void nitpicker_close(struct nitpicker *np);
 
 
 /*** CHECK IF A CONNECTION IS VAILD ***
@@ -68,7 +68,7 @@ void nitpicker_close(struct nitpicker *np);
  * \param[in]  np  Connection to Nitpicker service
  * \return         1 if valid, otherwise 0
  */
-int nitpicker_is_valid(const struct nitpicker *np);
+L4_CV int nitpicker_is_valid(const struct nitpicker *np);
 
 
 /*** RETRIEVE SOME INFORMATION ABOUT THE SCREEN CONFIGURATION ***
@@ -79,10 +79,10 @@ int nitpicker_is_valid(const struct nitpicker *np);
  * \param[out] format  Pixel format
  * \return             0 on success or negative error code
  */
-int nitpicker_get_screen_info(const struct nitpicker   *np,
-                              unsigned int             *width,
-                              unsigned int             *height,
-                              nitpicker_pixel_format_t *format);
+L4_CV int nitpicker_get_screen_info(const struct nitpicker   *np,
+                                    unsigned int             *width,
+                                    unsigned int             *height,
+                                    nitpicker_pixel_format_t *format);
 
 
 /*** DONATE SOME MEMORY TO NITPICKER ***
@@ -93,10 +93,10 @@ int nitpicker_get_screen_info(const struct nitpicker   *np,
  * \param[out] ds          Associated dataspace
  * \return                 0 on success or negative error code
  */
-int nitpicker_donate_memory(const struct nitpicker *np,
-                            unsigned int            max_views,
-                            unsigned int            max_buffers,
-                            l4dm_dataspace_t       *ds);
+L4_CV int nitpicker_donate_memory(const struct nitpicker *np,
+                                  unsigned int            max_views,
+                                  unsigned int            max_buffers,
+                                  l4dm_dataspace_t       *ds);
 
 
 /*** DONATE A DATASPACE TO NITPICKER ***
@@ -107,10 +107,10 @@ int nitpicker_donate_memory(const struct nitpicker *np,
  * \param[in] ds           Dataspace to donate
  * \return                 0 on success or negative error code
  */
-int nitpicker_donate_dataspace(const struct nitpicker *np,
-                               unsigned int            max_views,
-                               unsigned int            max_buffers,
-                               const l4dm_dataspace_t *ds);
+L4_CV int nitpicker_donate_dataspace(const struct nitpicker *np,
+                                     unsigned int            max_views,
+                                     unsigned int            max_buffers,
+                                     const l4dm_dataspace_t *ds);
 
 
 /*** REMOVE A DATASPACE FROM NITPICKER ***
@@ -118,7 +118,7 @@ int nitpicker_donate_dataspace(const struct nitpicker *np,
  * \param[in] np  Connection
  * \param[in] ds  Dataspace to remove
  */
-void nitpicker_remove_dataspace(struct nitpicker *np, l4dm_dataspace_t *ds);
+L4_CV void nitpicker_remove_dataspace(struct nitpicker *np, l4dm_dataspace_t *ds);
 
 
 /*** ENTER NITPICKER MAINLOOP ***
@@ -132,7 +132,7 @@ void nitpicker_remove_dataspace(struct nitpicker *np, l4dm_dataspace_t *ds);
  * to have more then one thread running this function simulaneously. Each
  * thread may use a different event callback.
  */
-void nitpicker_mainloop(nitpicker_event_func cb);
+L4_CV void nitpicker_mainloop(nitpicker_event_func cb);
 
 EXTERN_C_END
 

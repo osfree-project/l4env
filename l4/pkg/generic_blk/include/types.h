@@ -37,7 +37,7 @@ typedef l4_uint32_t l4blk_driver_t;
  * Notification thread setup callback function
  * \ingroup api_driver
  */
-typedef void (* l4blk_setup_notify_callback_fn_t) (void);
+typedef L4_CV void (* l4blk_setup_notify_callback_fn_t) (void);
 
 /**
  * Stream handle 
@@ -59,9 +59,9 @@ typedef struct l4blk_request l4blk_request_t;
  * \param status  Request status
  * \param error   Error code
  */
-typedef void (* l4blk_callback_fn_t) (l4blk_request_t * request, 
-                                      int status, 
-                                      int error);
+typedef L4_CV void (* l4blk_callback_fn_t) (l4blk_request_t * request, 
+                                            int status, 
+                                            int error);
 
 /**
  * Scatter-gather list element (phys. buffer address)

@@ -96,13 +96,13 @@ typedef void (* dsmlib_iterator_fn_t) (dsmlib_ds_desc_t * ds, void * data);
  * dataspace / client descriptors. The \a data pointer can be used to store
  * application data, it is returned with the page release callback function.
  */
-typedef void * (* dsmlib_get_page_fn_t)(void ** data);
+typedef L4_CV void * (* dsmlib_get_page_fn_t)(void ** data);
 
 /**
  * Page release callback function
  * \ingroup dsmlib_init
  */
-typedef void (* dsmlib_free_page_fn_t)(void * page, void * data);
+typedef L4_CV void (* dsmlib_free_page_fn_t)(void * page, void * data);
 
 /*****************************************************************************
  *** public API
@@ -121,7 +121,7 @@ __BEGIN_DECLS;
  * \return  0 on succes, -1 if initialization failed
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_init(dsmlib_get_page_fn_t get_page_fn,
             dsmlib_free_page_fn_t free_page_fn);
 
@@ -137,7 +137,7 @@ dsmlib_init(dsmlib_get_page_fn_t get_page_fn,
  * the dataspace list.
  */
 /*****************************************************************************/
-dsmlib_ds_desc_t *
+L4_CV dsmlib_ds_desc_t *
 dsmlib_create_dataspace(void);
 
 /*****************************************************************************/
@@ -151,7 +151,7 @@ dsmlib_create_dataspace(void);
  * the dataspace descriptor.
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_release_dataspace(dsmlib_ds_desc_t * ds);
 
 /*****************************************************************************/
@@ -164,7 +164,7 @@ dsmlib_release_dataspace(dsmlib_ds_desc_t * ds);
  * \return  Pointer to dataspace descriptor, #NULL if dataspace does not exist
  */
 /*****************************************************************************/
-dsmlib_ds_desc_t *
+L4_CV dsmlib_ds_desc_t *
 dsmlib_get_dataspace(l4_uint32_t id);
 
 /*****************************************************************************/
@@ -176,7 +176,7 @@ dsmlib_get_dataspace(l4_uint32_t id);
  * \param   owner        Dataspace owner
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_set_owner(dsmlib_ds_desc_t * ds, l4_threadid_t owner);
 
 /*****************************************************************************/
@@ -189,7 +189,7 @@ dsmlib_set_owner(dsmlib_ds_desc_t * ds, l4_threadid_t owner);
  * \return  owner thread id, #L4_INVALID_ID if invalid dataspace id
  */
 /*****************************************************************************/
-l4_threadid_t
+L4_CV l4_threadid_t
 dsmlib_get_owner(const dsmlib_ds_desc_t * ds);
 
 /*****************************************************************************/
@@ -203,7 +203,7 @@ dsmlib_get_owner(const dsmlib_ds_desc_t * ds);
  * \return  1 if the client owns the dataspace, 0 otherwise.
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_is_owner(const dsmlib_ds_desc_t * ds, l4_threadid_t client);
 
 /*****************************************************************************/
@@ -215,7 +215,7 @@ dsmlib_is_owner(const dsmlib_ds_desc_t * ds, l4_threadid_t client);
  * \param   name         Dataspace name
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_set_name(dsmlib_ds_desc_t * ds, const char * name);
 
 /*****************************************************************************/
@@ -228,7 +228,7 @@ dsmlib_set_name(dsmlib_ds_desc_t * ds, const char * name);
  * \return  Pointer to dataspace name, #NULL if invalid dataspace descriptor
  */
 /*****************************************************************************/
-char *
+L4_CV char *
 dsmlib_get_name(dsmlib_ds_desc_t * ds);
 
 /*****************************************************************************/
@@ -240,7 +240,7 @@ dsmlib_get_name(dsmlib_ds_desc_t * ds);
  * \param   ptr          Dataspace manager data
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds, void * ptr);
 
 /*****************************************************************************/
@@ -253,7 +253,7 @@ dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds, void * ptr);
  * \return Pointer to dataspace manager data
  */
 /*****************************************************************************/
-void *
+L4_CV void *
 dsmlib_get_dsm_ptr(const dsmlib_ds_desc_t * ds);
 
 /*****************************************************************************/
@@ -273,7 +273,7 @@ dsmlib_get_dsm_ptr(const dsmlib_ds_desc_t * ds);
  * exists, the rights are added to the client descriptor.
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_add_client(dsmlib_ds_desc_t * ds, l4_threadid_t client,
                   l4_uint32_t rights);
 
@@ -292,7 +292,7 @@ dsmlib_add_client(dsmlib_ds_desc_t * ds, l4_threadid_t client,
  * Remove client from the client list of the dataspace.
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_remove_client(dsmlib_ds_desc_t * ds, l4_threadid_t client);
 
 /*****************************************************************************/
@@ -306,7 +306,7 @@ dsmlib_remove_client(dsmlib_ds_desc_t * ds, l4_threadid_t client);
  *          - -#L4_EINVAL     invalid dataspace descriptor
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_remove_all_clients(dsmlib_ds_desc_t * ds);
 
 /*****************************************************************************/
@@ -323,7 +323,7 @@ dsmlib_remove_all_clients(dsmlib_ds_desc_t * ds);
  *          \a client is the owner of the dataspace.
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_is_client(const dsmlib_ds_desc_t * ds, l4_threadid_t client);
 
 /*****************************************************************************/
@@ -342,7 +342,7 @@ dsmlib_is_client(const dsmlib_ds_desc_t * ds, l4_threadid_t client);
  * Set rights for \a client to \a rights.
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_set_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client,
                   l4_uint32_t rights);
 
@@ -364,7 +364,7 @@ dsmlib_set_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client,
  *          dataspace.
  */
 /*****************************************************************************/
-l4_uint32_t
+L4_CV l4_uint32_t
 dsmlib_get_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client);
 
 /*****************************************************************************/
@@ -384,7 +384,7 @@ dsmlib_get_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client);
  *          dataspace.
  */
 /*****************************************************************************/
-int
+L4_CV int
 dsmlib_check_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client,
                     l4_uint32_t rights);
 
@@ -396,7 +396,7 @@ dsmlib_check_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client,
  * \return  Pointer to dataspace list, #NULL if list empty.
  */
 /*****************************************************************************/
-dsmlib_ds_desc_t *
+L4_CV dsmlib_ds_desc_t *
 dsmlib_get_dataspace_list(void);
 
 /*****************************************************************************/
@@ -408,7 +408,7 @@ dsmlib_get_dataspace_list(void);
  * \param   data         Iterator function data
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, void * data);
 
 /*****************************************************************************
@@ -421,7 +421,7 @@ dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, void * data);
  * \ingroup dsmlib_debug
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_show_ds_hash(void);
 
 /*****************************************************************************/
@@ -430,7 +430,7 @@ dsmlib_show_ds_hash(void);
  * \ingroup dsmlib_debug
  */
 /*****************************************************************************/
-void
+L4_CV void
 dsmlib_list_ds(void);
 
 /*****************************************************************************/
@@ -441,7 +441,7 @@ dsmlib_list_ds(void);
  * \param   ds           Dataspace descriptor
  */
 /*****************************************************************************/
-void
+void L4_CV
 dsmlib_list_ds_clients(const dsmlib_ds_desc_t * ds);
 
 __END_DECLS;

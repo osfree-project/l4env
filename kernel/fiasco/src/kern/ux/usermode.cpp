@@ -190,7 +190,7 @@ Usermode::kernel_entry (struct ucontext *context,
                         Mword err,
                         Mword cr2)
 {
-  Mword *kesp = (xcs & 3) == 2
+  Mword *kesp = (xcs & 3) == 3
               ? (Mword *) *Kmem::kernel_sp() - 5
               : (Mword *) context->uc_mcontext.gregs[REG_ESP] - 3;
 
@@ -218,13 +218,13 @@ Usermode::kernel_entry (struct ucontext *context,
 
   switch (xcs & 3)
     {
-      case 2:
+      case 3:
         *(kesp + 4) = xss;
         *(kesp + 3) = esp;
 
       case 0:
         *(kesp + 2) = efl | (Proc::processor_state() & EFLAGS_IF);
-        *(kesp + 1) = xcs;
+        *(kesp + 1) = xcs & ~1; // trap on iret
         *(kesp + 0) = eip;
     }
 
@@ -366,9 +366,9 @@ Usermode::user_exception (pid_t pid, struct ucontext *context,
 
   kernel_entry (context, trap,
                 regs->xss,      /* XSS */
-                regs->esp,		/* ESP */
+                regs->esp,	/* ESP */
                 regs->eflags,   /* EFL */
-                2,              /* XCS */
+                regs->xcs,      /* XCS */
                 regs->eip,      /* EIP */
                 error,          /* ERR */
                 addr);          /* CR2 */
@@ -428,9 +428,9 @@ Usermode::user_emulation (int stop, pid_t pid, struct ucontext *context,
 
   kernel_entry (context, trap,
                 regs->xss,      /* XSS */
-                regs->esp,		/* ESP */
+                regs->esp,	/* ESP */
                 regs->eflags,   /* EFL */
-                2,              /* XCS */
+                regs->xcs,      /* XCS */
                 regs->eip,      /* EIP */
                 error,          /* ERR */
                 0);             /* CR2 */
@@ -471,7 +471,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
                     *(kesp + 4),    /* XSS */
                     *(kesp + 3),    /* ESP */
                     *(kesp + 2),    /* EFL */
-                    2,              /* XCS */
+                    *(kesp + 1) | 3,/* XCS */
                     *(kesp + 0),    /* EIP */
                     0,              /* ERR */
                     0);             /* CR2 */
@@ -480,7 +480,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
 
   // Restore these from the kernel stack (iret context)
   regs.eip    = *(kesp + 0);
-  regs.xcs    = *(kesp + 1);
+  regs.xcs    = *(kesp + 1) | 3;
   regs.eflags = *(kesp + 2);
   regs.esp    = *(kesp + 3);
   regs.xss    = *(kesp + 4);
@@ -498,7 +498,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
   regs.xfs    = context->uc_mcontext.gregs[REG_FS];
   regs.xgs    = Cpu::get_gs();
 
-  ptrace (PTRACE_SETREGS, pid, NULL, &regs);
+  check(ptrace (PTRACE_SETREGS, pid, NULL, &regs) == 0);
 
   Fpu::restore_state (t->fpu_state());
 
@@ -512,7 +512,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
       if (EXPECT_FALSE (stop == SIGWINCH || stop == SIGTERM || stop == SIGINT))
         continue;
 
-      ptrace (PTRACE_GETREGS, pid, NULL, &regs);
+      check(ptrace (PTRACE_GETREGS, pid, NULL, &regs) == 0);
 
       if (EXPECT_TRUE (user_emulation (stop, pid, context, &regs)))
         break;
@@ -619,7 +619,7 @@ Usermode::emu_handler (int, siginfo_t *, void *ctx)
                 context->uc_mcontext.gregs[REG_SS],
                 context->uc_mcontext.gregs[REG_ESP],
                 context->uc_mcontext.gregs[REG_EFL],
-                0,					/* Fake CS */
+                context->uc_mcontext.gregs[REG_CS] & ~3,
                 context->uc_mcontext.gregs[REG_EIP],
                 context->uc_mcontext.gregs[REG_ERR] & ~PF_ERR_USERMODE,
                 context->uc_mcontext.cr2);
@@ -642,7 +642,7 @@ Usermode::int_handler (int, siginfo_t *, void *ctx)
                 context->uc_mcontext.gregs[REG_SS],     /* XSS */
                 context->uc_mcontext.gregs[REG_ESP],    /* ESP */
                 context->uc_mcontext.gregs[REG_EFL],    /* EFL */
-                0,                                      /* XCS */
+                context->uc_mcontext.gregs[REG_CS] & ~3,/* XCS */
                 context->uc_mcontext.gregs[REG_EIP],    /* EIP */
                 0,                                      /* ERR */
                 0);                                     /* CR2 */
@@ -672,7 +672,7 @@ Usermode::jdb_handler (int sig, siginfo_t *, void *ctx)
                 context->uc_mcontext.gregs[REG_SS],     /* XSS */
                 context->uc_mcontext.gregs[REG_ESP],	/* ESP */
                 context->uc_mcontext.gregs[REG_EFL],	/* EFL */
-                0,                                      /* XCS */
+                context->uc_mcontext.gregs[REG_CS] & ~3,/* XCS */
                 context->uc_mcontext.gregs[REG_EIP],	/* EIP */
                 0,                                      /* ERR */
                 0);                                     /* CR2 */

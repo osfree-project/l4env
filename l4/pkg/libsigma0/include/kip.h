@@ -19,7 +19,7 @@ EXTERN_C_BEGIN
  *
  * \return Address to the kernel info page or 0 if page is invalid.
  */
-l4_kernel_info_t *l4sigma0_kip(void);
+L4_CV l4_kernel_info_t *l4sigma0_kip(void);
 
 /**
  * \brief  Map the kernel info page from pager to addr.
@@ -29,7 +29,7 @@ l4_kernel_info_t *l4sigma0_kip(void);
  * \param  addr   address to map KIP to
  * \return 0 on success, !=0 on error
  */
-int l4sigma0_kip_map_to(l4_threadid_t pager, void *addr);
+L4_CV int l4sigma0_kip_map_to(l4_threadid_t pager, void *addr);
 
 /**
  * \brief  Map the kernel info page.
@@ -41,7 +41,7 @@ int l4sigma0_kip_map_to(l4_threadid_t pager, void *addr);
  *                (use L4_INVALID_ID to call sigma0)
  * \return Address to the kernel info page or 0 if page is invalid.
  */
-l4_kernel_info_t *l4sigma0_kip_map(l4_threadid_t pager);
+L4_CV l4_kernel_info_t *l4sigma0_kip_map(l4_threadid_t pager);
 
 /**
  * \brief  Unmap the kernel info page.
@@ -49,7 +49,7 @@ l4_kernel_info_t *l4sigma0_kip_map(l4_threadid_t pager);
  *
  * Unmaps the kernel info page from the library private address.
  */
-void l4sigma0_kip_unmap(void);
+L4_CV void l4sigma0_kip_unmap(void);
 
 /**
  * \brief  Get the kernel version.
@@ -60,7 +60,7 @@ void l4sigma0_kip_unmap(void);
  *
  * \return Kernel version string. 0 if KIP could not be mapped.
  */
-l4_umword_t l4sigma0_kip_version(void);
+L4_CV l4_umword_t l4sigma0_kip_version(void);
 
 /**
  * \brief  Get the kernel version string.
@@ -71,7 +71,7 @@ l4_umword_t l4sigma0_kip_version(void);
  *
  * \return Kernel version string.
  */
-const char *l4sigma0_kip_version_string(void);
+L4_CV const char *l4sigma0_kip_version_string(void);
 
 /**
  * \brief Return whether the kernel is running native or under UX.
@@ -82,7 +82,7 @@ const char *l4sigma0_kip_version_string(void);
  *
  * \return 1 when running under UX, 0 if not running under UX
  */
-int l4sigma0_kip_kernel_is_ux(void);
+L4_CV int l4sigma0_kip_kernel_is_ux(void);
 
 /**
  * \brief Check if kernel supports a feature.
@@ -95,7 +95,7 @@ int l4sigma0_kip_kernel_is_ux(void);
  * Checks the feature field in the KIP for the given string. The KIP will be
  * mapped if not already mapped. The KIP will not be unmapped again.
  */
-int l4sigma0_kip_kernel_has_feature(const char *str);
+L4_CV int l4sigma0_kip_kernel_has_feature(const char *str);
 
 /**
  * \brief Return kernel ABI version.
@@ -103,7 +103,7 @@ int l4sigma0_kip_kernel_has_feature(const char *str);
  *
  * \return Kernel ABI version.
  */
-unsigned long l4sigma0_kip_kernel_abi_version(void);
+L4_CV unsigned long l4sigma0_kip_kernel_abi_version(void);
 
 EXTERN_C_END
 

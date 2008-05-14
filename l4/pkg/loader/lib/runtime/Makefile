@@ -15,18 +15,6 @@ SYSTEMS		= x86-l4v2 arm-l4v2
 
 include $(L4DIR)/mk/Makeconf
 
-LOADERLIBS_diet	= -lc_be_l4env_start_stop.p	\
-		  -lc_be_minimal_log_io.p	\
-		  -lc_be_simple_mem.p		\
-		  -lc_be_mmap.p			\
-		  -lc_be_mmap_util.p
-LOADERLIBS_uc	= -lc_be_l4env_start_stop.p	\
-		  -lc_be_minimal_log_io.p	\
-		  -lc_be_simple_mem.p		\
-		  -lc_be_mmap.p			\
-		  -lc_be_mmap_util.p		\
-		  -luclibc_support.p
-
 TASKLIB-y	+= -ltask_server.o.p
 
 OBJS_libloader.s.so = helper_dyn.s.o
@@ -44,7 +32,12 @@ LIBS		= --whole-archive \
 		    -llogserver.p \
 		    -lnames.p \
 		    $(ROOTPLIB) \
-		    $(LOADERLIBS_$(LIBC_TYPE)) \
+		    -lc_be_l4env_start_stop.p \
+		    -lc_be_minimal_log_io.p \
+		    -lc_be_simple_mem.p	\
+		    -lc_be_mmap.p \
+		    -lc_be_mmap_util.p \
+		    -luclibc_support.p \
 		    -lgeneric_ts.p \
 		    $(TASKLIB-$(USE_TASKLIB)) \
 		    -lgeneric_fprov.p \

@@ -17,16 +17,14 @@
 
 #define stpmif_name "stpm"
 
-#ifdef __cplusplus
-extern "C" {
-#endif 
+#include <l4/sys/compiler.h>
 
-int stpm_transmit(const char *write_buf, unsigned int write_count,
-                  char **read_buf, unsigned int *read_count);
-int stpm_abort(void);
+EXTERN_C_BEGIN
 
-#ifdef __cplusplus
-}
-#endif 
+L4_CV int stpm_transmit(const char *write_buf, unsigned int write_count,
+                        char **read_buf, unsigned int *read_count);
+L4_CV int stpm_abort(void);
+
+EXTERN_C_END
 
 #endif

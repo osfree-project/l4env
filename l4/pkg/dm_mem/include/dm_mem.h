@@ -73,7 +73,7 @@ __BEGIN_DECLS;
  * Call dataspace manager \a dsm_id to create a new memory dataspace.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_open(l4_threadid_t dsm_id, l4_size_t size, l4_addr_t align,
 	      l4_uint32_t flags, const char * name,
 	      l4dm_dataspace_t * ds);
@@ -93,7 +93,7 @@ l4dm_mem_open(l4_threadid_t dsm_id, l4_size_t size, l4_addr_t align,
  *          - -#L4_EPERM   Caller is not a client of the dataspace
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_size(const l4dm_dataspace_t * ds, l4_size_t * size);
 
 /*****************************************************************************/
@@ -118,7 +118,7 @@ l4dm_mem_size(const l4dm_dataspace_t * ds, l4_size_t * size);
  * contiguous memory area.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_resize(const l4dm_dataspace_t * ds, l4_size_t new_size);
 
 /*****************************************************************************/
@@ -141,7 +141,7 @@ l4dm_mem_resize(const l4dm_dataspace_t * ds, l4_size_t new_size);
  * Retrieve information about a dataspace for debugging purposes.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_info(const l4dm_dataspace_t * ds, l4_size_t * size,
 	      l4_threadid_t *owner, char * name, l4_uint32_t *next_id);
 
@@ -172,7 +172,7 @@ l4dm_mem_info(const l4dm_dataspace_t * ds, l4_size_t * size,
  *       might get paged in the meantime).
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_ds_phys_addr(const l4dm_dataspace_t * ds, l4_offs_t offset,
                       l4_size_t size, l4_addr_t * paddr, l4_size_t * psize);
 
@@ -203,7 +203,7 @@ l4dm_mem_ds_phys_addr(const l4dm_dataspace_t * ds, l4_offs_t offset,
  * area must be pinned.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_phys_addr(const void * ptr, l4_size_t size, l4dm_mem_addr_t addrs[],
 		   int num, l4_size_t * psize);
 
@@ -217,7 +217,7 @@ l4dm_mem_phys_addr(const void * ptr, l4_size_t size, l4dm_mem_addr_t addrs[],
  * \return  1 if dataspace is allocated on contiguous memory, 0 if not.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_ds_is_contiguous(const l4dm_dataspace_t * ds);
 
 /*****************************************************************************/
@@ -240,7 +240,7 @@ l4dm_mem_ds_is_contiguous(const l4dm_dataspace_t * ds);
  * will not be unmapped by the dataspace manager.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_ds_lock(const l4dm_dataspace_t * ds,
                  l4_offs_t offset, l4_size_t size);
 
@@ -261,7 +261,7 @@ l4dm_mem_ds_lock(const l4dm_dataspace_t * ds,
  *          - -#L4_EINVAL_OFFS  offset points beyond end of dataspace
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_ds_unlock(const l4dm_dataspace_t * ds,
                    l4_offs_t offset, l4_size_t size);
 
@@ -285,7 +285,7 @@ l4dm_mem_ds_unlock(const l4dm_dataspace_t * ds,
  * this region will not be unmapped by the dataspace managers.
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_lock(const void * ptr, l4_size_t size);
 
 /*****************************************************************************/
@@ -305,7 +305,7 @@ l4dm_mem_lock(const void * ptr, l4_size_t size);
  *                           to the VM region
  */
 /*****************************************************************************/ 
-int
+L4_CV int
 l4dm_mem_unlock(const void * ptr, l4_size_t size);
 
 /*****************************************************************************/
@@ -332,7 +332,7 @@ l4dm_mem_unlock(const void * ptr, l4_size_t size);
  * address space. The access rights will be set to #L4DM_RW.
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4dm_mem_allocate(l4_size_t size, l4_uint32_t flags);
 
 /*****************************************************************************/
@@ -360,7 +360,7 @@ l4dm_mem_allocate(l4_size_t size, l4_uint32_t flags);
  * address space. The access rights will be set to #L4DM_RW.
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4dm_mem_allocate_named(l4_size_t size, l4_uint32_t flags, const char * name);
 
 /*****************************************************************************/
@@ -389,7 +389,7 @@ l4dm_mem_allocate_named(l4_size_t size, l4_uint32_t flags, const char * name);
  * to #L4DM_RW.
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4dm_mem_ds_allocate(l4_size_t size, l4_uint32_t flags, l4dm_dataspace_t * ds);
 
 /*****************************************************************************/
@@ -419,7 +419,7 @@ l4dm_mem_ds_allocate(l4_size_t size, l4_uint32_t flags, l4dm_dataspace_t * ds);
  * to #L4DM_RW.
  */
 /*****************************************************************************/
-void *
+L4_CV void *
 l4dm_mem_ds_allocate_named(l4_size_t size, l4_uint32_t flags,
                            const char * name, l4dm_dataspace_t * ds);
 
@@ -451,7 +451,7 @@ l4dm_mem_ds_allocate_named(l4_size_t size, l4_uint32_t flags,
  * to #L4DM_RW.
  */
 /*****************************************************************************/ 
-void *
+L4_CV void *
 l4dm_mem_ds_allocate_named_dsm(l4_size_t size, l4_uint32_t flags,
                                const char * name, l4_threadid_t dsm_id,
                                l4dm_dataspace_t * ds);
@@ -466,7 +466,7 @@ l4dm_mem_ds_allocate_named_dsm(l4_size_t size, l4_uint32_t flags,
  * Release memory attached to \a ptr.
  */
 /*****************************************************************************/ 
-void
+L4_CV void
 l4dm_mem_release(const void * ptr);
 
 __END_DECLS;

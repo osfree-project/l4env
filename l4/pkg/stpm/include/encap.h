@@ -15,11 +15,13 @@
 #ifndef  _ENCAP_H
 #define  _ENCAP_H
 
-int stpm_transmit ( const char *write_buf, unsigned int write_count,
-                    char **read_buffer, unsigned int *read_count);
+#include <l4/sys/linkage.h>
 
-int stpm_abort (void);
+L4_CV int stpm_transmit ( const char *write_buf, unsigned int write_count,
+                          char **read_buffer, unsigned int *read_count);
 
-int check_tpm_server(char * name, int recheck);
+L4_CV int stpm_abort (void);
+
+L4_CV int check_tpm_server(char * name, int recheck);
 
 #endif

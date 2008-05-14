@@ -32,11 +32,11 @@ enum parse_cmd_type {
 
 /*!\brief Function type for PARSE_CMD_FN
  * \ingroup parse_cmd */
-typedef void (*parse_cmd_fn_t)(int);
+typedef L4_CV void (*parse_cmd_fn_t)(int);
 
 /*!\brief Function type for PARSE_CMD_FN_ARG
  * \ingroup parse_cmd */
-typedef void (*parse_cmd_fn_arg_t)(int, const char*, int);
+typedef L4_CV void (*parse_cmd_fn_arg_t)(int, const char*, int);
 
 EXTERN_C_BEGIN
 
@@ -127,11 +127,11 @@ EXTERN_C_BEGIN
  *
  * Upon return, argc and argv point to a list of arguments that were not
  * scanned as arguments. See \c getoptlong for details on scanning. */
-extern int parse_cmdline(int *argc, const char***argv, char arg0, ...);
-extern int parse_cmdlinev(int *argc, const char***argv, char arg0, va_list va);
-extern int parse_cmdline_extra(const char*argv0, const char*line, char delim,
-			       char arg0,...);
-			       
+L4_CV int parse_cmdline(int *argc, const char***argv, char arg0, ...);
+L4_CV int parse_cmdlinev(int *argc, const char***argv, char arg0, va_list va);
+L4_CV int parse_cmdline_extra(const char*argv0, const char*line, char delim,
+			      char arg0,...);
+
 EXTERN_C_END
 
 #endif

@@ -13,15 +13,15 @@ EXTERN_C_BEGIN
  *              - ~0U -> timeout NEVER
  * \return the corresponding l4_timeout value
  */
-l4_timeout_s l4util_micros2l4to(unsigned int mus);
+L4_CV l4_timeout_s l4util_micros2l4to(unsigned int mus);
 
 /** Suspend thread for a period of <ms> milliseconds */
-void l4_sleep(int ms);
+L4_CV void l4_sleep(int ms);
 
 /* Suspend thread for a period of <us> micro seconds.
  * WARNING: This function is mostly bogus since the timer resolution of
  *          current L4 implementations is about 1ms! */
-void l4_usleep(int us);
+L4_CV void l4_usleep(int us);
 
 /** Go sleep and never wake up. */
 L4_INLINE void l4_sleep_forever(void) __attribute__((noreturn));

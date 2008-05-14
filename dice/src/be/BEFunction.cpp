@@ -2046,8 +2046,10 @@ CBETypedDeclarator* CBEFunction::GetParameter(CBEDeclarator *pDeclarator, bool b
 /** \brief writes the attributes for the function
  *  \param pFile the file to write to
  */
-void CBEFunction::WriteFunctionAttributes(CBEFile& /*pFile*/)
-{}
+void CBEFunction::WriteFunctionAttributes(CBEFile& pFile)
+{
+	pFile << " DICE_CV";
+}
 
 /** \brief access to opcode constant names
  *  \return a string conatining the opcode name

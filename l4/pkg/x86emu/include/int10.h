@@ -17,6 +17,7 @@
 #ifndef _X86EMU_INT10_H
 #define _X86EMU_INT10_H
 
+#include <l4/sys/linkage.h>
 #include <l4/util/mb_info.h>
 
 /**
@@ -30,8 +31,8 @@
  *               
  * See VESA Specification 3.0.
  */
-int x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t **ctrl_info,
-			     l4util_mb_vbe_mode_t **mode_info);
+L4_CV int x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t **ctrl_info,
+                                   l4util_mb_vbe_mode_t **mode_info);
 
 /**
  * Pan the graphics memory.
@@ -41,7 +42,7 @@ int x86emu_int10_set_vbemode(int mode, l4util_mb_vbe_ctrl_t **ctrl_info,
  * \return         0  Success
  *              != 0  Failure
  */
-int x86emu_int10_pan(unsigned *x, unsigned *y);
+L4_CV int x86emu_int10_pan(unsigned *x, unsigned *y);
 
 /**
  * Release all memory occupied by the int10 emulator.
@@ -49,6 +50,6 @@ int x86emu_int10_pan(unsigned *x, unsigned *y);
  * \return         0  Success
  *              != 0  Failure
  */
-int x86emu_int10_done(void);
+L4_CV int x86emu_int10_done(void);
 
 #endif

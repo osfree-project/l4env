@@ -33,7 +33,7 @@
  * \ingroup reboot
  */
 EXTERN_C_BEGIN
-void l4util_reboot(void) __attribute__ ((__noreturn__));
+L4_CV void l4util_reboot(void) __attribute__ ((__noreturn__));
 EXTERN_C_END
 
 #endif /* ! _L4UTIL_REBOOT_H */
