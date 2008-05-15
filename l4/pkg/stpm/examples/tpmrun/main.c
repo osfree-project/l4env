@@ -559,7 +559,7 @@ static void command_loop()
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         printf("\n\nCheck for availability ... ");
 
-        error = check_tpm_server((char *)anything, 1);
+        error = stpm_check_server((char *)anything, 1);
 
         if (error)
           printf(" failed (error=%d)\n", error);

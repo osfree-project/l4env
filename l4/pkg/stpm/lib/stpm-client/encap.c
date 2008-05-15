@@ -27,7 +27,7 @@ int stpm_transmit ( const char *write_buf, unsigned int write_count,
 {
   DICE_DECLARE_ENV(env);
 
-  if (check_tpm_server(stpmif_name, 0)) return -L4_EINVAL;	
+  if (stpm_check_server(stpmif_name, 0)) return -L4_EINVAL;	
 
   return stpmif_transmit_call(&server_id, write_buf, write_count,
 			      read_buffer, read_count, &env);
@@ -37,12 +37,12 @@ int stpm_abort (void)
 {
   DICE_DECLARE_ENV(env);
 
-  if (check_tpm_server(stpmif_name, 0)) return -L4_EINVAL;	
+  if (stpm_check_server(stpmif_name, 0)) return -L4_EINVAL;	
 
   return stpmif_abort_call(&server_id, &env);
 }
 
-int check_tpm_server (char * name, int recheck)
+int stpm_check_server (char * name, int recheck)
 {							
   if (l4_is_invalid_id(server_id) || recheck)		
     {							
