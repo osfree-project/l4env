@@ -51,6 +51,10 @@ int l4ts_connect(void)
 	return 0;
 }
 
+l4_threadid_t l4ts_server(void)
+{
+  return l4ts_server_id;
+}
 
 int l4ts_taskno_to_taskid(l4_uint32_t taskno, l4_taskid_t *taskid)
 {
