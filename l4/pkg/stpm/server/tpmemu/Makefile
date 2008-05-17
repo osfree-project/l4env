@@ -21,7 +21,9 @@ SRC_C     = server.c glue.c \
                $(foreach dir, $(TPM_DIRS), $(wildcard $(dir)/*.c)), \
                  $(lastword $(subst /, ,$(file))) \
               )
+
 LIBS		=  -lgmp -ltcg -lstpm-client
+LIBS		+= -lparsecmdline
 
 #required to run tpmd with socket interface ...
 

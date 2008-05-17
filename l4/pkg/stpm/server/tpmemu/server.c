@@ -17,11 +17,13 @@
 
 #include "tpm/tpm_emulator.h"
 
-#include <l4/names/libnames.h>
-#include <l4/util/rdtsc.h>
-#include <l4/util/util.h> //l4_sleep
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
+#include <l4/names/libnames.h>
+#include <l4/util/parse_cmd.h>
+#include <l4/util/rdtsc.h>
+#include <l4/util/util.h> //l4_sleep
+
 #include "stpm-server.h"
 #include "stpmif.h"
 
@@ -67,12 +69,31 @@ CORBA_int
 stpmif_abort_component(CORBA_Object _dice_corba_obj,
 		       CORBA_Server_Environment *_dice_corba_env)
 {
-    return -L4_EINVAL;
+  return -L4_EINVAL;
 }
 
-int main(void)
+int main(int argc, const char **argv)
 {
-  if (names_register("vtpmemu") == 0)
+  int error;
+  char * regname; 
+
+  if ((error = parse_cmdline(&argc, &argv,
+               'n', "name", "register with <name>, default is <vtpmemu>",
+               PARSE_CMD_STRING, "vtpmemu", &regname,
+               0)))
+  {
+    switch (error)
+      {
+      case -1: printf("Bad command line parameter\n"); break;
+      case -2: printf("Out of memory in parse_cmdline()\n"); break;
+      case -3: /* Unrecognized option */ break;
+      case -4: /* Help requested */ break;
+      default: printf("Error %d in parse_cmdline()", error); break;
+    }
+    return 1;
+  }
+
+  if (names_register(regname) == 0)
   {
     LOG_Error("Registration error at nameserver\n");
     return 1;
