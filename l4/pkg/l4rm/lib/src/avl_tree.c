@@ -713,7 +713,7 @@ avlt_remove(avlt_key_t key)
 		      o->right = p;
 		      if (t->right == p)
 			t->right = o;
-		      else 
+		      else
 			t->left = o;
 
 		      /* adjust balance factors */
@@ -785,6 +785,10 @@ avlt_remove(avlt_key_t key)
 		{
 		  /* search node q */
 		  t = p = s;
+
+		  if (s == &tree_head)
+		    p = s->right;
+
 		  while (p && (p != r)) /* r points to t of the prev. round */
 		    {
 		      t = p;

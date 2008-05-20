@@ -54,7 +54,7 @@ typedef struct
 typedef struct
 {
   l4_threadid_t		tid;		/**< L4 task id. */
-  unsigned int          taskno;         /**< L4 task number (if configured) */
+  unsigned int    taskno; /**< L4 task number (if configured) */
   int			hi_first_msg;	/**< true if first message. */
   l4env_infopage_t	*env;		/**< ptr to environment infopage. */
   app_area_t		app_area[MAX_APP_AREA]; /**< pager regions. */
@@ -66,19 +66,20 @@ typedef struct
   l4_uint32_t		flags;		/**< flags. */
 #define APP_MODE_SIGMA0	0x00000001	/**< emulate sigma0 style application */
 #define APP_MODE_INTERP	0x00000004	/**< interpret using libld-l4.s.so */
-#define APP_DIRECTMAP	0x00000008	/**< map program sections one-by-one */
-#define APP_SYMBOLS	0x00000010	/**< load symbols */
-#define APP_LINES	0x00000020	/**< load lines information */
-#define APP_ALLOW_VGA	0x00000080	/**< access to VGA memory allowed */
-#define APP_NOSIGMA0	0x00000100	/**< don't page other regions */
-#define APP_ALLOW_CLI	0x00000200	/**< task may execute cli/sti */
+#define APP_DIRECTMAP   0x00000008	/**< map program sections one-by-one */
+#define APP_SYMBOLS     0x00000010	/**< load symbols */
+#define APP_LINES       0x00000020	/**< load lines information */
+#define APP_ALLOW_KILL  0x00000040  /**< killing other apps is allowed */
+#define APP_ALLOW_VGA   0x00000080	/**< access to VGA memory allowed */
+#define APP_NOSIGMA0    0x00000100	/**< don't page other regions */
+#define APP_ALLOW_CLI   0x00000200	/**< task may execute cli/sti */
 #define APP_SHOW_AREAS	0x00000400	/**< show app areas before start */
-#define APP_STOP	0x00000800	/**< stop app just before start */
-#define APP_CONT	0x00001000	/**< ensure that we cont only once */
-#define APP_NOSUPER	0x00002000	/**< don't page superpages */
+#define APP_STOP        0x00000800	/**< stop app just before start */
+#define APP_CONT        0x00001000	/**< ensure that we cont only once */
+#define APP_NOSUPER     0x00002000	/**< don't page superpages */
 #define APP_ALL_WRITBLE	0x00004000	/**< all sections writable */
-#define APP_ALLOW_BIOS  0x00008000      /**< access to BIOS allowed */
-#define APP_MSG_IO	0x00010000	/**< internal pager flag */
+#define APP_ALLOW_BIOS  0x00008000	/**< access to BIOS allowed */
+#define APP_MSG_IO      0x00010000	/**< internal pager flag */
 #define APP_HASH_BINARY	0x00020000	/**< hash sections of binary */
   l4_addr_t		image;		/**< attached image */
   l4_size_t		sz_image;	/**< size of attached image */
@@ -114,7 +115,7 @@ void __attribute__ ((format (printf, 2, 3)))
 void app_list_addr(app_t *app);
 int  app_boot(cfg_task_t *ct, l4_taskid_t owner);
 int  app_cont(app_t *app);
-int  app_kill(l4_taskid_t task_id);
+int  app_kill(l4_taskid_t task_id, l4_taskid_t caller);
 int  app_dump(unsigned long task_id);
 int  app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds,
 	      l4_threadid_t client, char **fname);

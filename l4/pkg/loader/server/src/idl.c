@@ -126,7 +126,10 @@ l4loader_app_kill_component (CORBA_Object _dice_corba_obj,
                              unsigned long flags,
                              CORBA_Server_Environment *_dice_corba_env)
 {
-  return app_kill(*task_id);
+  if (task_id == NULL)
+    return -L4_EINVAL;
+
+  return app_kill(*task_id, *_dice_corba_obj);
 }
 
 /** Dump application

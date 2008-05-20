@@ -66,6 +66,7 @@ l4env			{ count(); return L4ENV_BINARY; }
 contiguous		{ count(); return CONTIGUOUS; }
 no_sigma0		{ count(); return NO_SIGMA0; }
 allow_vga		{ count(); return ALLOW_VGA; }
+allow_kill		{ count(); return ALLOW_KILL; }
 allow_bios		{ count(); return ALLOW_BIOS; }
 dma_able		{ count(); return DMAABLE; }
 dmaable			{ count(); return DMAABLE; }

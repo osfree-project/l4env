@@ -439,6 +439,8 @@ load_app(void)
 static int
 kill_app(void)
 {
+  DICE_DECLARE_ENV(env);
+
   char number[10];
   int error;
   long nr;
@@ -465,15 +467,17 @@ kill_app(void)
       l4_taskid_t taskid;
 
       if ((error = l4ts_taskno_to_taskid(nr, &taskid)))
-	printf("There seems to be no corresponding task ID\n");
+        printf("There seems to be no corresponding task ID\n");
       else
-	{
-	  if ((error = l4ts_kill_task_recursive(taskid)))
-	    printf("Error %d (%s) killing task #%02lX\n",
-		error, l4env_strerror(-error), nr);
-	  else
-	    printf("  successfully killed.\n");
-	}
+       {
+          error = l4loader_app_kill_call(&loader_id, &taskid, 0, &env);
+          if (DICE_HAS_EXCEPTION(&env) || error)
+//          if ((error = l4ts_kill_task_recursive(taskid)))
+            printf("Error %d (%s) killing task #%02lX (exc %d)\n",
+                   error, l4env_strerror(-error), nr, DICE_EXCEPTION_MAJOR(&env));
+          else
+            printf("  successfully killed.\n");
+        }
     }
 
   return 0;

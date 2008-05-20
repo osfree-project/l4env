@@ -356,6 +356,11 @@ The following information can be find there (see the
   effect on the x86 and amd64 architectures. The affected memory region is
   0xA0000 to 0xC0000.
 
+\par allow_kill
+  Allow the application to kill other applications started by the loader.
+  This is required by management services interacting with the loader, 
+  for example the 'run' loader client.
+
 \par allow_bios
   Allow the application to map the BIOS memory. This option only has an
   effect on the x86 and amd64 architectures. The affected memory region is

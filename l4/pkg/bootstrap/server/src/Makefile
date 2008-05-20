@@ -242,7 +242,7 @@ vpath bootstrap.ld.in $(SRC_DIR)/ARCH-x86
 SRC32_C		 = boot_cpu.c boot_kernel.c load_elf.c minilibc_support.c
 SRC32_S		 = boot.S boot_idt.S
 OBJ32		 = $(SRC32_S:.S=.o32) $(SRC32_C:.c=.o32)
-CC32		 = $(filter-out -m64, $(CC))
+CC32		 = $(filter-out -m64, $(CC)) -m32
 CFLAGS32	:= $(filter-out -m64, $(CFLAGS)) -m32
 
 .PHONY: libc32.a

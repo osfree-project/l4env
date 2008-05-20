@@ -93,6 +93,7 @@ typedef struct
 #define CFG_F_TEMPLATE		0x00000001 /**< this is a template */
 #define CFG_F_MEMDUMP		0x00000002 /**< dump memory */
 #define CFG_F_DIRECT_MAPPED	0x00000004 /**< sections are mapped 1:1 */
+#define CFG_F_ALLOW_KILL		0x00000008 /**< allow killing other apps */
 #define CFG_F_ALLOW_VGA		0x00000010 /**< allow access to vga memory */
 #define CFG_F_SLEEP		0x00000020 /**< sleep before continue */
 #define CFG_F_NO_SIGMA0		0x00000040 /**< dont page other regions */

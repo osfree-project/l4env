@@ -1478,7 +1478,7 @@ app_cont_interp(app_t *app)
 /** Cleanup application (external resources).
  *
  */
-static void
+static int
 app_cleanup_extern(app_t *app)
 {
   int error;
@@ -1488,10 +1488,14 @@ app_cleanup_extern(app_t *app)
     {
       killing = app->tid;
       if ((error = l4ts_kill_task(app->tid, 0)))
-	app_msg(app, "Error %d (%s) killing task (ignored)",
-		     error, l4env_errstr(error));
+        app_msg(app, "Error %d (%s) killing task (ignored)",
+		    error, l4env_errstr(error));
       killing = L4_INVALID_ID;
+
+      return error;
     }
+
+  return -L4_EINVAL;
 }
 
 /** Cleanup application (internal resources).
@@ -1598,6 +1602,7 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   if (ct->flags & CFG_F_DIRECT_MAPPED)
     app->flags |= APP_DIRECTMAP;
   app->flags |= ct->flags & CFG_F_ALLOW_VGA      ? APP_ALLOW_VGA   : 0;
+  app->flags |= ct->flags & CFG_F_ALLOW_KILL     ? APP_ALLOW_KILL  : 0;
   app->flags |= ct->flags & CFG_F_ALLOW_BIOS     ? APP_ALLOW_BIOS  : 0;
   app->flags |= ct->flags & CFG_F_NO_SIGMA0      ? APP_NOSIGMA0    : 0;
   app->flags |= ct->flags & CFG_F_ALLOW_CLI      ? APP_ALLOW_CLI   : 0;
@@ -1714,9 +1719,9 @@ app_boot(cfg_task_t *ct, l4_taskid_t owner)
       app_cleanup_extern(app);
       /* free our task resources */
       if (!app_cleanup_intern(app))
-	printf("==> App successfully purged\n");
+        printf("==> App successfully purged\n");
       else
-	printf("==> App not fully purged!\n");
+        printf("==> App not fully purged!\n");
     }
 
   return error;
@@ -1724,11 +1729,12 @@ app_boot(cfg_task_t *ct, l4_taskid_t owner)
 
 /** Kill application.
  *
- * \param task_id	L4 task id
+ * \param task_id	task to be killed
+ * \param caller_id task which wants to kill task_id
  * \return		0 on success
  *			-L4_ENOTFOUND if no proper task was not found */
 int
-app_kill(l4_taskid_t task_id)
+app_kill(l4_taskid_t task_id, l4_taskid_t caller)
 {
   int i;
 
@@ -1738,11 +1744,36 @@ app_kill(l4_taskid_t task_id)
       return -L4_EINVAL;
     }
 
-  for (i=0; i<MAX_APP; i++)
+  // distinct between invocation triggered by
+  // 1. messages received from events server and forwarded by internal
+  //    events thread of the loader [old handling]
+  // 2. messages received from outside (e.g. 'run' client) [new handling]
+  //    or by invocations during early loading/init of apps by loader [old handling]
+  if (l4_task_equal(l4_myself(), caller))
     {
-      app_t *app = app_array + i;
-      if (app->env && l4_thread_equal(task_id, app->tid))
-	return app_cleanup_intern(app);
+      for (i=0; i<MAX_APP; i++)
+        {
+          app_t *app = app_array + i;
+          if (app->env && l4_thread_equal(task_id, app->tid))
+            return app_cleanup_intern(app);
+        }
+    }
+  else
+    {
+      app_t * t_kill = task_to_app(task_id);
+      app_t * t_caller = task_to_app(caller);
+      if (t_kill != NULL && t_caller != NULL)
+        {
+          if (t_caller->flags & APP_ALLOW_KILL)
+            {
+              return app_cleanup_extern(t_kill);
+            }
+          else
+            {
+              LOG("Task "l4util_idfmt" is not allowed to kill tasks", l4util_idstr(caller));
+              return -L4_EPERM;
+            }
+        }
     }
 
   return -L4_ENOTFOUND;

@@ -117,7 +117,7 @@ void vfb_hbar_rgb(l4_int16_t * vscr, int w, int h, int x, int y, int barw,
 
 void vfb_clear_screen(l4_int16_t * vscr, int w, int h)
 {
-    bzero(vscr, w * h * sizeof(vscr[0]));
+    memset(vscr, 0, w * h * sizeof(vscr[0]));
 }
 
 void vfb_fill_rect(l4_int16_t * vscr, int w, int h, int x1, int y1,
