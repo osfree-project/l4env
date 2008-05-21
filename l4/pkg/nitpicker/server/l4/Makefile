@@ -28,7 +28,7 @@ IDL_PKGDIR        = $(PKGDIR_OBJ) $(PKGDIR_OBJ)/server
 include $(L4DIR)/mk/prog.mk
 
 $(OBJ_DIR)/%_fnt.o: $(OBJ_DIR)/%.tff
-	$(VERBOSE)cd $(OBJ_DIR) && $(LD) -r --oformat default -o $(@F) -b binary $(^F)
+	$(VERBOSE)cd $(OBJ_DIR) && $(LD) -r --oformat $(OFORMAT) -o $(@F) -b binary $(^F)
 
 $(OBJ_DIR)/%.tff: %.fnt
 	$(VERBOSE)$(PKGDIR_OBJ)/tool/fnt2tff/OBJ-$(SYSTEM)/fnt2tff $< $@

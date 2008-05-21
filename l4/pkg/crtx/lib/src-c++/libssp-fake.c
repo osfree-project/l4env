@@ -4,11 +4,14 @@
 
 #include <unistd.h>
 
-void
-__stack_chk_fail_local (void);
+#ifdef ARCH_x86
+#define FUNCNAME __stack_chk_fail_local
+#elif defined(ARCH_amd64)
+#define FUNCNAME __stack_chk_fail
+#endif
 
-void
-__stack_chk_fail_local (void)
+void FUNCNAME (void);
+void FUNCNAME (void)
 {
   // should we add a printf here? Someone will not like it...
   _exit(1);

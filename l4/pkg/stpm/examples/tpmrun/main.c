@@ -26,6 +26,7 @@
 #include <tcg/quote.h>
 #include <tcg/rand.h>       //TPM_GetRandom
 #include <tcg/owner.h>      //TPM_TakeOwnership 
+#include <tcg/pcrs.h>       //TPM_Extend 
 
 #include "tpmrun.h"
 #include "encap.h"
@@ -76,12 +77,13 @@ static void show_help_info()
   printf("l ... load a key to TPM from tmp buffer\n");
   printf("L ... load a key to TPM from tmp buffer, TCGA 1.2\n");
   printf("------- key eviction  -------\n");
-  printf("d ... dump key in tmp buffer to LOG\n");
-  printf("e ... evict loaded key from TPM\n");
-  printf("E ... evict loaded key from TPM, TCGA 1.2 \n");
+  printf("z ... dump key in tmp buffer to LOG\n");
+  printf("d ... evict loaded key from TPM\n");
+  printf("D ... evict loaded key from TPM, TCGA 1.2 \n");
   printf("------- general       -------\n");
   printf("i ... general information about TPM\n");
   printf("p ... print public key of loaded key\n");
+  printf("e ... extend a PCR register\n");
   printf("q ... quote of current pcrs with a loaded key\n");
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
@@ -210,7 +212,7 @@ static void command_loop()
   char * log2;
   #endif
 
-  // find out what for a TPM we have
+  // find out what kind of TPM we have
   maxpcrs = tpm_check();
 
   printf("\nWelcome ... press 'h' for a list of supported commands\n");
@@ -278,11 +280,11 @@ static void command_loop()
           printf("success. Key info stored in memory temporarily.\n");
 
         break;
-      case 'd':
+      case 'z':
         dumpkey(&key);
         printf("success.\n");
         break;
-      case 'e':
+      case 'd':
         memset(anything, 0, sizeof(anything));
         printf("Key to be deleted (hex): 0x");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
@@ -296,13 +298,33 @@ static void command_loop()
           printf(" success.\n");
 
         break;
-      case 'E':
+      case 'D':
         memset(anything, 0, sizeof(anything));
         printf("Key to be deleted (hex): 0x");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         printf(" ...");
 
         error = TPM_FlushSpecific(strtol((char *)anything, NULL, 16), TPM_RT_KEY);
+
+        if (error != 0)
+          printf(" failed (error=%d)\n", error);
+        else
+          printf(" success.\n");
+
+        break;
+      case 'e':
+        printf("PCR index to be extended: ");
+        memset(anything, 0, sizeof(anything));
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        i = strtol((char *)anything, NULL, 10);
+
+        printf("\nExtend with : ");
+        memset(anything2, 0, sizeof(anything2));
+        contxt_ihb_read((char *)anything2, sizeof(anything2), NULL);
+ 
+        sha1(anything2, strlen((char *)anything2), anything2);
+
+        error = TPM_Extend(i, anything2);
 
         if (error != 0)
           printf(" failed (error=%d)\n", error);
