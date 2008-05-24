@@ -268,13 +268,13 @@ ping_exception_IPC_thread(void)
     }
   out = l4_rdtsc();
 
-  /* tell main that we are finished */
-  PREFIX(send)(main_id);
-  PREFIX(recv)(main_id);
-
   printf("exception IPC    :  %10u cycles / %5lu rounds >> %u <<\n",
 	 (l4_uint32_t)(out-in), global_rounds*8,
 	 (l4_uint32_t)((out-in)/(global_rounds*8)));
+
+  /* tell main that we are finished */
+  PREFIX(send)(main_id);
+  PREFIX(recv)(main_id);
 
   /* done, sleep */
   l4_sleep_forever();

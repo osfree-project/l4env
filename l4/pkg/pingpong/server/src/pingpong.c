@@ -120,7 +120,7 @@ detect_kernel(void)
 #else
   printf("Kernel version %08x: ", kip->version);
 #endif
-  switch (kip->version)
+  switch (kip->version & L4SIGMA0_KIP_VERSION_FIASCO_MASK)
     {
     case 21000:
       puts("Jochen LN -- disabling 4MB mappings");
@@ -1703,6 +1703,7 @@ int
 main(int argc, const char **argv)
 {
   int c, i, j, loop = 0, description = 0, test_nr = -1;
+  const char *test_nr_string = NULL;
   typedef struct
     {
       const char *name;
@@ -1747,7 +1748,7 @@ main(int argc, const char **argv)
 		    'l', "loop", "repeat all tests forever",
 		      PARSE_CMD_SWITCH, 1, &loop,
 		    't', "test", "select specific test",
-		      PARSE_CMD_INT, -1, &test_nr,
+		      PARSE_CMD_STRING, 0, &test_nr_string,
 		    'd', "description", "give description about tests",
 		      PARSE_CMD_SWITCH, 1, &description,
 		    0);
@@ -1764,6 +1765,19 @@ main(int argc, const char **argv)
       help();
       my_exit(0);
     }
+
+  if (test_nr_string)
+    {
+      for (i=0; i < mentries; i++)
+        if (test[i].key == test_nr_string[0] && test[i].enabled)
+          {
+            test_nr = i;
+            break;
+          }
+      if (i == mentries)
+        printf("Invalid test selected\n");
+    }
+
 
   /* init librmgr */
   if (!rmgr_init())
@@ -1837,14 +1851,15 @@ main(int argc, const char **argv)
   if (0)
     {
       printf("Human time check: this will take 5seconds when START appears\n");
-      l4_cpu_time_t t = kip->clock;
-      while (kip->clock < t + 1000000ULL)
-	;
-      t = kip->clock;
+      l4_cpu_time_t t = get_clocks_kip();
+      while (get_clocks_kip() < t + 1000000ULL)
+        ;
       printf("START\n");
-      while (kip->clock < t + 5000000ULL)
+      t = get_clocks_kip();
+      while (get_clocks_kip() < t + 5000000ULL)
 	;
-      printf("DONE (%lld - %lld (d: %lld)\n", t, kip->clock, kip->clock - t);
+      printf("DONE (%lld - %lld (d: %lld)\n",
+             t, get_clocks_kip(), get_clocks_kip() - t);
     }
 #endif
 
@@ -1881,7 +1896,7 @@ invalid_key:
 	c = loop ? 'a' : getchar_multi();
       else
 	{
-	  c = test_nr + '0';
+	  c = test[test_nr].key;
 	  test_nr = -1;
 	}
       switch(c)

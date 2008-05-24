@@ -248,7 +248,7 @@ outstring(const char *text)
       "int	$3	\n\t"
       "cmpb	$2,%%al \n\t"
       : /* No output */
-      : "a" (text)
+      : "a" (text), "m" (*text)
       );
 }
 
@@ -262,7 +262,7 @@ outnstring(char const *text, unsigned len)
       "cmpb	$1,%%al      \n\t"
       "popl     %%ebx        \n\t"
       : /* No output */
-      : "a" (text), "c"(len)
+      : "a" (text), "c"(len), "m" (*text)
       );
 }
 

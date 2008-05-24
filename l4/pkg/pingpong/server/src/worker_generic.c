@@ -41,14 +41,14 @@ ping_exception_IPC_thread(void)
   for (i = global_rounds; i; i--)
     {
 #ifdef ARCH_arm
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
-      asm volatile ("swi" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
+      asm volatile ("swi $0x123" : : : "memory");
 #else
       asm volatile ("int $0x13" : : : "memory");
       asm volatile ("int $0x13" : : : "memory");
@@ -62,13 +62,13 @@ ping_exception_IPC_thread(void)
     }
   out = get_clocks();
 
+  printf("CLK:exception IPC    :  %10u cycles / %5lu rounds >> %u <<\n",
+	 (l4_uint32_t)(out-in), global_rounds*8,
+	 (l4_uint32_t)((out-in)/(global_rounds*8)));
+
   /* tell main that we are finished */
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
-
-  printf("exception IPC    :  %10u cycles / %5lu rounds >> %u <<\n",
-	 (l4_uint32_t)(out-in), global_rounds*8,
-	 (l4_uint32_t)((out-in)/(global_rounds*8)));
 
   /* done, sleep */
   l4_sleep_forever();

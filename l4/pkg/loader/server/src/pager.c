@@ -548,6 +548,8 @@ app_pager_thread(void *data)
                      l4util_idfmt" (%lx,%lx)\n",
                      l4_msgtag_label(tag), l4util_idstr(src_tid),
                      dw1, dw2);
+              if (l4_msgtag_is_exception(tag))
+                printf("  Exception at %lx\n", l4_utcb_exc_pc(l4sys_utcb_get()));
               skip_reply = 1;
             }
           else

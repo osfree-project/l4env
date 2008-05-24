@@ -35,13 +35,20 @@ enum callmodes { INT30, SYSENTER, KIPCALL, NR_MODES };
 
 extern l4_kernel_info_t *kip;
 
+#include <l4/sys/cache.h>
+static inline l4_cpu_time_t get_clocks_kip(void)
+{
+  l4_sys_cache_clean_range((unsigned long)&kip->clock, 8);
+  return kip->clock;
+}
+
 #ifdef ARCH_x86
 #include <l4/util/rdtsc.h>
 static inline l4_cpu_time_t get_clocks(void) { return l4_rdtsc(); }
 static inline l4_uint64_t clocks_to_us(l4_cpu_time_t clocks)
 { return l4_tsc_to_us(clocks); }
 #else
-static inline l4_cpu_time_t get_clocks(void) { return kip->clock; }
+static inline l4_cpu_time_t get_clocks(void) { return get_clocks_kip(); }
 static inline l4_uint64_t clocks_to_us(l4_cpu_time_t clocks)
 { return clocks; }
 #endif
