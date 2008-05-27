@@ -14,9 +14,13 @@
 #ifndef __L4UTIL__INCLUDE__KPRINTF_H__
 #define __L4UTIL__INCLUDE__KPRINTF_H__
 
-#include <l4/sys/linkage.h>
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 L4_CV int l4_kprintf(const char *fmt, ...)
-  __attribute__((format (printf, 1, 2)));
+                     __attribute__((format (printf, 1, 2)));
+
+EXTERN_C_END
 
 #endif /* ! __L4UTIL__INCLUDE__KPRINTF_H__ */
