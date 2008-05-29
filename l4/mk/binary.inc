@@ -132,7 +132,7 @@ all:: $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch))
 $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch)):%:%/$(BID_OBJ_Makefile) pre-obj
 	$(VERBOSE)PWD=$@ $(MAKE) $(PL_j) -C $@ -f $(BID_OBJ_Makefile)
 
-clean::
+clean disasm::
 	$(if $(wildcard $(OBJ_DIR)/OBJ-*), $(VERBOSE)set -e ; \
 	    for d in $(wildcard $(OBJ_DIR)/OBJ-*) ; do \
 	        PWD=$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
@@ -151,6 +151,9 @@ else
 ###############################################################
 
 all::		$(TARGET)
+
+disasm: $(TARGET)
+	$(call DISASM_CMD,$<)
 
 L4INCDIR ?=	$(addprefix $(OBJ_BASE)/include/$(ARCH)/,$(L4API)) \
                 $(addprefix $(OBJ_BASE)/include/,$(L4API)) \
@@ -713,7 +716,7 @@ clean cleanall::
 cleanall::
 	$(VERBOSE)$(RM) $(TARGET) $(wildcard .*.d) $(wildcard $(BID_OBJ_Makefile).inc)
 
-.PHONY: scrub clean cleanall
+.PHONY: scrub clean cleanall disasm
 
 endif	# $(SYSTEM) is defined
 

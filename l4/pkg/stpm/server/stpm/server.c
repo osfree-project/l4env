@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <l4/names/libnames.h>
+#include <l4/env/errno.h>
 #include "stpm-server.h"
 #include "stpmif.h"
 
@@ -54,7 +55,13 @@ stpmif_abort_component(CORBA_Object _dice_corba_obj,
 	return stpm_abort();
 }
 
-
+int
+stpmif_shutdown_on_exitevent_of_component (CORBA_Object _dice_corba_obj,
+                                           const l4_taskid_t *dm /* in */,
+                                           CORBA_Server_Environment *_dice_corba_env)
+{
+  return -L4_ENOTSUPP;
+}
 
 int main(void)
 {

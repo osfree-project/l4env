@@ -16,7 +16,7 @@ SERVERIDL	= stpm.idl
 TPM_DIRS  = $(PKGDIR)/contrib/tpmemulator/tpm \
             $(PKGDIR)/contrib/tpmemulator/crypto 
 
-SRC_C     = server.c glue.c \
+SRC_C     = server.c glue.c events.c \
              $(foreach file, \
                $(foreach dir, $(TPM_DIRS), $(wildcard $(dir)/*.c)), \
                  $(lastword $(subst /, ,$(file))) \
@@ -24,6 +24,8 @@ SRC_C     = server.c glue.c \
 
 LIBS		=  -lgmp -ltcg -lstpm-client
 LIBS		+= -lparsecmdline
+LIBS		+= -lfprov_ext
+LIBS		+= -levents
 
 #required to run tpmd with socket interface ...
 

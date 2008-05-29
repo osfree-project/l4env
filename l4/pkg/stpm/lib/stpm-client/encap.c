@@ -42,12 +42,19 @@ int stpm_abort (void)
   return stpmif_abort_call(&server_id, &env);
 }
 
-int stpm_check_server (char * name, int recheck)
+int stpm_shutdown_on_exit (l4_taskid_t const * const task)
+{
+  DICE_DECLARE_ENV(env);
+
+  return stpmif_shutdown_on_exitevent_of_call(&server_id, task, &env);
+}
+
+int stpm_check_server (const char * name, int recheck)
 {							
   if (l4_is_invalid_id(server_id) || recheck)		
     {							
       if (!names_waitfor_name(name, &server_id, 10000))	
-	return 1;					
+        return 1;					
     }							
   return 0;						
 }

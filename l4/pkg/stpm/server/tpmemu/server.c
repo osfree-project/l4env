@@ -23,11 +23,16 @@
 #include <l4/util/parse_cmd.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/util.h> //l4_sleep
+#include <l4/thread/thread.h>
 
 #include "stpm-server.h"
 #include "stpmif.h"
 
+#include "local.h"
+
 int l4libc_heapsize = 1024 * 1024;
+
+static l4_taskid_t shutdown_on_exit = L4_INVALID_ID;
 
 void *CORBA_alloc(unsigned long size){
 	return malloc(size);
@@ -66,15 +71,28 @@ stpmif_transmit_component (CORBA_Object _dice_corba_obj,
 }
 
 CORBA_int
+stpmif_shutdown_on_exitevent_of_component (CORBA_Object _dice_corba_obj,
+                                           const l4_taskid_t *dm /* in */,
+                                           CORBA_Server_Environment *_dice_corba_env)
+{
+  if (dm == 0 || !l4_is_invalid_id(shutdown_on_exit))
+    return -L4_EINVAL;
+
+  shutdown_on_exit = *dm;
+
+  return 0;
+}
+
+CORBA_int
 stpmif_abort_component(CORBA_Object _dice_corba_obj,
 		       CORBA_Server_Environment *_dice_corba_env)
 {
-  return -L4_EINVAL;
+  return -L4_ENOTSUPP;
 }
 
 int main(int argc, const char **argv)
 {
-  int error;
+  int error,n ;
   char * regname; 
 
   if ((error = parse_cmdline(&argc, &argv,
@@ -93,6 +111,13 @@ int main(int argc, const char **argv)
     return 1;
   }
 
+  n = strlen(regname);
+  n = n < 8 ? n : 8;
+
+  memcpy(LOG_tag, regname, n);
+  for(; n < 9; n++)
+    LOG_tag[n] = 0;
+
   if (names_register(regname) == 0)
   {
     LOG_Error("Registration error at nameserver\n");
@@ -101,10 +126,17 @@ int main(int argc, const char **argv)
 
   if (l4_calibrate_tsc() == 0)
   {
-     LOG_Error("Error in time stamp counter calibration ...\n");
-     return 1;
+    LOG_Error("Error in time stamp counter calibration ...\n");
+    return 1;
   }
 
+
+  l4thread_t event = l4thread_create(vtpmemu_event_loop, &shutdown_on_exit, L4THREAD_CREATE_SYNC);
+  if (event == L4THREAD_INVALID_ID)
+  {
+    LOG_Error("Event thread setup failed.");
+    return 1;
+  }
   l4_sleep(2000);
 
   // clear 1
@@ -117,4 +149,5 @@ int main(int argc, const char **argv)
 	env.free=CORBA_free;
 
   stpmif_server_loop(&env);
+
 }

@@ -129,6 +129,7 @@ GEN_DOPECODE	= $(L4DIR)/tool/gen_dopecode/gen_dopecode
 ABS2REL		= $(L4DIR)/tool/bin/abs2rel.sh
 # it's optional to be able to set it as environment variable
 FIASCOUX	?= $(L4DIR)/../kernel/fiasco/build-ux/fiasco
+DISASM_CMD      ?= $(SYSTEM_TARGET)objdump -ld $(1) | less
 
 # functions that are handy
 absfilename_target_dir_needs_to_exist = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&$(PWDCMD))))

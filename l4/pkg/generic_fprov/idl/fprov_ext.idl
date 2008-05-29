@@ -1,0 +1,17 @@
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+
+import <generic_fprov.idl>
+
+/** \brief module l4 */
+library l4fprov
+{
+  /** File provider interface */
+  interface file_ext : file
+    {
+      long write([in, string] char* fname, 
+                 [in] l4dm_dataspace_t ds, 
+                 [in] l4_size_t size);
+    };
+};
+

@@ -16,12 +16,15 @@
 #define  _ENCAP_H
 
 #include <l4/sys/linkage.h>
+#include <l4/sys/types.h>
 
 L4_CV int stpm_transmit ( const char *write_buf, unsigned int write_count,
                           char **read_buffer, unsigned int *read_count);
 
 L4_CV int stpm_abort (void);
 
-L4_CV int stpm_check_server(char * name, int recheck);
+L4_CV int stpm_shutdown_on_exit (l4_taskid_t const * const task);
+
+L4_CV int stpm_check_server(const char * name, int recheck);
 
 #endif
