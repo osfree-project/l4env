@@ -25,7 +25,7 @@ include $(L4DIR)/mk/lib.mk
 
 # convert to object file
 %.o: %.raw
-	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
+	$(VERBOSE)$(LD) -r --oformat $(OFORMAT) -o $@ -b binary $^
 
 #	$(VERBOSE)$(OBJCOPY) -I binary -O elf32-i386 $^ $@.binary
 #	$(VERBOSE)echo 'asm(".section .rodata.image_info;    '\

@@ -27,7 +27,7 @@
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
-#include <l4/generic_fprov/generic_fprov-server.h>
+#include <l4/generic_fprov/fprov_ext-server.h>
 #include <l4/thread/thread.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/getopt.h>
@@ -200,7 +200,7 @@ l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
 static void
 server_loop(void)
 {
-  l4fprov_file_server_loop(NULL);
+  l4fprov_file_ext_server_loop(NULL);
 }
 
 /* The only reason to start a new thread here is that we make sure that
@@ -227,7 +227,7 @@ real_main (void *dummy)
       exit(-1);
     }
 
-  if (netboot_init(netbuf, gunzipbuf))
+  if (netboot_init(netbuf, gunzipbuf, !have_tftp_server_addr))
     {
       printf("Can't determine network card\n");
       exit(-1);
@@ -245,6 +245,42 @@ real_main (void *dummy)
   server_loop();
 }
 
+long 
+l4fprov_file_ext_write_component (CORBA_Object _dice_corba_obj,
+                              const char* fname /* in */,
+                              const l4dm_dataspace_t *ds /* in */,
+                              l4_size_t size /* in */,
+                              CORBA_Server_Environment *_dice_corba_env)
+{
+  void * addr = 0;
+  int error, ret = 0;
+
+  // sanity checks
+  if (fname == 0 || ds == 0 || size <= 0)
+    return -L4_EINVAL;
+
+  if ((error = l4rm_attach(ds, size, 0, L4DM_RO | L4RM_MAP, &addr)))
+    {
+      printf("Error %d attaching dataspace\n", error);
+      return -L4_ENOMEM;
+    }
+
+  ret = tftp_file_write(fname, addr, size);
+ 
+  if ((error = l4rm_detach(addr)))
+    {
+      printf("Error %d detaching dataspace\n", error);
+      ret = -L4_ENOMEM;
+    }
+
+  if ((error = l4dm_close(ds)))
+    {
+      printf("Error %d closing dataspace\n", error);
+      ret = -L4_ENOMEM;
+    }
+
+  return ((ret > 0) ? 0 : (ret == 0 ? -L4_EIO : ret));
+}
 
 int
 main (int argc, char **argv)

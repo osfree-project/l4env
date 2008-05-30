@@ -139,7 +139,8 @@ int eth_probe(void)
 	dev->how_probe = -1;
 	dev->type = NIC_DRIVER;
 	dev->failsafe = 1;
-	rom = *((struct rom_info *)ROM_INFO_LOCATION);
+// Alex B. commented out:
+//	rom = *((struct rom_info *)ROM_INFO_LOCATION);
 
 	probed = (probe(dev) == PROBE_WORKED);
 
@@ -412,7 +413,7 @@ void rx_qdrain(void)
 
         /* signal to whoever might be interested, that we are draining the
 	 * rx-queue */
-        rx_drain_flag=1;
+	rx_drain_flag=1;
 	await_reply(await_qdrain, 0, NULL, 0);
 	rx_drain_flag=0;
 }
@@ -574,13 +575,12 @@ int bootp(void)
 }
 
 /**
- * dhcp
- *
- * Get IP address by dhcp, segregate from bootp in etherboot.
- **/
-static int await_dhcp(int ival __unused, void *ptr __unused,
-	unsigned short ptype __unused, struct iphdr *ip __unused, 
-	struct udphdr *udp)
+ * Depending on user needs - check for tftp server
+ * address in udp packet or not. If user does not specify
+ * a tftp server (default), check and look for server address
+ * in dhcp reply.
+ */
+static int __await_dhcp(struct udphdr *udp, int tftpaddr)
 {
 	struct	dhcp_t *dhcpreply;
 	int len;
@@ -602,7 +602,8 @@ static int await_dhcp(int ival __unused, void *ptr __unused,
 	if (dhcpreply->bp_xid != xid)
 		return 0;
 	if (memcmp((char *)&dhcpreply->bp_siaddr, (char *)&zeroIP, sizeof(in_addr)) == 0)
-		return 0;
+		if (tftpaddr)
+			return 0;
 	if ((memcmp(broadcast, dhcpreply->bp_hwaddr, ETH_ALEN) != 0) &&
 	    (memcmp(arptable[ARP_CLIENT].node, dhcpreply->bp_hwaddr, ETH_ALEN) != 0)) {
 		return 0;
@@ -620,7 +621,32 @@ static int await_dhcp(int ival __unused, void *ptr __unused,
 	return(1);
 }
 
-int dhcp(void)
+/**
+ * dhcp
+ *
+ * Get IP address by dhcp, segregate from bootp in etherboot.
+ **/
+static int await_dhcp_d(int ival __unused, void *ptr __unused,
+                      unsigned short ptype __unused, struct iphdr *ip __unused,
+                      struct udphdr *udp)
+{
+  return __await_dhcp(udp, 1);
+}
+
+static int await_dhcp_s(int ival __unused, void *ptr __unused,
+                      unsigned short ptype __unused, struct iphdr *ip __unused,
+                      struct udphdr *udp)
+{
+  return __await_dhcp(udp, 0);
+}
+
+
+/**
+ * @param dynserv: 1 = tftp server address to be extracted of dhcp reply
+ *                 0 = tftp server address are set by user statically,
+ *                      no dhcp reply with address required
+ */
+int dhcp(int dynserv)
 {
 	int retry;
 	int reqretry;
@@ -653,7 +679,7 @@ int dhcp(void)
 		udp_transmit(IP_BROADCAST, BOOTP_CLIENT, BOOTP_SERVER,
 			     sizeof(struct bootpip_t), &ip);
 		timeout = rfc2131_sleep_interval(TIMEOUT, retry++);
-		if (await_reply(await_dhcp, 0, NULL, timeout)) {
+		if (await_reply(dynserv ? await_dhcp_d : await_dhcp_s, 0, NULL, timeout)) {
 			/* If not a DHCPOFFER then must be just a BOOTP reply,
 			   be backward compatible with BOOTP then */
 			//if (dhcp_reply != DHCPOFFER){
@@ -673,7 +699,7 @@ int dhcp(void)
 					     sizeof(struct bootpip_t), &ip);
 				dhcp_reply=0;
 				timeout = rfc2131_sleep_interval(TIMEOUT, reqretry++);
-				if (await_reply(await_dhcp, 0, NULL, timeout))
+				if (await_reply(dynserv ? await_dhcp_d : await_dhcp_s, 0, NULL, timeout))
 					if (dhcp_reply == DHCPACK){
 						network_ready = 1;
 						return(1);

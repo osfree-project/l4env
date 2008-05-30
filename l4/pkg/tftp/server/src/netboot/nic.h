@@ -66,6 +66,6 @@ extern int rarp(void);
 
 extern int bootp(void);
 
-extern int dhcp(void);
+extern int dhcp(int dynserver);
 
 #endif	/* NIC_H */

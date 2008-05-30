@@ -29,7 +29,7 @@ include $(L4DIR)/mk/prog.mk
 
 %.ofs: %
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
+	$(VERBOSE)$(LD) -r --oformat $(OFORMAT) -o $@ -b binary $^
 
 $(FILES): %: $(FILES_DIR)/%
 	@ln -fs $? $@

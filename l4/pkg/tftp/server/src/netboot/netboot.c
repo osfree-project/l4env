@@ -312,14 +312,14 @@ netboot_close (void)
 }
 
 int
-netboot_init (unsigned bufaddr, unsigned gunzipaddr)
+netboot_init (unsigned bufaddr, unsigned gunzipaddr, int dynserver)
 {
   extern unsigned gunzip_buf;
 
   l4_calibrate_tsc ();
   gunzip_buf = gunzipaddr;
   netboot_buf = bufaddr;
-  dhcp();
+  dhcp(dynserver);
   print_network_configuration ();
   return 0;
 }

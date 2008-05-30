@@ -67,6 +67,10 @@ struct tftpreq_t {
 			uint16_t block;
 		} ack;
 		struct {
+			uint16_t block;
+			uint8_t data[512];
+		} wrq;
+		struct {
 			uint16_t errcode;
 			uint8_t  errmsg[512-2];
 		} err;
@@ -78,5 +82,6 @@ struct tftpreq_t {
 typedef int (*read_actor_t)(unsigned char *, unsigned int, unsigned int, int);
 
 int tftp_file_read(const char *name, read_actor_t);
+int tftp_file_write(const char *name, const char * buf, unsigned long bufsize);
 
 #endif	/* _TFTP_H */

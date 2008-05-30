@@ -510,7 +510,7 @@ tftp_read (unsigned char *addr, int size)
 #ifdef TFTP_DEBUG
       {
 	int i;
-	grub_printf ("opcode = 0x%x, rrq = ", (unsigned long) tp.opcode);
+	grub_printf ("opcode = 0x%x, rrq = ", tp.opcode);
 	for (i = 0; i < TFTP_DEFAULTSIZE_PACKET; i++)
 	  {
 	    if (tp.u.rrq[i] >= ' ' && tp.u.rrq[i] <= '~')
@@ -677,3 +677,133 @@ tftp_close (void)
   buf_read = 0;
   buf_fill (1);
 }
+
+int tftp_file_write(const char *name, const char * buf, unsigned long bufsize)
+{
+	struct tftpreq_t tp;
+	struct tftp_t  *tr;
+
+	retry = 0;
+	block = 0;
+	prevblock = 0;
+	bcounter = 0;
+  unsigned long sendalready = 0;
+  int bufsend = 0;
+  int ret = 0;
+
+	rx_qdrain();
+
+	tp.opcode = htons(TFTP_WRQ);
+	/* Warning: the following assumes the layout of bootp_t.
+	   But that's fixed by the IP, UDP and BOOTP specs. */
+	len = sizeof(tp.ip) + sizeof(tp.udp) + sizeof(tp.opcode) +
+		sprintf((char *)tp.u.rrq, "%s%coctet%cblksize%c",
+//		sprintf((char *)tp.u.rrq, "%s%coctet%cblksize%c%d",
+		name, 0, 0, 0);
+//		name, 0, 0, 0, TFTP_MAX_PACKET) + 1;
+	if (!udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr, ++iport,
+			  TFTP_PORT, len, &tp))
+		return (0);
+	for(;;)
+	{
+		long timeout;
+#ifdef	CONGESTED
+		timeout = rfc2131_sleep_interval(block?TFTP_REXMT: TIMEOUT, retry);
+#else
+		timeout = rfc2131_sleep_interval(TIMEOUT, retry);
+#endif
+		if (!await_reply(await_tftp, iport, NULL, timeout))
+		{
+			if (!block && retry++ < MAX_TFTP_RETRIES)
+			{	/* maybe initial request was lost */
+				if (!udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr,
+						  ++iport, TFTP_PORT, len, &tp))
+					return (0);
+				continue;
+			}
+#ifdef	CONGESTED
+			if (block && retry++ < MAX_TFTP_RETRIES && ((retry += TFTP_REXMT) < TFTP_TIMEOUT))
+			{	/* we resend our last ack */
+//#ifdef	MDEBUG
+				printf("<REXMT>\n");
+//#endif
+				udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr,
+					     iport, oport,
+					     len, &tp);
+				continue;
+			}
+#endif
+			break;	/* timeout */
+		}
+		tr = (struct tftp_t *)&nic.packet[ETH_HLEN];
+		if (tr->opcode == ntohs(TFTP_ERROR))
+		{
+#ifdef FULL_ERRMSG
+			printf("TFTP error %d (%s)\n",
+			       ntohs(tr->u.err.errcode),
+			       tr->u.err.errmsg);
+#else
+			printf("TFTP error %d\n",
+			       ntohs(tr->u.err.errcode));
+#endif
+			break;
+		}
+
+		if (ntohs(tr->opcode) == TFTP_OACK)
+    {
+      tp.opcode = htons (TFTP_ERROR);
+      tp.u.err.errcode = 8;
+      len = (grub_sprintf ((char *) tp.u.err.errmsg,
+               "RFC1782 error")
+       + sizeof (tp.ip) + sizeof (tp.udp)
+       + sizeof (tp.opcode) + sizeof (tp.u.err.errcode)
+       + 1);
+      udp_transmit (arptable[ARP_SERVER].ipaddr.s_addr,
+        iport, ntohs (tr->udp.src),
+        len, &tp);
+      printf("received OACK which wasn't expected and isn't supported");
+    } else
+		if (ntohs(tr->opcode) == TFTP_ACK)
+    {
+      // sum only acknowledgecked packets, otherwise send again
+      sendalready += bufsend;
+      buf += bufsend;
+      if (sendalready >= bufsize && bufsend != TFTP_DEFAULTSIZE_PACKET)
+      {
+        ret = 1;
+        break;
+      }
+
+      block   = ntohs(tr->u.data.block);
+      if (block != prevblock)
+        printf("block error %d %d\n", prevblock, block);
+
+      if (block == 0)
+        oport = ntohs(tr->udp.src);
+
+	    tp.opcode      = htons(TFTP_DATA);
+      tp.u.wrq.block = htons(++block);
+      prevblock      = block;
+
+      if (bufsize - sendalready > TFTP_DEFAULTSIZE_PACKET)
+        bufsend = TFTP_DEFAULTSIZE_PACKET;
+      else
+        bufsend = bufsize - sendalready;
+
+      len = sizeof(tp.ip) + sizeof(tp.udp) + sizeof(tp.opcode) + sizeof(tp.u.wrq.block) + bufsend;
+
+		  memcpy(tp.u.wrq.data, buf , bufsend);
+
+			if (!udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr,
+   						     iport, oport,
+	  					     len, &tp))
+      {
+        printf("transmit data failed\n");
+        return 0;
+      }
+    } else
+      printf("unknown response %d\n", tr->opcode);
+	}
+	return ret;
+}
+
