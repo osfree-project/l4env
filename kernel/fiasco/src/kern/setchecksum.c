@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string.h>
-
+#include <inttypes.h>
 
 static void usage(void)
 {
@@ -24,9 +24,9 @@ int main(int argc, char *argv[])
 {
 
   void *base;
-  unsigned long volatile *chksum;
+  uint32_t volatile *chksum;
   unsigned long left;
-  
+
   if (argc!=4)
     {
       usage();
