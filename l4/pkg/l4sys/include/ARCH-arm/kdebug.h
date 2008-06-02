@@ -198,14 +198,14 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
 L4_INLINE void
 outnstring(const char* x, unsigned len)
 {
-  asm volatile("" : : "m" (*x));
+  asm volatile ("" : : : "memory");
   __KDEBUG_ARM_PARAM_2(3, x, len);
 }
 
 L4_INLINE void
 outstring(const char *text)
 {
-  asm volatile("" : : "m" (*text));
+  asm volatile("" : : : "memory");
   __KDEBUG_ARM_PARAM_1(2, text);
 }
 

@@ -244,11 +244,12 @@ outchar(char c)
 L4_INLINE void
 outstring(const char *text)
 {
-  asm(
+  asm volatile (
       "int	$3	\n\t"
       "cmpb	$2,%%al \n\t"
       : /* No output */
-      : "a" (text), "m" (*text)
+      : "a" (text)
+      : "memory"
       );
 }
 
@@ -256,13 +257,15 @@ outstring(const char *text)
 L4_INLINE void
 outnstring(char const *text, unsigned len)
 {
-  asm("push     %%rbx        \n\t"
+  asm volatile (
+      "push     %%rbx        \n\t"
       "mov      %%rcx, %%rbx \n\t"
       "int	$3	     \n\t"
       "cmpb	$1,%%al      \n\t"
       "pop      %%rbx        \n\t"
       : /* No output */
-      : "a" (text), "c"(len), "m" (*text)
+      : "a" (text), "c"(len)
+      : "memory"
       );
 }
 
