@@ -373,7 +373,7 @@ help:
 	@echo "print-subdirs   - print the SUBDIRS which are subject to build"
 	@echo "relink          - rebuild servers and examples"
 	@echo "relocate        - building the relocatable binaries in the dirs"
-	@echo "reset           - reset the state used by the \"cont\" target"
+	@echo "BID_cont_reset  - reset the state used by the \"cont\" target"
 	@echo 'rm-old-links    - remove invalid symlinks in $$(L4DIR)/lib, $$(L4DIR)/include'
 	@echo "update          - update l4env + the packages currently checked out"
 	@echo "help            - this help"
