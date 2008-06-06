@@ -12,7 +12,7 @@
  * \hideinitializer
  * Page size
  */
-#define L4_PAGESIZE		(1U << L4_PAGESHIFT)
+#define L4_PAGESIZE		(1UL << L4_PAGESHIFT)
 
 /**
  * \ingroup api_types_common
@@ -33,7 +33,7 @@
  * \hideinitializer
  * Size of large page
  */
-#define L4_SUPERPAGESIZE	(1U << L4_SUPERPAGESHIFT)
+#define L4_SUPERPAGESIZE	(1UL << L4_SUPERPAGESHIFT)
 
 /**
  * \ingroup api_types_common
