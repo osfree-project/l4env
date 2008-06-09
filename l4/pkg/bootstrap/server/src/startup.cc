@@ -55,6 +55,11 @@ static Region __regs[MAX_REGION];
 static Region_list ram;
 static Region __ram[8];
 
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+static l4util_mb_vbe_mode_t __mb_vbe;
+static l4util_mb_vbe_ctrl_t __mb_ctrl;
+#endif
+
 /*
  * IMAGE_MODE means that all boot modules are linked together to one
  * big binary. This mode is in particular usefull for embedded systems.
@@ -660,9 +665,9 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
   *end = (l4_addr_t)p;
 
   printf("  Relocated mbi to [%p-%p]\n", mbi_start, (void*)(*end));
-  regions.add(Region::n((unsigned long)mbi_start, 
-	((unsigned long)*end) + 0xfe,
-	".Multiboot info", Region::Root));
+  regions.add(Region::n((unsigned long)mbi_start,
+                        ((unsigned long)*end) + 0xfe,
+                        ".Multiboot info", Region::Root));
 
   return dst_mbi;
 }
@@ -823,7 +828,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
 #if defined(ARCH_x86) || defined(ARCH_amd64)
 
 #ifdef REALMODE_LOADING
-  /* create synthetic multi bott info */
+  /* create synthetic multi boot info */
   mbi = init_loader_mbi(realmode_si);
 #else
   assert(flag == L4UTIL_MB_VALID); /* we need to be multiboot-booted */
@@ -868,6 +873,26 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
   construct_mbi(mbi);
 #endif
 
+  /* move vbe and ctrl structures to a known location, it might be in the
+   * way when moving modules around */
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+  if (mbi->flags & L4UTIL_MB_VIDEO_INFO)
+    {
+      if (mbi->vbe_mode_info)
+	{
+	  memcpy(&__mb_vbe, L4_VOID_PTR(mbi->vbe_mode_info),
+		 sizeof(l4util_mb_vbe_mode_t));
+	  mbi->vbe_mode_info = (l4_addr_t)&__mb_vbe;
+	}
+
+      if (mbi->vbe_ctrl_info)
+	{
+	  memcpy(&__mb_ctrl, L4_VOID_PTR(mbi->vbe_ctrl_info),
+		 sizeof(l4util_mb_vbe_ctrl_t));
+	  mbi->vbe_ctrl_info = (l4_addr_t)&__mb_ctrl;
+	}
+    }
+#endif
 
   if (_mod_addr)
     move_modules(mbi, _mod_addr);
