@@ -22,6 +22,7 @@
 static l4_threadid_t server_id = L4_INVALID_ID;
 
 typedef void* (*malloc_t)(unsigned long);
+
 #define my_default_environment \
   { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
       { param: 0}, L4_IPC_NEVER_INITIALIZER, \
@@ -54,7 +55,7 @@ int l4cpu_reserve_add(l4_threadid_t thread,
 		      int deadline,
 		      int *id){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -74,7 +75,7 @@ int l4cpu_reserve_delayed_preempt(l4_threadid_t thread,
 				  int prio,
 				  int *delay){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -92,7 +93,7 @@ int l4cpu_reserve_change(l4_threadid_t thread,
 			 int *new_wcet,
 			 int new_deadline){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -107,7 +108,7 @@ int l4cpu_reserve_change(l4_threadid_t thread,
 
 int l4cpu_reserve_delete_thread(l4_threadid_t thread){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -122,7 +123,7 @@ int l4cpu_reserve_delete_thread(l4_threadid_t thread){
 
 int l4cpu_reserve_delete_task(l4_threadid_t task){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -134,7 +135,7 @@ int l4cpu_reserve_delete_task(l4_threadid_t task){
 int l4cpu_reserve_begin_strictly_periodic(l4_threadid_t thread,
 					  l4_kernel_clock_t clock){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -146,7 +147,7 @@ int l4cpu_reserve_begin_strictly_periodic(l4_threadid_t thread,
 
 int l4cpu_reserve_begin_strictly_periodic_self(l4_threadid_t thread){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
     l4_threadid_t s;
 
     if((err = server_init())!=0) return err;
@@ -159,7 +160,7 @@ int l4cpu_reserve_begin_strictly_periodic_self(l4_threadid_t thread){
 int l4cpu_reserve_begin_strictly_periodic_self_deprecated(
     l4_threadid_t thread, l4_kernel_clock_t clock){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
     l4_threadid_t s;
 
     if((err = server_init())!=0) return err;
@@ -175,7 +176,7 @@ int l4cpu_reserve_begin_strictly_periodic_self_deprecated(
 int l4cpu_reserve_begin_minimal_periodic(l4_threadid_t thread,
 					 l4_kernel_clock_t clock){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -187,7 +188,7 @@ int l4cpu_reserve_begin_minimal_periodic(l4_threadid_t thread,
 
 int l4cpu_reserve_begin_minimal_periodic_self(l4_threadid_t thread){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
     l4_threadid_t s;
 
     if((err = server_init())!=0) return err;
@@ -200,7 +201,7 @@ int l4cpu_reserve_begin_minimal_periodic_self(l4_threadid_t thread){
 int l4cpu_reserve_begin_minimal_periodic_self_deprecated(
     l4_threadid_t thread, l4_kernel_clock_t clock){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
     l4_threadid_t s;
 
     if((err = server_init())!=0) return err;
@@ -215,7 +216,7 @@ int l4cpu_reserve_begin_minimal_periodic_self_deprecated(
 
 int l4cpu_reserve_end_periodic(l4_threadid_t thread){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -227,7 +228,7 @@ int l4cpu_reserve_end_periodic(l4_threadid_t thread){
 int l4cpu_reserve_watch(l4_threadid_t thread,
 			unsigned **addr){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
     l4dm_dataspace_t ds;
     l4_threadid_t preempter;
 
@@ -253,7 +254,7 @@ int l4cpu_reserve_watch(l4_threadid_t thread,
 
 int l4cpu_reserve_scheds_count(void){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -270,7 +271,7 @@ int l4cpu_reserve_scheds_get(int idx,
 			     int *wcet,
 			     int *deadline){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 
@@ -290,7 +291,7 @@ int l4cpu_reserve_scheds_get(int idx,
 int l4cpu_reserve_time_demand(l4_threadid_t thread,
 			      int id){
     int err;
-    CORBA_Environment env = my_default_environment;
+    DICE_DECLARE_ENV(env);
 
     if((err = server_init())!=0) return err;
 

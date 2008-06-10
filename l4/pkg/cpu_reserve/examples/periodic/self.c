@@ -42,7 +42,7 @@ int main(int argc, const char**argv){
            "This must fail.\n");
     err = l4cpu_reserve_begin_strictly_periodic_self_deprecated(
 	l4_myself(), kip->clock-10000);
-							      
+
     LOGL("l4cpu_reserve_begin_strictly_periodic_self_deprecated(): %s",
 	 l4env_strerror(-err));
     LOG_flush();
