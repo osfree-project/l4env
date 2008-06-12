@@ -129,12 +129,15 @@ while($_ = shift @ARGV) {
       next;
     }
     if (/^\s*([0-9a-fA-F]+):\s+R_\S+\s+(\S+\(.*\))\S*\s*$/) {
-#      print "$_\n";
       my $sym = $2;
       if (   defined $function
 	  && $function !~ /^($ignore_funcs)(\(.*\))?$/
 	  && defined $init_syms{$sym}) {
-	print STDERR "$source: $warn: $function uses initcall ($sym) from normal text section\n";
+	$source = $file unless defined $source;
+	(my $func_pretty = $function) =~ s/_GLOBAL__I\.\d+_//;
+	$func_pretty = `echo '$func_pretty' | c++filt`;
+	chomp $func_pretty;
+	print STDERR "$source: $warn: $func_pretty uses initcall ($sym) from normal text section\n";
 	$error++ if $werror;
       }
       next;
