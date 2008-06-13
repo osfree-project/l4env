@@ -32,7 +32,8 @@
 
 int l4libc_heapsize = 1024 * 1024;
 
-static l4_taskid_t shutdown_on_exit = L4_INVALID_ID;
+//static l4_taskid_t shutdown_on_exit = L4_INVALID_ID;
+static struct slocal slocal = { L4_INVALID_ID, "vtpm.bin" };
 
 void *CORBA_alloc(unsigned long size){
 	return malloc(size);
@@ -75,10 +76,10 @@ stpmif_shutdown_on_exitevent_of_component (CORBA_Object _dice_corba_obj,
                                            const l4_taskid_t *dm /* in */,
                                            CORBA_Server_Environment *_dice_corba_env)
 {
-  if (dm == 0 || !l4_is_invalid_id(shutdown_on_exit))
+  if (dm == 0 || !l4_is_invalid_id(slocal.shutdown_on_exit))
     return -L4_EINVAL;
 
-  shutdown_on_exit = *dm;
+  slocal.shutdown_on_exit = *dm;
 
   return 0;
 }
@@ -90,14 +91,18 @@ stpmif_abort_component(CORBA_Object _dice_corba_obj,
   return -L4_ENOTSUPP;
 }
 
+char * vtpm_get_name(void)
+{
+  return slocal.vtpmname;
+}
+
 int main(int argc, const char **argv)
 {
   int error,n ;
-  char * regname; 
 
   if ((error = parse_cmdline(&argc, &argv,
                'n', "name", "register with <name>, default is <vtpmemu>",
-               PARSE_CMD_STRING, "vtpmemu", &regname,
+               PARSE_CMD_STRING, "vtpmemu", &slocal.vtpmname,
                0)))
   {
     switch (error)
@@ -111,14 +116,14 @@ int main(int argc, const char **argv)
     return 1;
   }
 
-  n = strlen(regname);
+  n = strlen(slocal.vtpmname);
   n = n < 8 ? n : 8;
 
-  memcpy(LOG_tag, regname, n);
+  memcpy(LOG_tag, slocal.vtpmname, n);
   for(; n < 9; n++)
     LOG_tag[n] = 0;
 
-  if (names_register(regname) == 0)
+  if (names_register(slocal.vtpmname) == 0)
   {
     LOG_Error("Registration error at nameserver\n");
     return 1;
@@ -131,7 +136,7 @@ int main(int argc, const char **argv)
   }
 
 
-  l4thread_t event = l4thread_create(vtpmemu_event_loop, &shutdown_on_exit, L4THREAD_CREATE_SYNC);
+  l4thread_t event = l4thread_create(vtpmemu_event_loop, &slocal, L4THREAD_CREATE_SYNC);
   if (event == L4THREAD_INVALID_ID)
   {
     LOG_Error("Event thread setup failed.");

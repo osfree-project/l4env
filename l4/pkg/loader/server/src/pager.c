@@ -207,7 +207,7 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
 	       * for individual failures */
 	      if (last_port + 1 != port)
 		app_msg(app, "Not allowed to access I/O port %04x "
-			     " (req %04x-%04x)", i, port, port+ports-1);
+			     " (req %04x-%04x), ip=%08lx", i, port, port+ports-1, *dw2);
 	      *dw2   = 0; /* hint for client that we don't map anything */
 	      *reply = L4_IPC_SHORT_MSG;
               last_port = port;

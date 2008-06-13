@@ -21,7 +21,7 @@ void vtpmemu_event_loop(void *data) {
   l4events_ch_t event_ch = L4EVENTS_EXIT_CHANNEL;
   l4events_nr_t event_nr = L4EVENTS_NO_NR;
   l4events_event_t event;
-  l4_taskid_t *waitfor = (l4_taskid_t *)data;
+  l4_taskid_t *waitfor = &((*(struct slocal *)data).shutdown_on_exit);
 
   if (!l4events_init()) {
     LOG_Error("l4events_init() failed");
@@ -51,7 +51,11 @@ void vtpmemu_event_loop(void *data) {
     if (!l4_is_invalid_id(*waitfor) && l4_task_equal(*waitfor, tid))
     {
       LOG("Got exit event of task "l4util_idfmt". Try to save TPM state ...\n", l4util_idstr(tid));
-      TPM_SaveState();
+      tpm_emulator_shutdown();
+      res = l4events_unregister(L4EVENTS_EXIT_CHANNEL);
+      if (res != 0)
+        l4env_perror("unregistration of events service failed", res);
+
       LOG("Shutdown myself");
       exit(0);
     }

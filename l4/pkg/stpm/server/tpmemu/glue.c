@@ -13,6 +13,8 @@
 
 #include <tcg/tpm.h>       //TPM_GetRandom
 
+#include "local.h"
+
 #define GLUE_TPM_TRANSMIT_FUNC(NAME,TEST,PARAMS,PRECOND,POSTCOND,FMT,...) \
 unsigned long TPM_##NAME##_##TEST PARAMS; \
 unsigned long TPM_##NAME##_##TEST PARAMS { \
@@ -139,8 +141,10 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   l4dm_dataspace_t ds;
   void *addr;
   l4_size_t size = data_length;
-  const char * fname="incoming/vtpm.bin";
-
+  char * vtpmname = vtpm_get_name();
+  int namesize = strlen(vtpmname);
+  char * fname;
+ 
   if (!names_waitfor_name("TFTP", &tftp_id, 40000))
     {
       printf("TFTP not found\n");
@@ -154,9 +158,20 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
       return -1;
     }
 
+  fname = malloc( 10 + namesize);
+  if (fname == 0)
+    {
+      return -L4_ENOMEM;
+    }
+
+  memcpy(fname, "incoming/", 9);
+  memcpy(fname + 9, vtpmname, namesize);
+  fname[ 9 + namesize ] = 0;
+
   if (!(addr = l4dm_mem_ds_allocate_named(size, flags, fname, &ds)))
     {
       printf("Allocating dataspace of size %d failed\n", size);
+      free(fname);
       return -L4_ENOMEM;
     }
 
@@ -165,6 +180,7 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   if ((error = l4rm_detach(addr)))
     {
       printf("Error %d attaching dataspace\n", error);
+      free(fname);
       return -L4_ENOMEM;
     }
 
@@ -174,7 +190,7 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
       printf("Error transfering dataspace ownership: %s (%d)\n",
              l4env_errstr(error), error);
       l4dm_close(&ds);
-
+      free(fname);
       return -L4_EINVAL;
     }
 
@@ -186,6 +202,7 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
     }
 
   printf("File %s was written\n", fname);
+  free(fname);
 
   return 0;
 }
@@ -199,7 +216,9 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
   long error;
   l4_threadid_t fprov_id;
   l4_threadid_t dm_id;
-  const char * fname="(nd)/incoming/vtpm.bin";
+  char * fname;
+  char * vtpmname = vtpm_get_name();
+  int namesize = strlen(vtpmname);
 
   /* dataspace manager */
   dm_id = l4env_get_default_dsm();
@@ -215,30 +234,51 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
       return -1;
     }
 
+  fname = malloc( 10 + namesize);
+  if (fname == 0)
+    {
+      return -L4_ENOMEM;
+    }
+
+  memcpy(fname, "(nd)/incoming/", 14);
+  memcpy(fname + 14, vtpmname, namesize);
+  fname[ 14 + namesize ] = 0;
+
   error = l4fprov_file_open_call(&fprov_id, fname, &dm_id, 0,
                                  &ds, &size, &env);
 
   if (DICE_HAS_EXCEPTION(&env))
+  {
+    free(fname);
     return -L4_EIPC;
+  }
   if (error < 0)
+  {
+    free(fname);
     return error;
+  }
 
   if ((error = l4rm_attach(&ds, size, 0, L4DM_RO, &addr)))
     {
       LOG("Error %ld attaching dataspace for module %s", error, fname);
       l4rm_detach(addr);
       l4dm_close(&ds);
+      free(fname);
       return -1;
     }
 
   if (!(*data = malloc(size)))
+  {
+    free(fname);
     return -L4_ENOMEM;
+  }
 
   memcpy(*data, addr, size);
   *data_length = size;
 
   l4rm_detach(addr);
   l4dm_close(&ds);
+  free(fname);
 
   return 0;
 }
