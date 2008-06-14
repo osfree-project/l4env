@@ -38,6 +38,9 @@ public:
 
 IMPLEMENTATION[ux]:
 
+#include <feature.h>
+KIP_KERNEL_FEATURE("io_prot");
+
 char const Config::char_micro = '\265';
 const char *const Config::kernel_warn_config_string = 0;
 
