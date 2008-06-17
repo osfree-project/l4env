@@ -38,7 +38,6 @@
  */
 
 #define SRK_HANDLE      0x40000000
-#define SEAL_PCR_MAP    0x00000000
 
 #define MAX_BLOB_SIZE   512
 #define ENC_STAGE2_SIZE \
@@ -123,7 +122,9 @@ seal_secrets(const char *srk_auth, const char *secrets_auth,
     crypto_aes_ctx_t  aes_ctx;
     unsigned int      aes_flags = 0;
     int               ret;
-    
+    //FIXME set pcrs
+    unsigned char const seal_pcr_map[4] = { 0, 0, 0, 0};
+
     /* we put the secrets_stage2_t structure into a buffer whose size is a
      * multiple of the cipher block size, because it is to be used a input
      * for the CBC encrypt function */
@@ -149,7 +150,7 @@ seal_secrets(const char *srk_auth, const char *secrets_auth,
     calc_check_sum(&s1, ss->stage2_blob, s1.check_sum);
 
     /* now use the TPM to seal the secrets completely */
-    ret = TPM_Seal_CurrPCR(SRK_HANDLE, SEAL_PCR_MAP,
+    ret = TPM_Seal_CurrPCR(SRK_HANDLE, sizeof(seal_pcr_map), seal_pcr_map,
                            (unsigned char *) srk_auth, (unsigned char *) secrets_auth,
                            (unsigned char *) &s1, sizeof(s1),
                            (unsigned char *) ss->stage1_blob, &ss->stage1_blob_size);

@@ -15,9 +15,15 @@
 #include "keys.h"
 
 unsigned long
-TPM_OwnerClear(unsigned char *ownerauth);
+STPM_OwnerClear(unsigned char *ownerauth);
+#ifndef TPM_OwnerClear
+#define TPM_OwnerClear(...) STPM_OwnerClear(__VA_ARGS__)
+#endif
 
 uint32_t 
-TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass, keydata *key);
+STPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass, keydata *key);
+#ifndef TPM_TakeOwnership
+#define TPM_TakeOwnership(...) STPM_TakeOwnership(__VA_ARGS__)
+#endif
 
 #endif

@@ -51,8 +51,11 @@ int stpm_shutdown_on_exit (l4_taskid_t const * const task)
 
 int stpm_check_server (const char * name, int recheck)
 {							
-  if (l4_is_invalid_id(server_id) || recheck)		
+  if (l4_is_invalid_id(server_id) || recheck)
     {							
+      if (name == 0 || (name != 0 && strlen(name) == 0))
+        return 2;
+
       if (!names_waitfor_name(name, &server_id, 10000))	
         return 1;					
     }							

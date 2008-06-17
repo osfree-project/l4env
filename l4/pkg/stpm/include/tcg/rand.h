@@ -20,12 +20,18 @@
 int rand_buffer(unsigned char *buffer,int num);
 
 unsigned long
-TPM_GetRandom(unsigned long count,
-	      unsigned long *length,
-	      unsigned char *random);
+STPM_GetRandom(unsigned long count,
+               unsigned long *length,
+               unsigned char *random);
+#ifndef TPM_GetRandom
+#define TPM_GetRandom(...) STPM_GetRandom(__VA_ARGS__)
+#endif
 
 unsigned long
-TPM_StirRandom(unsigned long count,
+STPM_StirRandom(unsigned long count,
 	       unsigned char *random);
+#ifndef TPM_StirRandom
+#define TPM_StirRandom(...) STPM_StirRandom(__VA_ARGS__)
+#endif
 
 #endif

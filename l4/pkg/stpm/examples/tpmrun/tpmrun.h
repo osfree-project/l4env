@@ -18,12 +18,24 @@ int createKey(keydata * key, unsigned char * keyauth, unsigned char * newauth);
 
 int quotePCRs(unsigned int keyhandle,
               unsigned char * passhash,
-              unsigned char * nouncehash,
+              unsigned char * noncehash,
               unsigned char * output,
               unsigned int  * outputlen,
               unsigned char * pcrs,
               unsigned int  pcrlen,
               unsigned int maxpcrs);
+
+int quote_vTPM(unsigned int    keyhandle,
+               unsigned char * passhash,
+               unsigned char * noncehash,
+               unsigned char * output,
+               unsigned int  * outputlen,
+               unsigned char * pcrcomposite,
+               unsigned int  pcrlen,
+               unsigned int maxPCRs,
+               unsigned char * sTPM,
+               unsigned char * vTPM);
+
 
 void dumpkey(keydata * key);
 void redumpkey(const char * dumped, keydata * _key);

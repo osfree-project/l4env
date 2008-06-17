@@ -8,8 +8,12 @@
  */
 
 #include <tcg/quote.h>
+#include <tcg/tpm.h>
+#include <tcg/pcrs.h>
+#include <cryptoglue.h> //SHA1
 
 #include "tpmrun.h"
+#include "encap.h" //stpm_check_server
 
 /*
 struct tpm_pcr_selection2
@@ -34,7 +38,7 @@ struct tpm_pcr_composite
 */
 int quotePCRs(unsigned int    keyhandle,
               unsigned char * passhash,
-              unsigned char * nouncehash,
+              unsigned char * noncehash,
               unsigned char * output,
               unsigned int  * outputlen,
               unsigned char * pcrcomposite,
@@ -70,13 +74,13 @@ int quotePCRs(unsigned int    keyhandle,
 
   // select starts after first 2 bytes
   // request all PCRs
-  memset(&pcrselect[2], ~0, select_count);
+  memset(&pcrselect[2], 0xFF, select_count);
     
   res= TPM_Quote(keyhandle, passhash, 
-                pcrselect, 
-                nouncehash, 
-                pcrcomposite,
-                output, outputlen);
+                  pcrselect, 
+                  noncehash, 
+                  pcrcomposite,
+                  output, outputlen);
 
   if (res)
     return res;
@@ -88,4 +92,55 @@ int quotePCRs(unsigned int    keyhandle,
     return -4;
 
   return 0;
+}
+
+int quote_vTPM(unsigned int    keyhandle,
+               unsigned char * passhash,
+               unsigned char * noncehash,
+               unsigned char * output,
+               unsigned int  * outputlen,
+               unsigned char * pcrcomposite,
+               unsigned int  pcrlen,
+               unsigned int maxPCRs,
+               unsigned char * sTPM,
+               unsigned char * vTPM)
+{
+  int error;
+  unsigned short select_count;
+	SHA1_CTX sha;
+  unsigned char nonce_vTPM_hash[TCG_HASH_SIZE];
+  
+  select_count = maxPCRs >> 3;
+  if (maxPCRs % 8 != 0)
+    select_count += 1;
+
+  error = stpm_check_server((char *)vTPM, 1);
+  if (error)
+    return -1;
+
+  unsigned int pcrinfolen = 2 + select_count + 2 * TCG_HASH_SIZE;
+  unsigned char pcrinfo [pcrinfolen];
+  unsigned char pcrmap [select_count];
+
+  //we want all PCRs
+  memset(pcrmap, 0xFF, select_count);
+
+  //reads all PCRs by calling TPM_PcrRead several times and hash them to a sha1 value
+  if (STPM_GenPCRInfo(select_count, pcrmap, pcrinfo, &pcrinfolen))
+    return -2;
+
+  // hash nonce + pcrinfo(vtpm)
+	SHA1_init(&sha);
+	SHA1_update(&sha, noncehash, TCG_HASH_SIZE);
+	SHA1_update(&sha, pcrinfo, pcrinfolen);
+
+	SHA1_final(&sha, &nonce_vTPM_hash);
+
+  // Quote of sTPM
+  error = stpm_check_server((char *)sTPM, 1);
+  if (error)
+    return -3;
+
+  return quotePCRs(keyhandle, passhash, nonce_vTPM_hash, output, outputlen,
+                   pcrcomposite, pcrlen, maxPCRs);
 }

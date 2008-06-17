@@ -24,23 +24,23 @@ typedef struct counter_value
 
 
 unsigned long
-TPM_CreateCounter(unsigned char *owner_auth,
+STPM_CreateCounter(unsigned char *owner_auth,
 		  unsigned char *counter_auth,
 		  unsigned long label,
 		  unsigned long *id,
 		  counter_value *value);
 unsigned long
-TPM_IncrementCounter(unsigned long id,
+STPM_IncrementCounter(unsigned long id,
 		     unsigned char *auth,
 		     counter_value *value);
 unsigned long
-TPM_ReadCounter(unsigned long id,
+STPM_ReadCounter(unsigned long id,
 		counter_value *value);
 
 unsigned long
-TPM_ReleaseCounter(unsigned long id,
+STPM_ReleaseCounter(unsigned long id,
 		   unsigned char *auth);
 unsigned long
-TPM_ReleaseCounterOwner(unsigned long id,
+STPM_ReleaseCounterOwner(unsigned long id,
 			unsigned char *owner_auth);
 #endif

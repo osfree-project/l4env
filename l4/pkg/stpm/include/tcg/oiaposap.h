@@ -34,17 +34,17 @@ typedef struct oiapsess {
 
 
 
-unsigned long TPM_OIAP(oiapsess *sess);
-unsigned long TPM_OSAP(osapsess *sess, unsigned char *key, unsigned short etype,
-                  unsigned long evalue);
-unsigned long TPM_Terminate_Handle(unsigned long handle);
+unsigned long STPM_OIAP(oiapsess *sess);
+unsigned long STPM_OSAP(osapsess *sess, unsigned char *key, unsigned short etype,
+                        unsigned long evalue);
+unsigned long STPM_Terminate_Handle(unsigned long handle);
 
 /**
  * Defines an OIAP authenticated transmit function, which is used several times in
  * the lib, e.g. TPM_LoadKey
  */
 #define TPM_TRANSMIT_OIAP_FUNC(NAME,PARAMS,KEY_AUTH,PRECOND,POSTCOND,DATA_SKIP,AUTHFMT,FMT,...)\
-  unsigned long TPM_##NAME PARAMS {					\
+  unsigned long STPM_##NAME PARAMS {					\
     unsigned char buffer[TCG_MAX_BUFF_SIZE];				\
     oiapsess sess;							\
     unsigned char pubauth[TCG_HASH_SIZE];				\
@@ -56,7 +56,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
     if (KEY_AUTH==0)							\
       return -10;							\
 									\
-    if ((ret = TPM_OIAP(&sess)))					\
+    if ((ret = STPM_OIAP(&sess)))					\
       return ret;							\
     c = 0;								\
       /* try to build the param buffer */				\
@@ -64,7 +64,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		      TPM_ORD_##NAME,					\
 		      ##__VA_ARGS__);					\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return -20;							\
     }									\
 									\
@@ -75,7 +75,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		 ret, buffer,						\
 		 0,0);							\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return -30;							\
     }									\
     ret = buildbuff("00 C2 T L " FMT " L % o %",			\
@@ -87,12 +87,12 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		    c,							\
 		    TCG_HASH_SIZE, pubauth);				\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return -40;							\
     }									\
     ret = TPM_Transmit(buffer, #NAME );					\
     if (ret != 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return ret;							\
     }									\
     {									\
@@ -107,14 +107,14 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		      KEY_AUTH,						\
                       count, DATA_SKIP);                                \
       if (ret < 0) {							\
-	TPM_Terminate_Handle(sess.handle);				\
+	STPM_Terminate_Handle(sess.handle);				\
 	return -50;							\
       }									\
     }									\
 									\
     POSTCOND								\
 									\
-    TPM_Terminate_Handle(sess.handle);					\
+    STPM_Terminate_Handle(sess.handle);					\
     return ret;								\
   }
 
@@ -125,7 +125,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
  * the lib, e.g. TPM_ClearOwner
  */
 #define TPM_TRANSMIT_OSAP_FUNC(NAME,PARAMS,KEY_AUTH,KEY_TYPE,KEY_VALUE,OSAPCOND,PRECOND,POSTCOND,AUTHFMT,FMT,...) \
-  unsigned long TPM_##NAME PARAMS {					\
+  unsigned long STPM_##NAME PARAMS {					\
     unsigned char buffer[TCG_MAX_BUFF_SIZE]; /* request/response buffer */ \
     unsigned char pubauth[TCG_HASH_SIZE];				\
     osapsess sess;							\
@@ -136,7 +136,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 									\
       if (KEY_AUTH==0)							\
 	return -10;							\
-    ret = TPM_OSAP(&sess, KEY_AUTH, KEY_TYPE, KEY_VALUE);		\
+    ret = STPM_OSAP(&sess, KEY_AUTH, KEY_TYPE, KEY_VALUE);		\
     if (ret)								\
       return ret;							\
     c = 0;								\
@@ -148,7 +148,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		      TPM_ORD_##NAME,					\
 		      ##__VA_ARGS__);					\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return -20;							\
     }									\
 									\
@@ -159,7 +159,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		 ret, buffer,						\
 		 0,0);							\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return -30;							\
     }									\
     ret = buildbuff("00 C2 T L " FMT " L % o %",			\
@@ -171,12 +171,12 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		    c,							\
 		    TCG_HASH_SIZE, pubauth);				\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return -40;							\
     }									\
     ret = TPM_Transmit(buffer, #NAME );					\
     if (ret != 0) {							\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
       return ret;							\
     }									\
     {									\
@@ -190,14 +190,14 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		      sess.ssecret,					\
 		      count, 0);					\
       if (ret < 0) {							\
-	TPM_Terminate_Handle(sess.handle);				\
+	STPM_Terminate_Handle(sess.handle);				\
 	return -50;							\
       }									\
     }									\
 									\
     POSTCOND								\
 									\
-      TPM_Terminate_Handle(sess.handle);				\
+      STPM_Terminate_Handle(sess.handle);				\
     return ret;								\
   }
 
@@ -207,7 +207,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
  * Defines an authenticated transmit function with 2 AUTH sessions.
  */
 #define TPM_TRANSMIT_AUTH2_FUNC(NAME,PARAMS,KEY1_AUTH,KEY2_AUTH, PRECOND,POSTCOND,AUTHFMT,FMT,...) \
-  unsigned long TPM_##NAME PARAMS {					\
+  unsigned long STPM_##NAME PARAMS {					\
     unsigned char buffer[TCG_MAX_BUFF_SIZE];				\
     unsigned char pubauth1[TCG_HASH_SIZE];				\
     unsigned char pubauth2[TCG_HASH_SIZE];				\
@@ -222,9 +222,9 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
     if (KEY1_AUTH==NULL || KEY2_AUTH==0)				\
       return -10;							\
 									\
-    if ((ret = TPM_OIAP(&sess1)))					\
+    if ((ret = STPM_OIAP(&sess1)))					\
       return ret;							\
-    if ((ret = TPM_OIAP(&sess2)))					\
+    if ((ret = STPM_OIAP(&sess2)))					\
       return ret;							\
     c = 0;								\
     /* try to build the param buffer */					\
@@ -232,8 +232,8 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		    TPM_ORD_##NAME,					\
 		    ##__VA_ARGS__);					\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess1.handle);				\
-      TPM_Terminate_Handle(sess2.handle);				\
+      STPM_Terminate_Handle(sess1.handle);				\
+      STPM_Terminate_Handle(sess2.handle);				\
       return -20;							\
     }									\
 									\
@@ -249,8 +249,8 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		 length, buffer,					\
 		 0,0);							\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess1.handle);				\
-      TPM_Terminate_Handle(sess2.handle);				\
+      STPM_Terminate_Handle(sess1.handle);				\
+      STPM_Terminate_Handle(sess2.handle);				\
       return -30;							\
     }									\
     ret = buildbuff("00 C3 T L " FMT " L % o % L % o %",		\
@@ -266,14 +266,14 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		    c,							\
 		    TCG_HASH_SIZE, pubauth2);				\
     if (ret < 0) {							\
-      TPM_Terminate_Handle(sess1.handle);				\
-      TPM_Terminate_Handle(sess2.handle);				\
+      STPM_Terminate_Handle(sess1.handle);				\
+      STPM_Terminate_Handle(sess2.handle);				\
       return -40;							\
     }									\
     ret = TPM_Transmit(buffer, #NAME );					\
     if (ret != 0) {							\
-      TPM_Terminate_Handle(sess1.handle);				\
-      TPM_Terminate_Handle(sess2.handle);				\
+      STPM_Terminate_Handle(sess1.handle);				\
+      STPM_Terminate_Handle(sess2.handle);				\
       return ret;							\
     }									\
     {									\
@@ -287,8 +287,8 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		      KEY2_AUTH,					\
 		      count, 0);					\
       if (ret < 0) {							\
-	TPM_Terminate_Handle(sess1.handle);				\
-	TPM_Terminate_Handle(sess2.handle);				\
+	STPM_Terminate_Handle(sess1.handle);				\
+	STPM_Terminate_Handle(sess2.handle);				\
 	return -50;							\
       }									\
       									\
@@ -300,16 +300,16 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
 		      KEY1_AUTH,					\
 		      count, 0);					\
       if (ret < 0) {							\
-	TPM_Terminate_Handle(sess1.handle);				\
-	TPM_Terminate_Handle(sess2.handle);				\
+	STPM_Terminate_Handle(sess1.handle);				\
+	STPM_Terminate_Handle(sess2.handle);				\
 	return -60;							\
       }									\
     }									\
 									\
     POSTCOND								\
       									\
-    TPM_Terminate_Handle(sess1.handle);				        \
-    TPM_Terminate_Handle(sess2.handle);					\
+    STPM_Terminate_Handle(sess1.handle);				        \
+    STPM_Terminate_Handle(sess2.handle);					\
     return ret;								\
   }
 

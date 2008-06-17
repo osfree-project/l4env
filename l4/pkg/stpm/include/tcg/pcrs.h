@@ -10,18 +10,20 @@
 #ifndef PCRS_H
 #define PCRS_H
 
-#include <stdint.h>
-
-#define TCG_PCR_NUM       16   /* number of PCR registers supported */
-#define TCG_PCR_MASK_SIZE  2   /* size in bytes of PCR bit mask     */
+unsigned long 
+STPM_PcrRead(unsigned long pcrindex, unsigned char *pcrvalue);
+#ifndef TPM_PcrRead
+#define TPM_PcrRead(...) STPM_PcrRead(__VA_ARGS__)
+#endif
 
 unsigned long 
-TPM_PcrRead(unsigned long pcrindex, unsigned char *pcrvalue);
+STPM_Extend(unsigned long pcrindex, unsigned char *hash);
+#ifndef TPM_Extend
+#define TPM_Extend(...) STPM_Extend(__VA_ARGS__)
+#endif
 
 unsigned long 
-TPM_Extend(unsigned long pcrindex, unsigned char *hash);
-
-unsigned long 
-GenPCRInfo(unsigned long pcrmap, unsigned char *pcrinfo, unsigned int *len);
+STPM_GenPCRInfo(int pcrmapsize, const unsigned char * pcrmap,
+                unsigned char *pcrinfo, unsigned int *len);
 
 #endif

@@ -33,40 +33,70 @@ typedef struct keydata {
     unsigned char encprivkey[1024];
 } keydata;
 
+/**
+ * Read public key of EK
+ */
+unsigned long STPM_ReadPubek(pubkeydata * k);
+#ifndef TPM_ReadPubek
+#define TPM_ReadPubek(...) STPM_ReadPubek(__VA_ARGS__)
+#endif
 
-unsigned long TPM_ReadPubek(pubkeydata * k);
-unsigned long TPM_CreateWrapKey(unsigned long keyhandle,
+/**
+ * Create keys
+ */
+unsigned long STPM_CreateWrapKey(unsigned long keyhandle,
 				unsigned char *keyauth,
 				unsigned char *newauth,
 				unsigned char *migauth,
 				keydata *keyparms, keydata *key);
+#ifndef TPM_CreateWrapKey
+#define TPM_CreateWrapKey(...) STPM_CreateWrapKey(__VA_ARGS__)
+#endif
+
 /**
  * Reads the public key of a loaded key specified by keyhandle
  * from TPM
  */
-unsigned long TPM_GetPubKey(unsigned long   keyhandle,
+unsigned long STPM_GetPubKey(unsigned long   keyhandle,
                             unsigned char * keyauth,
                             pubkeydata    * pubkey);
+#ifndef TPM_GetPubKey
+#define TPM_GetPubKey(...) STPM_GetPubKey(__VA_ARGS__)
+#endif
 
 /**
  * Deprecated in TCGA 1.2 spec
  */
-unsigned long TPM_LoadKey(unsigned long keyhandle, unsigned char *keyauth,
+unsigned long STPM_LoadKey(unsigned long keyhandle, unsigned char *keyauth,
 			  keydata *keyparms, unsigned long *newhandle);
+#ifndef TPM_LoadKey
+#define TPM_LoadKey(...) STPM_LoadKey(__VA_ARGS__)
+#endif
+
 /**
  * Load a given key into TPM. Replacement of TPM_Loadkey.
  */
-unsigned long TPM_LoadKey2(unsigned long keyhandle, unsigned char *keyauth,
+unsigned long STPM_LoadKey2(unsigned long keyhandle, unsigned char *keyauth,
  			   keydata *keyparms, unsigned long *newhandle);
+#ifndef TPM_LoadKey2
+#define TPM_LoadKey2(...) STPM_LoadKey2(__VA_ARGS__)
+#endif
+
 /**
  * Deprecated in TCGA 1.2 spec
  */
-unsigned long TPM_EvictKey(unsigned long keyhandle);
+unsigned long STPM_EvictKey(unsigned long keyhandle);
+#ifndef TPM_EvictKey
+#define TPM_EvictKey(...) STPM_EvictKey(__VA_ARGS__)
+#endif
 
 /**
  * Replacement of TPM_EvictKey in TCGA 1.2 spec
  */
-unsigned long TPM_FlushSpecific(unsigned long keyhandle, unsigned long type);
+unsigned long STPM_FlushSpecific(unsigned long keyhandle, unsigned long type);
+#ifndef TPM_FlushSpecific
+#define TPM_FlushSpecific(...) STPM_FlushSpecific(__VA_ARGS__)
+#endif
 
 int KeyExtract(unsigned char *keybuff, keydata *k);
 int PubKeyExtract(unsigned char *pkeybuff, pubkeydata *k, int pcrpresent);

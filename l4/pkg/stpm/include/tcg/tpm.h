@@ -31,14 +31,13 @@
 #define TPM_TAG_RSP_AUTH2_COMMAND       0x00C6
 #define RSA_MODULUS_BYTE_SIZE           256
 #define RSA_MODULUS_BIT_SIZE  ( RSA_MODULUS_BYTE_SIZE * 8 )
-#define MAXPCRINFOLEN ( (TCG_HASH_SIZE * 2) + 2 + TCG_PCR_MASK_SIZE )
 
 /**
  * Defines a simple transmit function, which is used several times in
  * the lib, e.g. TPM_PcrRead, TPM_EvictKey, TPM_FlushSpecific.
  */
 #define TPM_TRANSMIT_FUNC(NAME,PARAMS,PRECOND,POSTCOND,FMT,...) \
-unsigned long TPM_##NAME PARAMS { \
+unsigned long STPM_##NAME PARAMS { \
   unsigned char buffer[TCG_MAX_BUFF_SIZE]; /* request/response buffer */ \
   unsigned long ret;         \
   PRECOND               \

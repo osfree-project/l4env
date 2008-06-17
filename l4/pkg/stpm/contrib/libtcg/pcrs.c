@@ -47,73 +47,89 @@ TPM_TRANSMIT_FUNC(Extend,
 /*  Create PCR_INFO structure using current PCR values                      */
 /*                                                                          */
 /****************************************************************************/
-unsigned long GenPCRInfo(unsigned long pcrmap, unsigned char *pcrinfo,
-			 unsigned int *len)
+unsigned long
+STPM_GenPCRInfo(int pcrmapsize, const unsigned char * pcrmap, unsigned char *pcrinfo,
+                unsigned int *len)
 {
-	struct pcrinfo {
+/*	struct pcrinfo {
 		unsigned short selsize;
-		unsigned char select[TCG_PCR_MASK_SIZE];
+		unsigned char select[pcrinfolen];
 		unsigned char relhash[TCG_HASH_SIZE];
 		unsigned char crthash[TCG_HASH_SIZE];
 	} myinfo;
-	int i;
-	int j;
-	unsigned long work;
-	unsigned char *valarray;
+*/
+	int i, j, k;
+	unsigned char work;
+	unsigned char *valarray = 0;
 	unsigned long numregs;
 	unsigned long ret;
 	unsigned long valsize;
+  unsigned long pcrinfolen = 2 + pcrmapsize + 2 * TCG_HASH_SIZE;
+  unsigned char buffer[pcrinfolen]; 
 	SHA1_CTX sha;
 
 	/* check arguments */
-	if (pcrinfo == NULL || len == NULL)
+	if (pcrinfo == NULL || len == NULL || len == 0 || *len < pcrinfolen || pcrmap == 0)
 		return -1;
+
+  /* set selection size */
+  *(unsigned short *)buffer = htons(pcrmapsize);
+
 	/* build pcr selection array */
-	work = pcrmap;
-	memset(myinfo.select, 0, TCG_PCR_MASK_SIZE);
-	for (i = 0; i < TCG_PCR_MASK_SIZE; ++i) {
-		myinfo.select[i] = work & 0x000000FF;
-		work = work >> 8;
-	}
+	memcpy(buffer + 2, pcrmap, pcrmapsize);
+
 	/* calculate number of PCR registers requested */
 	numregs = 0;
-	work = pcrmap;
-	for (i = 0; i < (TCG_PCR_MASK_SIZE * 8); ++i) {
-		if (work & 1)
-			++numregs;
-		work = work >> 1;
+	for (j = 0; j < pcrmapsize; j++) {
+		work = pcrmap[j];
+		for (i = 0; i < 8; ++i) {
+			if (work & 1)
+				++numregs;
+			work = work >> 1;
+		}
 	}
-	if (numregs == 0) {
-		*len = 0;
-		return 0;
+
+	if (numregs != 0) { 
+		/* create the array of PCR values */
+		valarray = (unsigned char *) malloc(TCG_HASH_SIZE * numregs);
+		/* read the PCR values into the value array */
+    k=0;
+		for (j = 0; j < pcrmapsize; j++) { 
+			work = pcrmap[j];
+			for (i = 0; i < 8; i++, work = work >> 1) {
+				if ((work & 1) == 0)
+					continue;
+				ret = STPM_PcrRead(i + j * 8, &(valarray[(k * TCG_HASH_SIZE)]));
+				if (ret)
+				{        
+					//free memory
+					free(valarray);
+					return ret;
+				}
+				k++;
+			}
+		}
 	}
-	/* create the array of PCR values */
-	valarray = (unsigned char *) malloc(TCG_HASH_SIZE * numregs);
-	/* read the PCR values into the value array */
-	work = pcrmap;
-	j = 0;
-	for (i = 0; i < (TCG_PCR_MASK_SIZE * 8); ++i, work = work >> 1) {
-		if ((work & 1) == 0)
-			continue;
-		ret = TPM_PcrRead(i, &(valarray[(j * TCG_HASH_SIZE)]));
-		if (ret)
-			return ret;
-		++j;
-	}
-	myinfo.selsize = ntohs(TCG_PCR_MASK_SIZE);
-	valsize = ntohl(numregs * TCG_HASH_SIZE);
+
+	valsize = htonl(numregs * TCG_HASH_SIZE);
 	/* calculate composite hash */
 	SHA1_init(&sha);
-	SHA1_update(&sha, &myinfo.selsize, 2);
-	SHA1_update(&sha, &myinfo.select, TCG_PCR_MASK_SIZE);
+	SHA1_update(&sha, &buffer[0], 2);
+	SHA1_update(&sha, &buffer[2], pcrmapsize);
 	SHA1_update(&sha, &valsize, 4);
 	for (i = 0; i < numregs; ++i) {
 		SHA1_update(&sha, &(valarray[(i * TCG_HASH_SIZE)]),
-			    TCG_HASH_SIZE);
+		            TCG_HASH_SIZE);
 	}
-	SHA1_final(&sha,myinfo.relhash);
-	memcpy(myinfo.crthash, myinfo.relhash, TCG_HASH_SIZE);
-	memcpy(pcrinfo, &myinfo, sizeof(struct pcrinfo));
-	*len = sizeof(struct pcrinfo);
+	SHA1_final(&sha, &buffer[2 + pcrmapsize]); //myinfo.relhash
+  //myinfo.crthash <- myinfo.relhash
+	memcpy(&buffer[2 + pcrmapsize + TCG_HASH_SIZE], &buffer[2 + pcrmapsize], TCG_HASH_SIZE); 
+	memcpy(pcrinfo, &buffer, pcrinfolen);
+	*len = pcrinfolen;
+
+	//free memory
+	if (numregs > 0)
+		free(valarray);
+
 	return 0;
 }

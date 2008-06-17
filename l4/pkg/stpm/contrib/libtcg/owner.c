@@ -100,8 +100,8 @@ pubkey_t *convpubkey(pubkeydata *k)
 /*           or NULL if this information is not required                    */
 /*                                                                          */
 /****************************************************************************/
-uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
-                           keydata *key)
+uint32_t STPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
+                            keydata *key)
 {
     char take_owner_fmt[] = "00 c2 T l s @ @ % L % 00 %";
     char tcpa_oaep_pad_str[] = { 'T', 'C', 'P', 'A' };
@@ -135,7 +135,7 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
     command = htonl(0x0d);
     protocol = htons(0x05);
     /* get the TCPA Endorsement Public Key */
-    ret = TPM_ReadPubek(&tcpapubkey);
+    ret = STPM_ReadPubek(&tcpapubkey);
     if (ret)
         return -11;
     /* convert the public key to OpenSSL format */
@@ -228,7 +228,7 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
     /* convert to a memory buffer */
     srkparamsize = BuildKey(srk_param_buff, &srk);
     /* initiate the OIAP protocol */
-    ret = TPM_OIAP(&sess);
+    ret = STPM_OIAP(&sess);
     if (ret)
         return ret;
     /* calculate the Authorization Data */
@@ -239,7 +239,7 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
                    &sencdatasize, ntohl(sencdatasize), srkencr,
                    srkparamsize, srk_param_buff, 0, 0);
     if (ret < 0) {
-        TPM_Terminate_Handle(sess.handle);
+        STPM_Terminate_Handle(sess.handle);
         return -20;
     }
     /* insert all the calculated fields into the request buffer */
@@ -255,11 +255,11 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
                     sess.handle,
                     TCG_HASH_SIZE, sess.ononce, TCG_HASH_SIZE, authdata);
     if (ret <= 0) {
-        TPM_Terminate_Handle(sess.handle);
+        STPM_Terminate_Handle(sess.handle);
         return -21;
     }
     ret = TPM_Transmit(tcpadata, "Take Ownership");
-    TPM_Terminate_Handle(sess.handle);
+    STPM_Terminate_Handle(sess.handle);
     if (ret != 0)
         return ret;
     /* check the response HMAC */

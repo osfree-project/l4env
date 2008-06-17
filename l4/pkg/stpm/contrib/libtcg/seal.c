@@ -10,6 +10,7 @@
 
 #include <tcg/oiaposap.h>
 #include <tcg/pcrs.h>
+#include <tcg/seal.h>
 
 /****************************************************************************/
 /*                                                                          */
@@ -92,19 +93,19 @@ TPM_TRANSMIT_OSAP_FUNC(Seal,
 /*           of the sealed blob                                             */
 /*                                                                          */
 /****************************************************************************/
-unsigned long TPM_Seal_CurrPCR(unsigned long keyhandle, unsigned long pcrmap,
-			       unsigned char *keyauth,
-			       unsigned char *dataauth,
-			       unsigned char *data, unsigned int datalen,
-			       unsigned char *blob, unsigned int *bloblen)
+unsigned long TPM_Seal_CurrPCR(unsigned long keyhandle, int pcrmapsize,
+                               const unsigned char * pcrmap,
+                               unsigned char *keyauth,
+                               unsigned char *dataauth,
+                               unsigned char *data, unsigned int datalen,
+                               unsigned char *blob, unsigned int *bloblen)
 {
-    unsigned char pcrinfo[MAXPCRINFOLEN];
-    unsigned int pcrlen;
+    unsigned int pcrlen = 2 + pcrmapsize + 2 * TCG_HASH_SIZE;
+    unsigned char pcrinfo[pcrlen];
 
-    pcrlen=0;
-    GenPCRInfo(pcrmap, pcrinfo, &pcrlen);
-    return TPM_Seal(keyhandle, pcrinfo, pcrlen,
-                    keyauth, dataauth, data, datalen, blob, bloblen);
+    STPM_GenPCRInfo(pcrmapsize, pcrmap, pcrinfo, &pcrlen);
+    return STPM_Seal(keyhandle, pcrinfo, pcrlen,
+                     keyauth, dataauth, data, datalen, blob, bloblen);
 }
 
 /****************************************************************************/

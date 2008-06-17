@@ -6,43 +6,14 @@
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/env/errno.h>
 #include <l4/env/env.h>
-//#include <l4/l4rm/l4rm.h>
 #include <l4/dm_mem/dm_mem.h>
 
 #include <l4/generic_fprov/fprov_ext-client.h>
 
-#include <tcg/tpm.h>       //TPM_GetRandom
-
+#include <tcg/rand.h> //STPM_GetRandom
 #include "local.h"
 
-#define GLUE_TPM_TRANSMIT_FUNC(NAME,TEST,PARAMS,PRECOND,POSTCOND,FMT,...) \
-unsigned long TPM_##NAME##_##TEST PARAMS; \
-unsigned long TPM_##NAME##_##TEST PARAMS { \
-  unsigned char buffer[TCG_MAX_BUFF_SIZE]; /* request/response buffer */ \
-  unsigned long ret;         \
-  PRECOND               \
-  ret = buildbuff("00 C1 T L " FMT, buffer, TPM_ORD_##NAME, ##__VA_ARGS__ ); \
-  if (ret < 0)          \
-     return -1;         \
-  ret = TPM_Transmit(buffer, #NAME ); \
-  if (ret != 0)         \
-      return ret;       \
-  POSTCOND              \
-  return ret;           \
-}
-
-GLUE_TPM_TRANSMIT_FUNC(GetRandom, STPM,
-                  (unsigned long count,
-                   unsigned long *length,
-                   unsigned char *random),
-                  if (length == NULL || random == NULL)
-                    return -1;
-                  ,
-                  *length = TPM_EXTRACT_LONG(0);
-                  TPM_COPY_FROM(random, 4, *length);
-                  ,
-                  "L",
-                  count);
+#include <stdio.h> //printf
 
 void tpm_log(int priority, const char *fmt, ...)
 {
@@ -79,7 +50,7 @@ void tpm_get_random_bytes(void *buf, size_t nbytes)
   
   if (waitretry == 0)
   { 
-    error = TPM_GetRandom_STPM(nbytes, &count, buf);
+    error = STPM_GetRandom(nbytes, &count, buf);
     if (error == 0)
       // all fine
       return;

@@ -37,13 +37,16 @@ struct tpm_pcr_composite
 
 
 unsigned long 
-TPM_Quote(unsigned long keyhandle,
+STPM_Quote(unsigned long keyhandle,
 	  unsigned char *keyauth,
 	  unsigned char *pcrselect,
 	  unsigned char *nounce,
 	  unsigned char *pcrcomposite,
 	  unsigned char *blob, 
 	  unsigned int *bloblen);
+#ifndef TPM_Quote
+#define TPM_Quote(...) STPM_Quote(__VA_ARGS__)
+#endif
 
 int quote_stdout(int argc, unsigned char *argv[]);
 

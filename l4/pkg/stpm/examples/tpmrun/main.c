@@ -39,6 +39,7 @@ static unsigned char quote      [1024]; //temp storage for quotes
 static unsigned int  quotelen;
 static pubkeydata    pubkey;            //temp storage for a pubkey
 static unsigned char pcrcomposite [1024];
+static unsigned char currentTPM [20] = "stpm";
 
 static const char * fp = "BMODFS";
 static const char * file = "keydata.hex";
@@ -85,6 +86,7 @@ static void show_help_info()
   printf("p ... print public key of loaded key\n");
   printf("e ... extend a PCR register\n");
   printf("q ... quote of current pcrs with a loaded key\n");
+  printf("Q ... quote of a sTPM including a vTPM with a loaded key\n");
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
   printf("------- ownership     -------\n");
@@ -208,6 +210,8 @@ static void command_loop()
   int c, i;
   int major, minor, version, rev;
   unsigned long maxpcrs; 
+  unsigned char sTPM[20];
+  unsigned char vTPM[20];
   #ifdef _LOG_OUTPUT
   char * log2;
   #endif
@@ -502,6 +506,9 @@ static void command_loop()
         }
       
         break;
+      case 'Q':
+        memset(sTPM, 0, sizeof(sTPM));
+        memset(vTPM, 0, sizeof(vTPM));
       case 'q':
         memset(anything, 0, sizeof(anything));
         memset(anything2, 0, sizeof(anything2));
@@ -514,19 +521,32 @@ static void command_loop()
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         sha1(anything, strlen((char *)anything), anything);
 
-        //TODO
-        anything2[0] = 'n';
-        anything2[1] = 'o';
-        anything2[2] = 'n';
-        anything2[3] = 'c';
-        anything2[4] = 'e';
-        anything2[5] = 0;
+        printf("\nSelect a nonce: ");
+        contxt_ihb_read((char *)anything2, sizeof(anything2), NULL);
         sha1(anything2, strlen((char *)anything2), anything2);
 
-        printf("\nStart quoting ... ");
+        if (c=='Q')
+        {
+          printf("\nName of sTPM service: ");
+          contxt_ihb_read((char *)sTPM, sizeof(sTPM), NULL);
 
-        error = quotePCRs(keyhandle, anything, anything2, quote, &quotelen,
-                          pcrcomposite, sizeof(pcrcomposite), maxpcrs);
+          printf("\nName of vTPM service: ");
+          contxt_ihb_read((char *)vTPM, sizeof(vTPM), NULL);
+
+          printf("\nStart quoting ... ");
+          error = quote_vTPM(keyhandle, anything, anything2, quote, &quotelen,
+                             pcrcomposite, sizeof(pcrcomposite), maxpcrs, sTPM, vTPM);
+
+          stpm_check_server((char *)currentTPM, 1);
+       
+        }
+        else
+        {
+          printf("\nStart quoting ... ");
+
+          error = quotePCRs(keyhandle, anything, anything2, quote, &quotelen,
+                            pcrcomposite, sizeof(pcrcomposite), maxpcrs);
+        }
 
         if (error)
           printf(" failed (error=%d)\n", error);
@@ -545,7 +565,7 @@ static void command_loop()
           printf(" failed (error=%d)\n", error);
         else
         {
-          printf(" success. %lu numbers: ", foranything);
+          printf(" success.\n %lu numbers: ", foranything);
           for (i=0; i< foranything; i++)
             printf("%02x ", anything[i]);
 
@@ -587,7 +607,9 @@ static void command_loop()
           printf(" failed (error=%d)\n", error);
         else
 				{
-          printf(" success. Try to detect TPM version of '%s' ... \n\n", anything);
+          memcpy(currentTPM, anything, sizeof(anything));
+
+          printf(" success. Try to detect TPM version of '%s' ... \n\n", currentTPM);
 					maxpcrs = tpm_check();
 				}
 
