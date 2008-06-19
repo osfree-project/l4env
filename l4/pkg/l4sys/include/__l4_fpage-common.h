@@ -123,7 +123,7 @@ l4_is_io_page_fault(unsigned long address);
 
 
 /**
- * \brief   Build I/O flexpage descriptor
+ * \brief   Build Cap flexpage descriptor
  * \ingroup api_types_fpage
  *
  * \param   taskno       Capability task number
@@ -132,7 +132,7 @@ l4_is_io_page_fault(unsigned long address);
  *                       \a taskno 0)
  * \param   grant        Grant flexpage (#L4_FPAGE_GRANT) or map flexpage
  *                       (#L4_FPAGE_MAP)
- * \return  I/O flexpage descriptor
+ * \return  Cap flexpage descriptor
  */
 L4_INLINE l4_fpage_t
 l4_capfpage(unsigned taskno, unsigned int order, unsigned char grant);
