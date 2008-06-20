@@ -6,7 +6,7 @@ PREPROCESS_PARTS        += integrator libuart
 CONFIG_KERNEL_LOAD_ADDR := 0x00000000
 
 
-uart_IMPL             += uart-pl011
+uart_IMPL             += uart-arm-integrator
 config_IMPL           += config-arm-integrator
 mem_layout_IMPL       += mem_layout-arm-integrator
 pic_IMPL              += pic-arm-integrator
