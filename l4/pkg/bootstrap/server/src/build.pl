@@ -67,6 +67,8 @@ sub get_module_list($$)
     my ($type, $command, $args) = split /\s+/, $_, 3;
     $type = lc($type);
 
+    $type = 'bin' if $type eq 'module';
+
     if ($type =~ /^(entry|title)$/) {
       $do_entry = (lc($title) eq lc($command));
       $found_entry |= $do_entry;
