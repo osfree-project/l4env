@@ -10,11 +10,13 @@
 #include <tcg/quote.h>
 #include <tcg/tpm.h>
 #include <tcg/pcrs.h>
+#include <tcg/seal.h>
 #include <cryptoglue.h> //SHA1
 
 #include "tpmrun.h"
 #include "encap.h" //stpm_check_server
 
+#include <stdlib.h>
 /*
 struct tpm_pcr_selection2
 {
@@ -143,4 +145,55 @@ int quote_vTPM(unsigned int    keyhandle,
 
   return quotePCRs(keyhandle, passhash, nonce_vTPM_hash, output, outputlen,
                    pcrcomposite, pcrlen, maxPCRs);
+}
+
+int seal_TPM(int keyhandle, unsigned char * keyhash, unsigned char * authhash,
+             int maxPCRs, unsigned int * outdatalen, unsigned char * outdata,
+             unsigned int indatalen, unsigned char * indata)
+{
+  int error;
+  unsigned short select_count;
+
+  select_count = maxPCRs >> 3;
+  if (maxPCRs % 8 != 0)
+    select_count += 1;
+
+  unsigned int pcrinfolen = 2 + select_count + 2 * TCG_HASH_SIZE;
+  unsigned char pcrinfo [pcrinfolen];
+  unsigned char pcrmap [select_count];
+
+  //we want all PCRs
+  memset(pcrmap, 0xFF, select_count);
+
+  //reads all PCRs
+  if (STPM_GenPCRInfo(select_count, pcrmap, pcrinfo, &pcrinfolen))
+  {
+    return -2;
+  }
+
+  error = TPM_Seal(keyhandle, pcrinfo, pcrinfolen, keyhash, authhash,
+                   indata, indatalen, outdata, outdatalen);
+
+  return error;
+}
+
+int unseal_TPM(int keyhandle, unsigned char *keyhash, unsigned char *authhash,
+               int maxPCRs, unsigned int sealedbloblen,
+               unsigned char * sealedblob)
+{
+  unsigned long error;
+  unsigned char *unsealedblob;
+  unsigned int unsealedlen = 512;
+
+  unsealedblob = malloc(unsealedlen);
+  if (unsealedblob == 0)
+    return -1;
+
+  error = STPM_Unseal(keyhandle, keyhash, authhash,
+                      sealedblob, sealedbloblen,
+                      unsealedblob, &unsealedlen);
+  printf("\n%s\n",unsealedblob);
+  free(unsealedblob);
+
+  return error;
 }

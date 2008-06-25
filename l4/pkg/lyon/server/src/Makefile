@@ -20,7 +20,7 @@ SRC_C		= main.c init.c server.c seal_anchor.c lyon.c
 SERVERIDL	= lyon.idl
 
 # list additional library paths and libraries here
-LIBS		= -ltcg -ltcg_crypt -lcrypto_sha1_openssl -lcrypto_rsaref2 \
+LIBS		= -ltcg -ltcg_crypt -ltcg -lcrypto_sha1_openssl -lcrypto_rsaref2 \
 		  -lcrypto_pad -lcrypto_aes_linux_586.o -lcrypto_modes
 LIBS_lyon-tis	= -lstpm-l4-tis.o -lio
 LIBS_lyon-legacy= -lstpm-l4.o -ldde_linux26 -lddekit -lio -llist_alloc

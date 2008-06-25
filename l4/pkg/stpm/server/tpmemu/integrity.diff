@@ -1,0 +1,150 @@
+--- ../../contrib/tpmemulator/tpm/tpm_integrity.c	2008-05-15 12:42:06.000000000 +0100
++++ integrity.c	2008-06-24 15:47:42.000000000 +0100
+@@ -24,6 +24,7 @@
+ #include "tpm_handles.h"
+ #include "tpm_marshalling.h"
+ 
++#include <l4/log/l4log.h>
+ /* import functions from tpm_capability.c */
+ extern TPM_RESULT cap_version_val(UINT32 *respSize, BYTE **resp);
+ 
+@@ -66,6 +67,8 @@
+   return TPM_SUCCESS;
+ }
+ 
++static int linktoHWTPM (UINT32 *sigSize, BYTE **sig);
++
+ TPM_RESULT TPM_Quote(TPM_KEY_HANDLE keyHandle, TPM_NONCE *extrnalData, 
+                      TPM_PCR_SELECTION *targetPCR, TPM_AUTH *auth1, 
+                      TPM_PCR_COMPOSITE *pcrData, 
+@@ -78,35 +81,129 @@
+   info("TPM_Quote()");
+   /* get key */
+   key = tpm_get_key(keyHandle);
++  LOG("1");
+   if (key == NULL) return TPM_INVALID_KEYHANDLE;
+   /* verify authorization */
++  LOG("2");
+   if (auth1->authHandle != TPM_INVALID_HANDLE
+       || key->authDataUsage != TPM_AUTH_NEVER) {
+     res = tpm_verify_auth(auth1, key->usageAuth, keyHandle);
+     if (res != TPM_SUCCESS) return res;
+   }
++  LOG("3");
+   if (key->sigScheme != TPM_SS_RSASSAPKCS1v15_SHA1)
+     return TPM_INAPPROPRIATE_SIG;
++  LOG("4");
+   if (key->keyUsage != TPM_KEY_SIGNING && key->keyUsage != TPM_KEY_LEGACY
+       && key->keyUsage != TPM_KEY_IDENTITY)
+     return TPM_INVALID_KEYUSAGE;
++  LOG("5");
+   /* compute composite hash */
+   res = tpm_compute_pcr_digest(targetPCR, &hash, pcrData);
+   if (res != TPM_SUCCESS) return res;
++
++  LOG("6");
++  //START CHANGES
+   /* setup quote info and sign it */
+   memcpy(&buf[ 0], "\x01\x01\x00\x00QUOT", 8);
+   memcpy(&buf[ 8], hash.digest, 20);
+-  memcpy(&buf[28], extrnalData->nonce, 20);
++  memset(&buf[28], 0, 20);
+   *sigSize = key->key.size >> 3;
+   *sig = tpm_malloc(*sigSize);
+   if (*sig == NULL) return TPM_FAIL;
++
++  LOG("7");
++  /* STEP 1: create signature over pcr hash solely */
++  if (tpm_rsa_sign(&key->key, RSA_SSA_PKCS1_SHA1, buf, 48, *sig)) {
++    return TPM_FAIL;
++  }
++  /* STEP 2: use *sig as nonce for STPM */
++  if (linktoHWTPM(sigSize, sig))
++     return TPM_FAIL;
++
++  /* STEP 3: hash signature of TPM and create new nonce */
++  tpm_sha1_ctx_t ctx;
++  tpm_sha1_init(&ctx);
++  tpm_sha1_update(&ctx, *sig, *sigSize);
++  tpm_sha1_update(&ctx, extrnalData->nonce, 20);
++  tpm_sha1_final(&ctx, extrnalData->nonce);
++  /* STEP 4: copy new nonce to old request */
++  memcpy(&buf[ 0], "\x01\x01\x00\x00QUOT", 8);
++  memcpy(&buf[ 8], hash.digest, 20);
++  memcpy(&buf[28], extrnalData->nonce, 20);
++  //END CHANGES
++ 
++  LOG("8");
+   if (tpm_rsa_sign(&key->key, RSA_SSA_PKCS1_SHA1, buf, 48, *sig)) {
+     tpm_free(*sig);
+     return TPM_FAIL;
+   }
++  LOG("9");
+   return TPM_SUCCESS;
+ }
+ 
++#include "tcg/quote.h"
++static int linktoHWTPM (UINT32 *sigSize, BYTE **sig)
++{
++  tpm_sha1_ctx_t ctx;
++  unsigned char nonce [20];
++  unsigned long keyhandle = 0x1000000;
++  unsigned char passhash[20] = "c";
++  unsigned char * pcrcomposite;
++  unsigned int pcrlen = 1024;
++  unsigned int maxPCRs = 24;
++  unsigned char pcrselect[20];
++  unsigned short select_count;
++  unsigned long size_composite;
++  int res;
++
++  tpm_sha1_init(&ctx);
++  tpm_sha1_update(&ctx, *sig, *sigSize);
++  tpm_sha1_final(&ctx, nonce);
++
++  tpm_sha1_init(&ctx);
++  tpm_sha1_update(&ctx, passhash, strlen(passhash));
++  tpm_sha1_final(&ctx, passhash);
++
++  // the select count must be in bytes and in big endian
++  select_count = maxPCRs >> 3;
++  if (maxPCRs % 8 != 0)
++    select_count += 1;
++
++  if (select_count + 2 > sizeof(pcrselect))
++    return -2;
++
++  // 2 bytes select count + select bytes used +
++  // 4 byte for value count + maxPCRs * 20 value bytes
++  size_composite = 2 + select_count + 4 + (maxPCRs * 20);
++
++  // sanity check
++  if (size_composite > pcrlen)
++    return -3;
++
++  pcrcomposite = malloc(pcrlen);
++  if (pcrcomposite == 0)
++    return -1;
++
++  // set the size/count to pcrselect (the first 2 bytes)
++  // convert it to network byte order (big endian)
++  *((unsigned short *)pcrselect) = htons(select_count);
++
++  // select starts after first 2 bytes
++  // request all PCRs
++  memset(&pcrselect[2], 0xFF, select_count);
++    
++  res= STPM_Quote(keyhandle, passhash, 
++                  pcrselect, 
++                  nonce, 
++                  pcrcomposite,
++                  *sig, sigSize);
++
++  free(pcrcomposite);
++
++  return res;
++}
++
+ TPM_RESULT TPM_PCR_Reset(TPM_PCR_SELECTION *pcrSelection)
+ {
+   int i;

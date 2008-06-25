@@ -15,8 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tpm/tpm_emulator.h"
-
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
@@ -25,8 +23,12 @@
 #include <l4/util/util.h> //l4_sleep
 #include <l4/thread/thread.h>
 
+#include "tpm/tpm_emulator.h"
+#include "tpm/tpm_structures.h"
+
 #include "stpm-server.h"
 #include "stpmif.h"
+
 
 #include "local.h"
 
@@ -51,13 +53,30 @@ stpmif_transmit_component (CORBA_Object _dice_corba_obj,
                            CORBA_Server_Environment *_dice_corba_env)
 {
 
-  int res;
+  int res = 0;
 
   if (write_buf == NULL || read_buf == NULL || read_count == NULL)
     return -L4_EINVAL;
 
-  res = tpm_handle_command((const unsigned char *)write_buf, write_count,
-                           (uint8_t **)read_buf, read_count);
+/*  if (write_count >= 10)
+  {
+    unsigned long ord = ntohl(*(unsigned long *)&write_buf[6]);
+    LOG("ord %lu", ord);
+    if (ord == TPM_ORD_Quote || ord == TPM_ORD_Quote2)
+    {
+      res = tpm_handle_command((const unsigned char *)write_buf, write_count,
+                               (uint8_t **)read_buf, read_count);
+      LOG("heho, %d", res);
+    }
+  }
+
+  if (!res)
+  {*/
+    res = tpm_handle_command((const unsigned char *)write_buf, write_count,
+                             (uint8_t **)read_buf, read_count);
+/*    LOG("heho2 %d", res);
+  }
+*/
   if (res < 0) {
     LOG_Error("tpm_handle_command failed.");
   }

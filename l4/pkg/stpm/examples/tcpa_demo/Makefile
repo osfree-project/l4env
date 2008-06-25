@@ -14,7 +14,7 @@ SRC_C		= tcpa_demo.c
 SERVERIDL	=
 
 # list additional library paths and libraries here
-LIBS			= -ltcg -ltcg_crypt -lcrypto_sha1_linux
+LIBS			= -ltcg -ltcg_crypt -ltcg -lcrypto_sha1_linux
 LIBS_tcpa_demo		= -lstpm-client -llist_alloc
 LIBS_tcpa_demo-ux	= -lstpm-ux -lclxfux.o
 LIBS_tcpa_demo-emu	= -lstpm-emu -lclxfux.o

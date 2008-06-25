@@ -40,7 +40,7 @@ unsigned long
 STPM_Quote(unsigned long keyhandle,
 	  unsigned char *keyauth,
 	  unsigned char *pcrselect,
-	  unsigned char *nounce,
+	  unsigned char *nonce,
 	  unsigned char *pcrcomposite,
 	  unsigned char *blob, 
 	  unsigned int *bloblen);

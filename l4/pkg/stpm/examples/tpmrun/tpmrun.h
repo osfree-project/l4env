@@ -36,6 +36,14 @@ int quote_vTPM(unsigned int    keyhandle,
                unsigned char * sTPM,
                unsigned char * vTPM);
 
+int seal_TPM(int keyhandle, unsigned char * keyhash, unsigned char * authhash,
+             int maxPCRs,
+             unsigned int * outdatalen, unsigned char * outdata,
+             unsigned int indatalen, unsigned char * indata);
+
+int unseal_TPM(int keyhandle, unsigned char *keyhash,
+               unsigned char *authhash, int maxPCRs,
+               unsigned int sealedbloblen, unsigned char * sealedblob);
 
 void dumpkey(keydata * key);
 void redumpkey(const char * dumped, keydata * _key);

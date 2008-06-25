@@ -1,12 +1,12 @@
-PKGDIR		?= ../..
-L4DIR		?= $(PKGDIR)/../..
+PKGDIR    ?= ../..
+L4DIR     ?= $(PKGDIR)/../..
 
 DEPENDS_PKGS = gmp
 # rtc l4vfs
 
-TARGET  = tpmemu-l4
-SYSTEMS = x86-l4v2
-MODE    = l4env
+TARGET    = tpmemu-l4
+SYSTEMS   = x86-l4v2
+MODE      = l4env
 
 # the default relocation address. This may be superseded by a STATIC file.
 DEFAULT_RELOC	= 0x017C0000
@@ -16,16 +16,21 @@ SERVERIDL	= stpm.idl
 TPM_DIRS  = $(PKGDIR)/contrib/tpmemulator/tpm \
             $(PKGDIR)/contrib/tpmemulator/crypto 
 
-SRC_C     = server.c glue.c events.c \
+FILES     = server.c glue.c events.c link.c \
              $(foreach file, \
                $(foreach dir, $(TPM_DIRS), $(wildcard $(dir)/*.c)), \
                  $(lastword $(subst /, ,$(file))) \
               )
+SRC_C     = $(PKGDIR_OBJ)/server/tpmemu/integrity.c
+SRC_C    += $(filter-out tpm_integrity.c, $(FILES))
 
-LIBS		=  -lgmp -ltcg -lstpm-client
-LIBS		+= -lparsecmdline
-LIBS		+= -lfprov_ext
-LIBS		+= -levents
+LIBS		  = -lgmp
+LIBS     += -ltcg -ltcg_crypt
+LIBS     += -lcrypto_sha1_linux -lcrypto_aes_linux_586.o -lcrypto_modes
+LIBS     += -lstpm-client
+LIBS		 += -lparsecmdline
+LIBS		 += -lfprov_ext
+LIBS		 += -levents
 
 #required to run tpmd with socket interface ...
 
@@ -50,3 +55,7 @@ PRIVATE_INCDIR = \
 vpath %.c $(strip $(TPM_DIRS))
 
 include $(L4DIR)/mk/prog.mk
+
+$(PKGDIR_OBJ)/server/tpmemu/integrity.c:
+	cp $(PKGDIR)/contrib/tpmemulator/tpm/tpm_integrity.c $(PKGDIR_OBJ)/server/tpmemu/integrity.c
+	patch $(PKGDIR_OBJ)/server/tpmemu/integrity.c <$(PKGDIR)/server/tpmemu/integrity.diff

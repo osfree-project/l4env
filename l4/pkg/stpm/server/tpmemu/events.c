@@ -38,9 +38,7 @@ void vtpmemu_event_loop(void *data) {
     l4_threadid_t tid;
 
     /* wait for event */
-    if((res = l4events_give_ack_and_receive(&event_ch, &event, &event_nr,
-						L4_IPC_NEVER,
-						L4EVENTS_RECV_ACK))<0)
+    if ((res = l4events_receive(&event_ch, &event, &event_nr, L4_IPC_NEVER, 0)) < 0)
     {
       l4env_perror("l4events_give_ack_and_receive()", -res);
       continue;

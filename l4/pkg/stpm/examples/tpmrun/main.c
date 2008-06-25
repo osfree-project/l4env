@@ -89,6 +89,8 @@ static void show_help_info()
   printf("Q ... quote of a sTPM including a vTPM with a loaded key\n");
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
+  printf("S ... seal\n");
+  printf("U ... unseal\n");
   printf("------- ownership     -------\n");
   printf("a ... set authentication of owner or SRK to be used\n");
   printf("o ... take ownership of TPM\n");
@@ -263,7 +265,6 @@ static void command_loop()
 
             sha1(srk_auth, strlen((char *)srk_auth), srk_auth);
             printf("\n");
-
             break;
         }
 
@@ -443,7 +444,7 @@ static void command_loop()
       case 'p':
         memset(anything, 0, sizeof(anything));
         
-        printf("Public key of key handle (hex): 0x");
+        printf("Key handle (hex): 0x");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         keyhandle = strtol((char *)anything, NULL, 16);
 
@@ -582,6 +583,62 @@ static void command_loop()
         else
           printf(" success.\n");
 
+        break;
+      case 'S':
+        quotelen=1024;
+        memset(anything, 0, sizeof(anything));
+        memset(anything2, 0, sizeof(anything2));
+        memset(quote, 0, quotelen);
+
+        printf("Key handle (hex): 0x");
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        keyhandle = strtol((char *)anything, NULL, 16);
+
+        printf("\nAuthentication/password of key 0x%08lx: ", keyhandle);
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        sha1(anything, strlen((char *)anything), anything);
+
+        printf("\nSealing password: ");
+        contxt_ihb_read((char *)anything2, sizeof(anything2), NULL);
+        sha1(anything2, strlen((char *)anything2), anything2);
+
+        printf("\nSeal following (1023 bytes max): ");
+        contxt_ihb_read((char *)quote, quotelen-1, NULL);
+        
+        error = seal_TPM(keyhandle, anything, anything2, maxpcrs,
+                         &quotelen, quote, strlen((char *)quote), quote);
+
+        if (error)
+          printf("\nfailed (error=%d)\n", error);
+        else
+          printf("\nsuccess. quotelen=%d\n", quotelen);
+
+        break;
+      case 'U':
+        memset(anything, 0, sizeof(anything));
+        memset(anything2, 0, sizeof(anything2));
+
+        printf("Key handle (hex): 0x");
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        keyhandle = strtol((char *)anything, NULL, 16);
+
+        printf("\nAuthentication/password of key 0x%08lx: ", keyhandle);
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        sha1(anything, strlen((char *)anything), anything);
+
+        printf("\nSealing password: ");
+        contxt_ihb_read((char *)anything2, sizeof(anything2), NULL);
+        sha1(anything2, strlen((char *)anything2), anything2);
+
+        error = unseal_TPM(keyhandle, anything, anything2, maxpcrs,
+                           quotelen, quote);
+
+        if (error)
+          printf(" failed (error=%d)\n", error);
+        else
+        {
+          printf(" success.\n");
+        }
         break;
       case 'w':
         printf("Clear ownership ...");

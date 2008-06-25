@@ -118,8 +118,6 @@ unsigned long STPM_Terminate_Handle(unsigned long handle);
     return ret;								\
   }
 
-
-
 /**
  * Defines an authenticated transmit function, which is used several times in
  * the lib, e.g. TPM_ClearOwner

@@ -1,3 +1,14 @@
+/*
+ * \author  Alexander Boettcher <boettcher@tudos.org>
+ */
+/*
+ * Copyright (C) 2008
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the libcrypto package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
 #include "tpm/tpm_emulator.h"
 
 #include <l4/log/l4log.h>
@@ -10,10 +21,8 @@
 
 #include <l4/generic_fprov/fprov_ext-client.h>
 
-#include <tcg/rand.h> //STPM_GetRandom
+#include <tcg/rand.h>  //STPM_GetRandom
 #include "local.h"
-
-#include <stdio.h> //printf
 
 void tpm_log(int priority, const char *fmt, ...)
 {
@@ -55,7 +64,7 @@ void tpm_get_random_bytes(void *buf, size_t nbytes)
       // all fine
       return;
 
-    LOG("WARNING: failed (%d), use random() instead", error);
+    LOG("SECURITY ISSUE - TPM_GetRandom failed (%d), use libc random() instead", error);
   }
 
   //real TPM seems to be not available
@@ -111,22 +120,22 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   l4_threadid_t dm_id;
   l4dm_dataspace_t ds;
   void *addr;
-  l4_size_t size = data_length;
+  l4_size_t size;
   char * vtpmname = vtpm_get_name();
   int namesize = strlen(vtpmname);
   char * fname;
  
   if (!names_waitfor_name("TFTP", &tftp_id, 40000))
     {
-      printf("TFTP not found\n");
+      LOG("TFTP not found\n");
       return -1;
     }
 
   dm_id = l4env_get_default_dsm();
   if (l4_is_invalid_id(dm_id))
     {
-      printf("No dataspace manager found\n");
-      return -1;
+      LOG("No dataspace manager found\n");
+      return -2;
     }
 
   fname = malloc( 10 + namesize);
@@ -139,18 +148,30 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   memcpy(fname + 9, vtpmname, namesize);
   fname[ 9 + namesize ] = 0;
 
+  size = data_length + 2048;
+  if (size % 4096 != 0)
+    size = ((size >> 12) + 1) << 12;
+    
   if (!(addr = l4dm_mem_ds_allocate_named(size, flags, fname, &ds)))
     {
-      printf("Allocating dataspace of size %d failed\n", size);
+      LOG("Allocating dataspace of size %d failed\n", size);
       free(fname);
       return -L4_ENOMEM;
     }
 
-  memcpy(addr, data, data_length);
+  if ((error = _seal_TPM(addr, &size, data, data_length)))
+    {
+       LOG("Sealing failed, errorcode %d\n", error);
+       l4rm_detach(addr);
+       l4dm_close(&ds);
+       free(fname);
+       return error;
+    }
 
   if ((error = l4rm_detach(addr)))
     {
-      printf("Error %d attaching dataspace\n", error);
+      LOG("Error %d attaching dataspace\n", error);
+      l4dm_close(&ds);
       free(fname);
       return -L4_ENOMEM;
     }
@@ -158,7 +179,7 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   /* set dataspace owner to server */
   if ((error = l4dm_transfer(&ds, tftp_id)))
     {
-      printf("Error transfering dataspace ownership: %s (%d)\n",
+      LOG("Error transfering dataspace ownership: %s (%d)\n",
              l4env_errstr(error), error);
       l4dm_close(&ds);
       free(fname);
@@ -168,11 +189,12 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   if ((error = l4fprov_file_ext_write_call(&tftp_id, fname,
                                            &ds, size, &env)))
     {
-      printf("Error opening file from tftp\n");
-      return -1;
+      LOG("Error writing file\n");
+      free(fname);
+      return -3;
     }
 
-  printf("File %s was written\n", fname);
+  LOG("File %s was written.\n", fname);
   free(fname);
 
   return 0;
@@ -195,7 +217,7 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
   dm_id = l4env_get_default_dsm();
   if (l4_is_invalid_id(dm_id))
     {
-      printf("No dataspace manager found!\n");
+      LOG("No dataspace manager found!\n");
       return -L4_ENODM;
     }
 
@@ -232,24 +254,24 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
   if ((error = l4rm_attach(&ds, size, 0, L4DM_RO, &addr)))
     {
       LOG("Error %ld attaching dataspace for module %s", error, fname);
-      l4rm_detach(addr);
       l4dm_close(&ds);
       free(fname);
       return -1;
     }
 
-  if (!(*data = malloc(size)))
+  if ((error = _unseal_TPM(size, addr, data_length, data)))
   {
+    LOG("unseal failed, error %ld\n", error);
+    l4rm_detach(addr);
+    l4dm_close(&ds);
     free(fname);
     return -L4_ENOMEM;
   }
 
-  memcpy(*data, addr, size);
-  *data_length = size;
-
   l4rm_detach(addr);
   l4dm_close(&ds);
   free(fname);
+  LOG("unseal success\n");
 
   return 0;
 }

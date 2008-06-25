@@ -14,7 +14,7 @@ SRC_C		= quote_demo.c
 SERVERIDL	=
 
 # list additional library paths and libraries here 
-LIBS_quotes		= -ltcg -ltcg_crypt -lcrypto_sha1_linux -lstpm-client
+LIBS_quotes		= -ltcg -ltcg_crypt -ltcg -lcrypto_sha1_linux -lstpm-client
 
 # we need some special dirs
 PRIVATE_INCDIR = $(PKGDIR)/include \

@@ -14,24 +14,26 @@
 
 /* L4-specific includes */
 #include <l4/crypto/random.h>
-
-static char base = 0;
+#include <l4/stpm/tcg/rand.h>
+#include <l4/log/l4log.h>
 
 /**
  * Fill the buffer with num random bytes.
- * 
- * FIXME: This is a dummy function until real random is
- *        available. We should use TPM_GetRandom() ...
  */
 int 
-rand_buffer(char *buffer, int len)
+rand_buffer(unsigned char *buffer, int len)
 {
-  int i;
+  int error;
+  unsigned long count;
+ 
+  error = STPM_GetRandom(len, &count, buffer);
+  if (error != 0 || count != len)
+  {
+    LOG("Error generating random numbers, requested %d, got %lu, errorcode %d", len, count, error);
+    return -1;
+  }
   
-  for (i = 0; i < len; i++)
-    buffer[i] = base++;
-  
-  return len;
+  return count;
 }
 
 

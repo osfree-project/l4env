@@ -14,5 +14,5 @@
 
 #ifndef _RAND_H
 #define _RAND_H
-int rand_buffer(char *buffer,int num);
+int rand_buffer(unsigned char *buffer,int num);
 #endif
