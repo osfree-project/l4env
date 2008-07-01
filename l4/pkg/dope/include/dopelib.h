@@ -16,7 +16,11 @@
 #ifndef __DOPE_INCLUDE_DOPELIB_H_
 #define __DOPE_INCLUDE_DOPELIB_H_
 
+#ifdef L4API_l4v2
 #include <l4/sys/linkage.h>
+#else
+#define L4_CV
+#endif
 
 #define EVENT_TYPE_UNDEFINED    0
 #define EVENT_TYPE_COMMAND      1
