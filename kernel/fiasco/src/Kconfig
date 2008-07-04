@@ -65,6 +65,9 @@ config CAN_ARM_CPU_1176
 config CAN_ARM_CPU_MPCORE
 	bool
 
+config CAN_ARM_CPU_CORTEX_A8
+	bool
+
 
 choice
 	prompt "CPU"
@@ -95,6 +98,10 @@ config ARM_1176
 config ARM_MPCORE
 	bool "ARM MPCore CPU"
 	depends on CAN_ARM_CPU_MPCORE
+
+config ARM_CORTEX_A8
+	bool "ARM Cortex-A8 CPU"
+	depends on CAN_ARM_CPU_CORTEX_A8
 
 config IA32_486
 	bool "Intel 80486"

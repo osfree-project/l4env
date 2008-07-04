@@ -49,16 +49,17 @@ public:
   /* 0xB0 */
   Mword frequency_cpu;
   Mword frequency_bus;
-  Mword user_ptr;
-  Mword vhw_offset;
+  Mword _res10[2];
 
   /* 0xC0 */
+  Mword irq_desc;
+  Mword _res11[7];
+
+  /* 0xE0 */
+  Mword user_ptr;
+  Mword vhw_offset;
   Unsigned8 vkey_irq;
-  char _res8[15];
-
-  /* 0xD0 */
-
-//  Mem_desc _mem[];
+  char _res8[7];
 };
 
 //---------------------------------------------------------------------------

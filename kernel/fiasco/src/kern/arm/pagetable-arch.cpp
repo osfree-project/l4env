@@ -33,7 +33,7 @@ public:
 
 
 //---------------------------------------------------------------------------
-INTERFACE[arm && armv6]:
+INTERFACE[arm && (armv6 || armv7)]:
 
 EXTENSION class Mem_page_attr
 {
@@ -344,7 +344,7 @@ void Page_table::activate()
 
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [arm && armv6]:
+IMPLEMENTATION [arm && (armv6 || armv7)]:
 
 IMPLEMENT inline
 unsigned long 

@@ -92,8 +92,7 @@ public:
 
     Cp15_c1_generic         = Cp15_c1_mmu
                               | Cp15_c1_alignment_check
-			      | Cp15_c1_high_vector
-			      | Cp15_c1_xp,
+			      | Cp15_c1_high_vector,
   };
 };
 

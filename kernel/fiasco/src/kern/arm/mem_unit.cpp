@@ -34,9 +34,9 @@ IMPLEMENT inline
 void Mem_unit::dtlb_flush( void* va )
 {
   asm volatile (
-      "mcr p15, 0, %0, c8, c6, 0x01 \n" 
-      : 
-      : "r"((unsigned long)va & 0xfffff000) 
+      "mcr p15, 0, %0, c8, c6, 0x01 \n"
+      :
+      : "r"((unsigned long)va & 0xfffff000)
       : "memory" ); // TLB flush
 }
 
@@ -61,9 +61,9 @@ PUBLIC static inline
 void Mem_unit::tlb_flush( void* va, unsigned long)
 {
   asm volatile (
-      "mcr p15, 0, %0, c8, c7, 0x01 \n" 
-      : 
-      : "r"((unsigned long)va & 0xfffff000) 
+      "mcr p15, 0, %0, c8, c7, 0x01 \n"
+      :
+      : "r"((unsigned long)va & 0xfffff000)
       : "memory" ); // TLB flush
 }
 
@@ -90,7 +90,7 @@ void Mem_unit::dtlb_flush(unsigned long)
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [arm && armv6]:
+IMPLEMENTATION [arm && (armv6 || armv7)]:
 
 IMPLEMENT static inline
 void Mem_unit::btc_flush()
@@ -102,11 +102,12 @@ void Mem_unit::tlb_flush( void* va, unsigned long asid )
   if (asid == ~0UL) return;
   btc_flush();
   asm volatile (
-      "mcr p15, 0, r0, c7, c10, 4   \n" // drain write buffer
-      "mcr p15, 0, %0, c8, c7, 0x01 \n" 
-      : 
-      : "r"(((unsigned long)va & 0xfffff000) | (asid & 0xff)) 
-      : "memory" ); // TLB flush
+      "mcr p15, 0, %1, c7, c10, 4   \n" // drain write buffer
+      "mcr p15, 0, %0, c8, c7, 1    \n" // flush both TLB entry
+      :
+      : "r"(((unsigned long)va & 0xfffff000) | (asid & 0xff)),
+        "r" (0)
+      : "memory" );
 }
 
 IMPLEMENT inline
@@ -114,11 +115,12 @@ void Mem_unit::tlb_flush(unsigned long asid)
 {
   btc_flush();
   asm volatile (
-      "mcr p15, 0, r0, c7, c10, 4   \n" // drain write buffer
-      "mcr p15, 0, %0, c8, c7, 2    \n" // flush TLB
-      : 
-      : "r"(asid)
-      : "memory" ); // TLB flush
+      "mcr p15, 0, %1, c7, c10, 4   \n" // drain write buffer
+      "mcr p15, 0, %0, c8, c7, 2    \n" // flush both TLB with asid
+      :
+      : "r"(asid),
+        "r" (0)
+      : "memory" );
 }
 
 IMPLEMENT inline
@@ -126,9 +128,9 @@ void Mem_unit::dtlb_flush(unsigned long asid)
 {
   asm volatile (
       "mcr p15, 0, r0, c7, c10, 4   \n" // drain write buffer
-      "mcr p15, 0, %0, c8, c6, 2    \n" // flush TLB
-      : 
-      : "r"(asid) 
-      : "memory" ); // TLB flush
+      "mcr p15, 0, %0, c8, c6, 2    \n" // flush data TLB with asid
+      :
+      : "r"(asid)
+      : "memory" );
 }
 

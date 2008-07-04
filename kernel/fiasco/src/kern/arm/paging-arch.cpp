@@ -34,7 +34,7 @@ namespace Page
 
 
 //----------------------------------------------------------------------------
-INTERFACE [arm && armv6]:
+INTERFACE [arm && (armv6 || armv7)]:
 
 #include "types.h"
 

@@ -91,7 +91,7 @@ FIASCO_NOINLINE void Mmu<Flush_area, Ram>::inv_dcache(void const *start, void co
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [arm && (mpcore || arm11xx)]:
+IMPLEMENTATION [arm && (mpcore || arm11xx || armca8)]:
 
 IMPLEMENT inline
 template< unsigned long Flush_area, bool Ram >
@@ -121,7 +121,7 @@ void Mmu<Flush_area, Ram>::clean_dcache(void const *va)
 {
 #if 0
   __asm__ __volatile__ (
-      "mcr p15, 0, %0, c7, c10, 1       \n"
+      "mcr p15, 0, %0, c7, c10, 1       \n" // Clean Data Cache Line (using MVA) Register
       : : "r"(va) : "memory");
 #else
   (void)va;
@@ -136,8 +136,8 @@ void Mmu<Flush_area, Ram>::clean_dcache(void const *start, void const *end)
 #if 0
   __asm__ __volatile__ (
       "    mov %0, %1                       \n"
-      "    mcr p15, 0, %0, c7, c10, 4       \n"
-      "1:  mcr p15, 0, %0, c7, c10, 1       \n"
+      "    mcr p15, 0, %0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "1:  mcr p15, 0, %0, c7, c10, 1       \n" // Clean Data Cache Line (using MVA) Register
       "    add %0, %0, #4                   \n"
       "    cmp %0, %2                       \n"
       "    blo 1b                           \n"
@@ -156,8 +156,8 @@ void Mmu<Flush_area, Ram>::flush_dcache(void const *start, void const *end)
 {
 #if 0
   __asm__ __volatile__ (
-      "    mcr p15, 0, r0, c7, c10, 4       \n"
-      "1:  mcr p15, 0, %0, c7, c14, 1       \n"
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "1:  mcr p15, 0, %0, c7, c14, 1       \n" // Clean and Invalidate Data Cache Line (using MVA) Register
       "    add %0, %0, #4                   \n"
       "    cmp %0, %1                       \n"
       "    blo 1b                           \n"
@@ -175,8 +175,8 @@ template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::inv_dcache(void const *start, void const *end)
 {
   __asm__ __volatile__ (
-      "    mcr p15, 0, r0, c7, c10, 4       \n"
-      "1:  mcr p15, 0, %0, c7, c6, 1        \n"
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "1:  mcr p15, 0, %0, c7, c6, 1        \n" // Invalidate Data Cache Line (using MVA) Register
       "    add %0, %0, #4                   \n"
       "    cmp %0, %1                       \n"
       "    blo 1b                           \n"
@@ -184,14 +184,17 @@ void Mmu<Flush_area, Ram>::inv_dcache(void const *start, void const *end)
       : "r0", "memory");
 }
 
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm && (mpcore || arm11xx)]:
+
 IMPLEMENT
 template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::flush_cache()
 {
   __asm__ __volatile__ (
-      "    mcr p15, 0, r0, c7, c10, 4       \n"
-      "    mcr p15, 0, r0, c7, c14, 0       \n"
-      "    mcr p15, 0, r0, c7, c5, 0        \n"
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "    mcr p15, 0, r0, c7, c14, 0       \n" // Clean and Invalidate Entire Data Cache Register
+      "    mcr p15, 0, r0, c7, c5, 0        \n" // Invalidate Entire Instruction Cache Register
       : : : "memory");
 }
 
@@ -200,8 +203,8 @@ template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::clean_dcache()
 {
   __asm__ __volatile__ (
-      "    mcr p15, 0, r0, c7, c10, 4       \n"
-      "    mcr p15, 0, r0, c7, c10, 0       \n"
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "    mcr p15, 0, r0, c7, c10, 0       \n" // Clean Entire Data Cache Register
       : : : "memory");
 }
 
@@ -210,10 +213,46 @@ template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::flush_dcache()
 {
   __asm__ __volatile__ (
-      "    mcr p15, 0, r0, c7, c10, 4       \n"
-      "    mcr p15, 0, r0, c7, c14, 0       \n"
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "    mcr p15, 0, r0, c7, c14, 0       \n" // Clean and Invalidate Entire Data Cache Register
       : : : "memory");
 }
+
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm && armca8]:
+// Cortex A8 CPU don't provide full flushes anymore
+
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_cache()
+{
+  __asm__ __volatile__ (
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      "    mcr p15, 0, r0, c7, c5, 0        \n" // Invalidate Entire Instruction Cache Register
+      : : : "memory");
+}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::clean_dcache()
+{
+  __asm__ __volatile__ (
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      : : : "memory");
+}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_dcache()
+{
+  __asm__ __volatile__ (
+      "    mcr p15, 0, r0, c7, c10, 4       \n" // Drain Synchronization Barrier Register
+      : : : "memory");
+}
+
+
 
 //-----------------------------------------------------------------------------
 IMPLEMENTATION [arm && sa1100]:
@@ -254,7 +293,7 @@ FIASCO_NOINLINE void Mmu<Flush_area, Ram>::clean_dcache()
       );
 }
 
-IMPLEMENT 
+IMPLEMENT
 template< unsigned long Flush_area, bool Ram >
 FIASCO_NOINLINE void Mmu<Flush_area, Ram>::flush_dcache()
 {

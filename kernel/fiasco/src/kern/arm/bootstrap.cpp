@@ -25,7 +25,7 @@ set_asid()
 {}
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [arm && armv6]:
+IMPLEMENTATION [arm && (armv6 || armv7)]:
 
 enum
 {
@@ -106,10 +106,10 @@ extern "C" int bootstrap_main()
   for (char *p = __bss_start + Virt_ofs; p < __bss_end + Virt_ofs; ++p)
     *p = 0;
 #endif
-  
+
   extern char kernel_page_directory[];
   void *const page_dir = kernel_page_directory + Virt_ofs;
-  
+
   Address va, pa;
   // map sdram linear from 0xf0000000
   for (va = Mem_layout::Map_base, pa = Mem_layout::Sdram_phys_base;

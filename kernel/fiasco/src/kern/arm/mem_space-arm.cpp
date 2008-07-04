@@ -509,7 +509,7 @@ void Mem_space::make_current()
 
 
 //----------------------------------------------------------------------------
-INTERFACE [armv6]:
+INTERFACE [armv6 || armv7]:
 
 EXTENSION class Mem_space
 {
@@ -522,7 +522,7 @@ private:
 
 
 //----------------------------------------------------------------------------
-IMPLEMENTATION [armv6]:
+IMPLEMENTATION [armv6 || armv7]:
 
 
 unsigned char Mem_space::_next_free_asid;

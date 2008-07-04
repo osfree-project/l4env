@@ -62,10 +62,10 @@ asm (".globl task_trampoline         \n"
 void
 task_trampoline(l4_addr_t entry, void* mbi)
 {
-  unsigned dummy1, dummy2;
-  
+  unsigned long dummy1, dummy2;
+
   asm volatile("pop %%rcx		\n\t" // remove dummy
-      	       "pop %%rcx		\n\t" // get entry point
+	       "pop %%rcx		\n\t" // get entry point
 	       "pop %%rbx		\n\t" // get mbi
                "call *%%rcx		\n\t" // jump to entry
                ".globl _task_trampoline_end\n"

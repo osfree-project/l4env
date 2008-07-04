@@ -114,12 +114,15 @@ typedef struct
   /* offset 0xB0 */
   l4_uint32_t            frequency_cpu;       ///< CPU frequency in kHz
   l4_uint32_t            frequency_bus;       ///< Bus frequency
+  l4_umword_t            reserved4[2];
+  /* offset 0xC0 */
+  l4_umword_t            reserved5[8];
   l4_umword_t		 user_ptr;
   l4_umword_t		 vhw_offset;
 
-  /* offset 0xC0 */
   l4_uint8_t             vkey_irq;            ///< Number of virtual key interrupt
-  l4_uint8_t             reserved4[3];
+  /* offset 0xC0 */
+  l4_uint8_t             reserved6[3];
 
   /* offset 0xD0 */
 
