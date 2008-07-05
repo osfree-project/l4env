@@ -1,4 +1,4 @@
-IMPLEMENTATION [arm-pxa]:
+IMPLEMENTATION [arm && pxa && serial]:
 #include "mem_layout.h"
 
 IMPLEMENT

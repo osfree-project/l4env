@@ -1,4 +1,4 @@
-IMPLEMENTATION [arm-sa1100]:
+IMPLEMENTATION [arm && sa1100 && serial]:
 
 #include "mem_layout.h"
 

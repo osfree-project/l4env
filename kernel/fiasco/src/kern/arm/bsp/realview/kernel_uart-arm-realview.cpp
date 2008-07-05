@@ -1,4 +1,4 @@
-IMPLEMENTATION [arm-realview]:
+IMPLEMENTATION [arm && realview && serial]:
 
 #include "mem_layout.h"
 

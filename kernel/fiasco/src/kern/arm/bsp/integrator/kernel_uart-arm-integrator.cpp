@@ -1,4 +1,4 @@
-IMPLEMENTATION [arm-integrator]:
+IMPLEMENTATION [arm && integrator && serial]:
 
 #include "mem_layout.h"
 
