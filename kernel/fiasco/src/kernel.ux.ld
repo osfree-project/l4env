@@ -1,5 +1,5 @@
 
-_load	= 0x1000;	/* kernel load address */
+_load	= 0x10000;	/* kernel load address */
 
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
 OUTPUT_ARCH(i386)

@@ -387,7 +387,7 @@ l4rm_handle_fault(CORBA_Object src_id, l4_msgtag_t *tag,
 
   if (EXPECT_FALSE(!l4_task_equal(*src_id, l4rm_service_id)))
     {
-      LOG_printf("L4RM: blocked PF/Exceptio message from outside ("
+      LOG_printf("L4RM: blocked PF/Exception message from outside ("
                  l4util_idfmt")!", l4util_idstr(*src_id));
       return DICE_NO_REPLY;
     }
