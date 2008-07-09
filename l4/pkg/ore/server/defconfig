@@ -8,12 +8,13 @@
 # CONFIG_ORE_DDE24 is not set
 # CONFIG_ORE_PCNET32 is not set
 # CONFIG_ORE_TIGON3 is not set
-CONFIG_ORE_EEPRO100=y
-# CONFIG_ORE_E1000 is not set
+# CONFIG_ORE_EEPRO100 is not set
+CONFIG_ORE_E1000=y
 # CONFIG_ORE_NE2000 is not set
 # CONFIG_ORE_RTL8139 is not set
 # CONFIG_ORE_RTL8139CP is not set
 # CONFIG_ORE_SKGE is not set
+# CONFIG_ORE_SKY2 is not set
 # CONFIG_ORE_TULIP is not set
 
 #

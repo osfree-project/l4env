@@ -24,6 +24,7 @@ src-$(CONFIG_ORE_RTL8139) += 8139too.c
 src-$(CONFIG_ORE_RTL8139CP) += 8139cp.c
 src-$(CONFIG_ORE_PCNET32) += pcnet32.c
 src-$(CONFIG_ORE_SKGE) += skge.c
+src-$(CONFIG_ORE_SKY2) += sky2.c
 src-$(CONFIG_ORE_TIGON3)  += tg3.c
 
 PRIVATE_INCDIR +=  $(PKGDIR)/server/src \

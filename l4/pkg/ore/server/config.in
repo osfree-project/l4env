@@ -25,6 +25,7 @@ else
 		bool '  RealTek RTL-8139' CONFIG_ORE_RTL8139
 		bool '  RealTek RTL-8139C+' CONFIG_ORE_RTL8139CP
 		bool '  SysKonnect GigaEthernet (Yukon chipset)' CONFIG_ORE_SKGE
+		bool '  Marvell Yukon 2 Gigabit Ethernet (Sky2)' CONFIG_ORE_SKY2
 		bool '  Tulip support'    CONFIG_ORE_TULIP
 fi
 endmenu
