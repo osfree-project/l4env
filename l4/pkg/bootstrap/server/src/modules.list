@@ -25,8 +25,9 @@ modaddr 0x02000000
 # this entry is for building a dummy package on ARM when no ENTRY variable
 # is given
 entry auto-build-entry
-kernel sigma0
-roottask sigma0
+kernel   Makefile
+sigma0   Makefile
+roottask Makefile
 
 entry hello
 kernel fiasco -serial_esc -comport 1 -nowait -nokdb -jdb_cmd=JH

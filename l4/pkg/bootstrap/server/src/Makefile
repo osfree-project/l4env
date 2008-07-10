@@ -8,10 +8,18 @@ DEFAULT_RELOC_amd64 := 0x002d0000
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
 
+MODULE_LIST     ?= $(SRC_DIR)/modules.list
+MODULE_PATH     ?= $(OBJ_BASE)/bin/$(SYSTEM)/$(BUILD_ABI)
+
 SYSTEMS		:= x86 amd64 arm
 ifeq ($(BUILD_ARCH),arm)
-# ARM always uses single image mode
-ENTRY		:= auto-build-entry
+  # ARM always uses single image mode
+  # when no entry is given we just take an arbitrary file we have available
+  ifeq ($(E)$(ENTRY),)
+    $(info Note: We are building the default bootstrap image, it is useless.)
+    MODULE_PATH     := .
+  endif
+  ENTRY := auto-build-entry
 endif
 
 
@@ -25,7 +33,7 @@ PRIVATE_INCDIR_init_arm_kip.o     = $(OBJ_BASE)/include/$(ARCH)/l4v2 \
 
 TARGET		:= bootstrap
 TARGET_BIN	 = $(TARGET)
-MODE		 = tiny
+MODE		 = libc
 
 SUPPORT_CC_arm-sa1000     := support_sa1000.cc
 SUPPORT_CC_arm-pxa        := support_pxa.cc
@@ -66,9 +74,6 @@ LDNMAGIC	 =
 vpath serial.c        $(SRC_DIR)/ARCH-x86
 vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
 vpath crt0.S	      $(SRC_DIR)/ARCH-$(ARCH)
-
-MODULE_PATH     ?= $(OBJ_BASE)/bin/$(SYSTEM)/$(BUILD_ABI)
-MODULE_LIST     ?= $(SRC_DIR)/modules.list
 
 # can be overwritten by Makeconf.local
 COMPRESS	?= 0
@@ -140,6 +145,7 @@ CXXFLAGS += $(call checkcxx,-fno-threadsafe-statics)
 ifneq ($(SYSTEM),)
  ifneq ($(ENTRY),)
   ifeq ($(filter clean cleanall,$(MAKECMDGOALS)),)
+    $(info Building entry "$(ENTRY)".)
     BUILD_DUMMY := $(shell SEARCHPATH=$(BOOTSTRAP_SEARCH_PATH):$(MODULE_PATH) \
                            CROSS_COMPILE=$(SYSTEM_TARGET) \
 			   OPT_ARCH=$(ARCH) \
