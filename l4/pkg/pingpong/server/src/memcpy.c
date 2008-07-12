@@ -15,10 +15,39 @@
 #include "helper.h"
 
 typedef l4_cpu_time_t (*memcpy_t)(char *dst, char const *src, l4_size_t size);
+typedef l4_cpu_time_t (*memset_t)(char *dst, const int val, l4_size_t size);
+typedef l4_cpu_time_t (*memzero_t)(char *dst, l4_size_t size);
 
 static unsigned char memcpy_stack[STACKSIZE] __attribute__((aligned(4096)));
-static jmp_buf memcpy_jmp_buf;
+static jmp_buf op_jmp_buf;
 
+static l4_cpu_time_t
+memcpy_gcc_builtin(char *dst, char const *src, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+
+  printf("   %-38s", "memcpy_gcc_builtin:");
+
+  start = get_clocks();
+  __builtin_memcpy(dst, src, size);
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memcpy_libc(char *dst, char const *src, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+
+  printf("   %-38s", "memcpy_libc:");
+
+  start = get_clocks();
+  memcpy(dst, src, size);
+  stop = get_clocks();
+
+  return stop - start;
+}
 
 static l4_cpu_time_t
 memcpy_c_byte(char *dst, char const *src, l4_size_t size)
@@ -401,7 +430,7 @@ fast_memcpy_sse(char *dst, char const *src, l4_size_t size)
 #endif
 
 static void
-test_memcpy(memcpy_t memcpy)
+test_memcpy(memcpy_t memcpy_f)
 {
   l4_size_t size = SCRATCH_MEM_SIZE/2;
   char *src = (char*)scratch_mem;
@@ -414,9 +443,9 @@ test_memcpy(memcpy_t memcpy)
        m++)
     *m = l4util_rand();
 
-  if (!setjmp(memcpy_jmp_buf))
+  if (!setjmp(op_jmp_buf))
     {
-      time = memcpy(dst, src, size);
+      time = memcpy_f(dst, src, size);
 
       if (0 != memcmp((void*)scratch_mem, (void*)scratch_mem+size, size))
 	puts("Implementation error!");
@@ -433,8 +462,8 @@ test_memcpy(memcpy_t memcpy)
 	  printf("Memory (copy): %4uMB/s (%u.%03ucy/B)\n", 
 	      mb_s, cy_b, cy1000_b);
 #else
-	  printf("Memory (copy): %4llukB/s\n",
-	      ((l4_uint64_t)SCRATCH_MEM_SIZE/2)*1024 / clocks_to_us(time));
+	  printf("Memory (copy): %8llukB/s\n",
+	         ((l4_uint64_t)SCRATCH_MEM_SIZE/2)*1024 / clocks_to_us(time));
 #endif
 	}
     }
@@ -442,11 +471,248 @@ test_memcpy(memcpy_t memcpy)
     puts("Not applicable (invalid opcode)");
 }
 
+
+
+
+
+static l4_cpu_time_t
+memset_libc(char *dst, const int val, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+
+  printf("   %-38s", "memset_libc:");
+
+  start = get_clocks();
+  memset(dst, val, size);
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memset_gcc_builtin(char *dst, const int val, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+
+  printf("   %-38s", "memset_gcc_builtin:");
+
+  start = get_clocks();
+  __builtin_memset(dst, val, size);
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memset_c_byte(char *dst, const int val, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register char *d=dst;
+
+  printf("   %-38s", "memset_c_byte:");
+
+  start = get_clocks();
+  while (size)
+    {
+      *d = val;
+      d++;
+      size--;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memset_c_word(char *dst, const int val, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register unsigned long *d= (unsigned long *)dst;
+  register unsigned long v = val;
+  v |= v << 16;
+  v |= v << 8;
+
+  printf("   %-38s", "memset_c_word:");
+
+  start = get_clocks();
+  size >>= 2;
+  while (size)
+    {
+      *d = v;
+      d++;
+      size--;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memset_c_word_unroll(char *dst, const int val, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register unsigned long *d= (unsigned long *)dst;
+  register unsigned long v = val;
+  v |= v << 16;
+  v |= v << 8;
+
+  printf("   %-38s", "memset_c_word_unroll:");
+
+  start = get_clocks();
+  size >>= 2;
+  while (size > 4)
+    {
+      *(d + 0) = v;
+      *(d + 1) = v;
+      *(d + 2) = v;
+      *(d + 3) = v;
+      d += 4;
+      size -= 4;
+    }
+  while (size)
+    {
+      *d = v;
+      ++d;
+      size--;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static void
+test_memset(memset_t memset_f)
+{
+  l4_cpu_time_t time;
+
+  if (!setjmp(op_jmp_buf))
+    {
+      time = memset_f((void*)scratch_mem, 0, SCRATCH_MEM_SIZE);
+#ifdef BENCH_x86
+      unsigned mb_s     = (unsigned)(((l4_uint64_t)SCRATCH_MEM_SIZE) /
+                                     clocks_to_us(time));
+      unsigned cy1000_b = (unsigned)(1000*time/
+                                     ((l4_uint64_t)SCRATCH_MEM_SIZE));
+      unsigned cy_b     = cy1000_b / 1000;
+
+      cy1000_b -= 1000*cy_b;
+      printf("Memory (set ): %4uMB/s (%u.%03ucy/B)\n", mb_s, cy_b, cy1000_b);
+#else
+      printf("Memory (set ): %8llukB/s\n",
+             ((l4_uint64_t)SCRATCH_MEM_SIZE)*1024 / clocks_to_us(time));
+#endif
+    }
+  else
+    puts("Not applicable (invalid opcode)");
+}
+
+
+
+
+
+static l4_cpu_time_t
+memzero_c_byte(char *dst, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register char *d=dst;
+
+  printf("   %-38s", "memzero_c_byte:");
+
+  start = get_clocks();
+  while (size)
+    {
+      *d = 0;
+      d++;
+      size--;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memzero_c_word(char *dst, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register unsigned long *d= (unsigned long *)dst;
+
+  printf("   %-38s", "memzero_c_word:");
+
+  start = get_clocks();
+  size >>= 2;
+  while (size)
+    {
+      *d = 0;
+      d++;
+      size--;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memzero_c_word_unroll(char *dst, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register unsigned long *d= (unsigned long *)dst;
+
+  printf("   %-38s", "memzero_c_word_unroll:");
+
+  start = get_clocks();
+  size >>= 2;
+  while (size > 4)
+    {
+      *(d + 0) = 0;
+      *(d + 1) = 0;
+      *(d + 2) = 0;
+      *(d + 3) = 0;
+      d += 4;
+      size -= 4;
+    }
+  while (size)
+    {
+      *d = 0;
+      ++d;
+      size--;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static void
+test_memzero(memzero_t memzero_f)
+{
+  l4_cpu_time_t time;
+
+  if (!setjmp(op_jmp_buf))
+    {
+      time = memzero_f((void*)scratch_mem, SCRATCH_MEM_SIZE);
+#ifdef BENCH_x86
+      unsigned mb_s     = (unsigned)(((l4_uint64_t)SCRATCH_MEM_SIZE) /
+                                     clocks_to_us(time));
+      unsigned cy1000_b = (unsigned)(1000*time/
+                                     ((l4_uint64_t)SCRATCH_MEM_SIZE));
+      unsigned cy_b     = cy1000_b / 1000;
+
+      cy1000_b -= 1000*cy_b;
+      printf("Memory (zero): %4uMB/s (%u.%03ucy/B)\n", mb_s, cy_b, cy1000_b);
+#else
+      printf("Memory (zero): %8llukB/s\n",
+             ((l4_uint64_t)SCRATCH_MEM_SIZE)*1024 / clocks_to_us(time));
+#endif
+    }
+  else
+    puts("Not applicable (invalid opcode)");
+}
+
+
 #ifdef BENCH_x86
 void
 exception6_c_handler(void)
 {
-  longjmp(memcpy_jmp_buf, 0);
+  longjmp(op_jmp_buf, 0);
 }
 
 void exception6_handler(void);
@@ -474,6 +740,8 @@ test_mem_bandwidth_thread(void)
 
   printf(">> m: Testing memory bandwidth (CPU %dMHz):\n", mhz);
 
+  test_memcpy(memcpy_libc);
+  test_memcpy(memcpy_gcc_builtin);
   test_memcpy(memcpy_c_byte);
   test_memcpy(memcpy_c_word);
   test_memcpy(memcpy_c_word_unroll);
@@ -487,6 +755,14 @@ test_mem_bandwidth_thread(void)
   test_memcpy(fast_memcpy_mmx2_64);
   test_memcpy(fast_memcpy_sse);
 #endif
+  test_memset(memset_libc);
+  test_memset(memset_gcc_builtin);
+  test_memset(memset_c_byte);
+  test_memset(memset_c_word);
+  test_memset(memset_c_word_unroll);
+  test_memzero(memzero_c_byte);
+  test_memzero(memzero_c_word);
+  test_memzero(memzero_c_word_unroll);
 
   call(main_id);
 
