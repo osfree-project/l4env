@@ -776,7 +776,7 @@ static void conf_string(struct menu *menu)
 
 	while (1) {
 		int res;
-		char *heading;
+		const char *heading;
 
 		switch (sym_get_type(menu->sym)) {
 		case S_INT:
@@ -928,3 +928,4 @@ int main(int ac, char **av)
 
 	return 0;
 }
+
