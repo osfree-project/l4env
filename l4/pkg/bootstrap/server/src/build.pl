@@ -184,7 +184,8 @@ sub build_obj($$$)
   my ($cmdline, $modname, $no_strip) = @_;
   my $_file = first_word($cmdline);
 
-  my $file = search_module($_file) || die "Cannot find file $_file!";
+  my $file = search_module($_file)
+    || die "Cannot find file $_file! Used search path: $module_path";
 
   printf STDERR "Merging image %s to %s\n", $file, $modname;
   # make sure that the file isn't already compressed
