@@ -102,7 +102,7 @@ while (<>)
     }
     print_func($addr);
   }
-  elsif (/^\s*(0x)?([0-9a-f]+)\s*$/i) # simple figure
+  elsif (/^(?:.*?\|)?\s*(0x)?([0-9a-f]+)\s*$/i) # simple figure
   {
     print_func($2);
   }
