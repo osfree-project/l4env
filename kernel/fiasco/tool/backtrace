@@ -26,7 +26,7 @@ if (!defined $img)
 }
 
 my $nm = 'nm';
-$nm = 'arm-linux-nm' if !(system("file -L $img | grep -qw ARM") >> 8);
+$nm = 'arm-softfloat-elf-nm' if !(system("file -L $img | grep -qw ARM") >> 8);
 
 foreach my $l (split('\n', qx{$nm $img | c++filt}))
 {
@@ -120,7 +120,7 @@ while (<>)
     for my $val (split(/\s+/, $l))
     {
       next if $val eq '35353535'; # stack poison
-      if ($val =~ /^f.......$/i) { # XXX fix 64 bit
+      if ($val =~ /^f.......(?:........)?$/i) {
         print_func($val);
       } else {
 	print " 0x$val  ... value ...\n";

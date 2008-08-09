@@ -61,7 +61,7 @@ do-all: $(ALL_STAMPS)
 # If the compiler configuration has changed, remove all dependency
 # files -- they have just become useless.
 	@$(MOVE_IF_CHANGE) $@.new $@				\
-	  && { $(RM) .*.d; echo "CHANGED.  Recompiling."; }	\
+	  && { $(RM) .*.d */.*.d; echo "CHANGED.  Recompiling."; }	\
 	  || echo "unchanged."
 
 force-the-rule: ;
