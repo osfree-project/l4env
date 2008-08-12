@@ -9,6 +9,7 @@ TARGET		= libarm_uart.a
 PRIVATE_INCDIR += $(SRC_DIR)/../include 
 
 include $(L4DIR)/mk/lib.mk
+-include $(SRC_DIR)/Makeconf.$(ARM_PLATFORM_TYPE)
 
 CXXFLAGS += -fno-exceptions -fno-rtti
 
