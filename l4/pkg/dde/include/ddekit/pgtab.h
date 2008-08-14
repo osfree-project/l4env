@@ -21,12 +21,12 @@ enum ddekit_pgtab_type
 /**
  * Set virtual->physical mapping for VM region
  *
- * \param virtual   virtual start address for region
- * \param physical  physical start address for region
+ * \param virt      virtual start address for region
+ * \param phys      physical start address for region
  * \param pages     number of pages in region
  * \param type      pgtab type for region
  */
-void ddekit_pgtab_set_region(void *virtual, ddekit_addr_t physical, int pages, int type);
+void ddekit_pgtab_set_region(void *virt, ddekit_addr_t phys, int pages, int type);
 
 
 /**
@@ -42,19 +42,19 @@ void ddekit_pgtab_set_region_with_size(void *virt, ddekit_addr_t phys, int size,
 /**
  * Clear virtual->physical mapping for VM region
  *
- * \param virtual   virtual start address for region
+ * \param virt      virtual start address for region
  * \param type      pgtab type for region
  */
-void ddekit_pgtab_clear_region(void *virtual, int type);
+void ddekit_pgtab_clear_region(void *virt, int type);
 
 /**
  * Get physical address for virtual address
  *
- * \param virtual  virtual address
+ * \param virt     virtual address
  *
  * \return physical address
  */
-ddekit_addr_t ddekit_pgtab_get_physaddr(const void *virtual);
+ddekit_addr_t ddekit_pgtab_get_physaddr(const void *virt);
 
 /**
  * Get virtual address for physical address
@@ -68,19 +68,19 @@ ddekit_addr_t ddekit_pgtab_get_virtaddr(const ddekit_addr_t physical);
 /**
  * Get type of VM region.
  *
- * \param virtual   virtual address
+ * \param virt      virtual address
 
  * \return VM region type
  */
-int ddekit_pgtab_get_type(const void *virtual);
+int ddekit_pgtab_get_type(const void *virt);
 
 /**
  * Get size of VM region.
  *
- * \param virtual   virtual address
+ * \param virt      virtual address
  *
  * \return VM region size (in bytes)
  */
-int ddekit_pgtab_get_size(const void *virtual);
+int ddekit_pgtab_get_size(const void *virt);
 
 #endif
