@@ -150,7 +150,7 @@ ifneq ($(SYSTEM),)
                            CROSS_COMPILE=$(SYSTEM_TARGET) \
 			   OPT_ARCH=$(ARCH) \
 			   OPT_COMPRESS=$(COMPRESS) \
-                           $(SRC_DIR)/build.pl $(MODULE_LIST) $(ENTRY) 2>&1 | tee build.log 1>&2 \
+                           $(SRC_DIR)/build.pl $(MODULE_LIST) $(ENTRY) 1>&2 \
                      || echo X-build-failed-X)
     ifeq ($(BUILD_DUMMY),X-build-failed-X)
      $(error Processing of module list failed!)
