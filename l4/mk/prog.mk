@@ -145,6 +145,7 @@ endif
 ifneq ($(SYSTEM),)
 	@echo "                   to $(INSTALLDIR_LOCAL)"
 endif
+	@echo "  disasm         - disassemble first target"
 	@echo "  scrub          - delete backup and temporary files"
 	@echo "  clean          - delete generated object files"
 	@echo "  cleanall       - delete all generated, backup and temporary files"
