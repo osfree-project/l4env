@@ -118,7 +118,8 @@ getchar(void)
 
   do
     c = uart()->get_char(0);
-  while (c == -1);
+  while (c == -1)
+    ;
   return c;
 }
 
@@ -137,7 +138,8 @@ void reboot(void)
 #if defined(ARCH_x86) || defined(ARCH_amd64)
   l4util_reboot_arch();
 #else
-  while (1);
+  while (1)
+    ;
 #endif
 }
 
@@ -169,5 +171,5 @@ panic(const char *fmt, ...)
   vprintf(fmt, v);
   va_end(v);
   putchar('\n');
-  exit(1);
+  _exit(1);
 }

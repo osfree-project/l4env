@@ -173,7 +173,7 @@ namespace L4
     do {
       c = com_cons_try_getchar();
       if (c == -1)
-        raw_keyboard_getscancode();
+        c = raw_keyboard_getscancode();
       l4util_cpu_pause();
     } while (c == -1 && blocking);
 

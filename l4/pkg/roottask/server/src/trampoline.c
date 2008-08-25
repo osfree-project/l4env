@@ -70,7 +70,7 @@ task_trampoline(l4_addr_t entry, void* mbi)
                "call *%%rcx		\n\t" // jump to entry
                ".globl _task_trampoline_end\n"
 	       "_task_trampoline_end:"
-	       : "=rax" (dummy1), "=rcx" (dummy2)
+	       : "=a" (dummy1), "=c" (dummy2)
 	       : "0" (L4UTIL_MB_VALID)
 	       );
 
