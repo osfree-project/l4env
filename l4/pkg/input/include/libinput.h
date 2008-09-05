@@ -55,7 +55,7 @@ struct l4input {
  * -# on each event occurrence \a handler is called and no local event
  * buffering is done.
  */
-L4_CV int l4input_init(int prio, void (*handler)(struct l4input *));
+L4_CV int l4input_init(int prio, L4_CV void (*handler)(struct l4input *));
 
 /** Query event status.
  *
