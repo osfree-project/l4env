@@ -57,7 +57,7 @@ module verner
      *
      * The return parameter indicates if the open operation was successful.
      */
-    boolean open(in string filename, out double length);
+    boolean open(in string filename, out double *length);
 
     /*
      * registers a thread to receive update events

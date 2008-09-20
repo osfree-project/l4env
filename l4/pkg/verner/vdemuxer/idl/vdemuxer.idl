@@ -15,7 +15,8 @@
 
 
 import <l4/dsi/types.h>
-import <arch_types.h> 
+import <arch_types.h>
+#define stream_info_t frame_ctrl_t
 
 interface VideoDemuxerComponentIntern
 {
