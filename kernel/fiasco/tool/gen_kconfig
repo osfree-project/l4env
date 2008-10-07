@@ -39,7 +39,7 @@ while ($_=<IN>) {
 	print OUT "	depends on PF_$i\n";
 	print OUT "	default \"$pfs{$i}{name}\"\n";
       }
-      print OUT "source $pfs{$i}{file}\nendif\n";
+      print OUT "source \"$pfs{$i}{file}\"\nendif\n";
     }
   }
   if (/^\s*\#\s*PF_CHOICE\W/) {
