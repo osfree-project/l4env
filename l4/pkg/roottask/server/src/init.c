@@ -1589,7 +1589,8 @@ init(void)
 
   configure();
 
-  setup_symbols_and_lines((l4_addr_t)mb_mod[2].mod_start, myself);
+  if (!ux_running)
+    setup_symbols_and_lines((l4_addr_t)mb_mod[2].mod_start, myself);
   setup_task(TASKNO_ROOT, myself);
   setup_task(TASKNO_SIGMA0, my_pager);
   setup_names();

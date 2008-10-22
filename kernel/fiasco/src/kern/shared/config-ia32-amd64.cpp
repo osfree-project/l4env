@@ -88,6 +88,10 @@ public:
   static char const char_micro;
 
   static bool found_vmware;
+
+  enum {
+    Is_ux = 0,
+  };
 };
 
 IMPLEMENTATION[ia32,amd64]:

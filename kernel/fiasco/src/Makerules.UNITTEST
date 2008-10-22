@@ -90,7 +90,7 @@ $(ALL_TESTS): %: %.o
 	  $(filter-out $(srcdir)/kernel.ux.ld,$^) -o $@ $(TEST_LIB)
 
 %.ok: %
-ifeq ($(CONFIG_XARCH),ux)	# Test execution for 
+ifeq ($(SYSTEM_TARGET)$(CONFIG_XARCH),ux)	# Test execution for non-cross UX builds
 	@echo -n "Running test $* ... "
 	@./$< --test --quiet > $*.out
 ifeq ($(RECREATE_OUTPUT),1)

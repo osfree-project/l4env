@@ -95,11 +95,11 @@ public:
   enum
   {
     Kernel_start_frame   = 0x1000,      // Frame 0 special-cased by roottask
-    Multiboot_frame      = 0xc000,      // Multiboot info + modules
     Trampoline_frame     = 0x2000,      // Trampoline Page
     Utcb_ptr_frame       = 0x3000,      // UTCB pointer page
     Sigstack_start_frame = 0x4000,      // Kernel Signal Altstack Start
     Sigstack_end_frame   = 0xc000,      // Kernel Signal Altstack End
+    Multiboot_frame      = 0x10000,      // Multiboot info + modules
     Kernel_end_frame     = Sigstack_end_frame
   };
 

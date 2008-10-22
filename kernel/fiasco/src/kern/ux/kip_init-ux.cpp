@@ -13,7 +13,9 @@ Kip_init::setup_arch()
   Kip::k()->user_ptr = (unsigned long)(Boot_info::mbi_phys());
   Mem_desc *m = Kip::k()->mem_descs();
 
-  *(m++) = Mem_desc(0, Kmem::get_mem_max() - 1, Mem_desc::Conventional);
+  // start at 64k because on some distributions (like Ubuntu 8.04) it's not
+  // allowed to map below a certain treshold
+  *(m++) = Mem_desc(64 << 10, Kmem::get_mem_max() - 1, Mem_desc::Conventional);
   *(m++) = Mem_desc(Kmem::kernel_image_start(), Kmem::kcode_end() - 1, 
       Mem_desc::Reserved);
 

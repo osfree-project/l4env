@@ -32,7 +32,8 @@ public:
   static const char char_micro;
 
   enum {
-    Vkey_irq   = 0,
+    Vkey_irq   = 17,
+    Is_ux = 1,
   };
 };
 
@@ -43,6 +44,7 @@ KIP_KERNEL_FEATURE("io_prot");
 
 char const Config::char_micro = '\265';
 const char *const Config::kernel_warn_config_string = 0;
+
 
 IMPLEMENT FIASCO_INIT
 void

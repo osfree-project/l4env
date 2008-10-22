@@ -40,11 +40,11 @@ $(KERNEL):	$(srcdir)/kernel.ux.ld $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(KERNEL_EXTRA
 
 irq0.o:		irq0.c
 		$(COMP_MESSAGE)
-		$(VERBOSE)$(HOST_CC) -O2 -Wall -W -c -o $@ $<
+		$(VERBOSE)$(CC) -O2 -Wall -W -c -o $@ $<
 
 irq0:		irq0.o
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(HOST_CC) -static -o $@ $<
+		$(VERBOSE)$(CC) -static -o $@ $<
 		$(STRIP_MESSAGE)
 		$(VERBOSE)$(STRIP) $@
 
@@ -59,11 +59,11 @@ endif
 
 ux_con.o:	ux_con.c
 		$(COMP_MESSAGE)
-		$(VERBOSE)$(HOST_CC) -O2 -Wall -W -g $(SDL_CFLAGS) -c $<
+		$(VERBOSE)$(CC) -O2 -Wall -W -g $(SDL_CFLAGS) -c $<
 
 ux_con:		ux_con.o
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(HOST_CC) $(SDL_LDFLAGS) $< -o $@
+		$(VERBOSE)$(CC) $(SDL_LDFLAGS) $< -o $@
 		$(STRIP_MESSAGE)
 		$(VERBOSE)$(STRIP) $@
 endif
@@ -71,11 +71,11 @@ endif
 ifeq ($(CONFIG_UX_NET),y)
 ux_net.o:	ux_net.c
 		$(COMP_MESSAGE)
-		$(VERBOSE)$(HOST_CC) -O2 -Wall -W -g -c $<
+		$(VERBOSE)$(CC) -O2 -Wall -W -g -c $<
 
 ux_net:		ux_net.o
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(HOST_CC) $< -o $@
+		$(VERBOSE)$(CC) $< -o $@
 		$(STRIP_MESSAGE)
 		$(VERBOSE)$(STRIP) $@
 endif

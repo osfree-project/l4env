@@ -91,6 +91,8 @@ l4_addr_t
 dmphys_kinfo_mem_low(void)
 {
   ram_base = dmphys_kinfo_get_conventional_mem(low);
+  if (ram_base < L4_SUPERPAGESIZE)
+    ram_base = 0;
   return ram_base;
 }
 

@@ -804,7 +804,11 @@ Thread::handle_sigma0_page_fault (Address pfa)
   // Check if mapping a superpage doesn't exceed the size of physical memory
   if (Cpu::have_superpages() &&
       (pfa & Config::SUPERPAGE_MASK) + Config::SUPERPAGE_SIZE <
-       Kip::k()->main_memory_high())
+       Kip::k()->main_memory_high()
+  // Some distributions do not allow to mmap below a certain threshold (like
+  // 64k on Ubuntu 8.04) so we cannot map a superpage at 0 if we're
+  // Fiasco-UX
+      && (!Config::Is_ux || !(pfa < Config::SUPERPAGE_SIZE)))
     {
       pfa &= Config::SUPERPAGE_MASK;
       size = Config::SUPERPAGE_SIZE;
