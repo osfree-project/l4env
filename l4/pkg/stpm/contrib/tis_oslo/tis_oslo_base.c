@@ -21,6 +21,7 @@
 #include <linux/fs.h>
 #include <linux/delay.h>
 #include <linux/ioport.h>
+#include <linux/sched.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
 
