@@ -50,8 +50,8 @@ irq0:		irq0.o
 
 ifeq ($(CONFIG_UX_CON),y)
 
-SDL_CFLAGS  := $(shell sdl-config --cflags)
-SDL_LDFLAGS := $(shell sdl-config --libs)
+SDL_CFLAGS  := $(shell $(SYSTEM_TARGET)sdl-config --cflags)
+SDL_LDFLAGS := $(shell $(SYSTEM_TARGET)sdl-config --libs)
 
 ifeq ($(SDL_CFLAGS),)
   $(error sdl-config not found. libsdl including header files installed?)

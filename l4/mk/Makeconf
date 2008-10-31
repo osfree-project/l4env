@@ -145,7 +145,7 @@ ifeq ($(O)$(OBJ_BASE),)
 $(error need to give builddir with O=.../builddir)
 else
 ifneq ($(O),)
-ifeq ($(origin OBJ_BASE),undefined)
+ifeq ($(filter-out undefined environment,$(origin OBJ_BASE)),)
 OBJ_BASE := $(call absfilename, $(O))
 export OBJ_BASE
 endif
