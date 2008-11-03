@@ -40,6 +40,7 @@ private:
   static unsigned long                  _sigma0_end;
   static unsigned long                  _root_start;
   static unsigned long                  _root_end;
+  static unsigned long                  _min_mappable_address;
 };
 
 IMPLEMENTATION[ux]:
@@ -88,6 +89,7 @@ unsigned long           Boot_info::_sigma0_start;
 unsigned long           Boot_info::_sigma0_end;
 unsigned long           Boot_info::_root_start;
 unsigned long           Boot_info::_root_end;
+unsigned long           Boot_info::_min_mappable_address;
 
 // If you add options here, add them to getopt_long and help below
 struct option Boot_info::_long_options[] FIASCO_INITDATA =
@@ -383,6 +385,8 @@ Boot_info::init()
   if (! quiet && _native)
     printf ("Native Syscall Map: 0x%lx\n", _native);
 
+  get_minimum_map_address();
+
   if ((_fd = open (physmem_file, O_RDWR | O_CREAT | O_EXCL | O_TRUNC, 0700))
       == -1)
     panic ("cannot create physmem: %s", strerror (errno));
@@ -508,6 +512,22 @@ Boot_info::init()
 
   if (! quiet)
     puts ("\nBootstrapping...");
+}
+
+PRIVATE static
+void
+Boot_info::get_minimum_map_address()
+{
+  FILE *f = fopen("/proc/sys/vm/mmap_min_addr", "r");
+  if (!f)
+    return;
+
+  fscanf(f, "%ld", &_min_mappable_address);
+
+  _min_mappable_address
+    = (_min_mappable_address + (Config::PAGE_SIZE - 1)) & Config::PAGE_MASK;
+
+  fclose(f);
 }
 
 PUBLIC static inline
@@ -670,3 +690,8 @@ PUBLIC static inline
 unsigned long
 Boot_info::root_end()
 { return _root_end; }
+
+PUBLIC static inline
+unsigned long
+Boot_info::min_mappable_address()
+{ return _min_mappable_address; }

@@ -814,7 +814,7 @@ rm_fault_sse(l4_msgtag_t tag, l4_utcb_t *utcb, l4_threadid_t src)
   extern char after_sse_insn[];
   sse_faulted = 1;
   utcb->exc.eip = (l4_umword_t)after_sse_insn;
-  return L4RM_REPLY_SUCCESS;
+  return L4RM_REPLY_EMPTY;
 }
 #endif // ARCH_x86
 
@@ -866,7 +866,7 @@ rm_fault_rdpmc(l4_msgtag_t tag, l4_utcb_t *utcb, l4_threadid_t src)
     }
   utcb->exc.eip = (l4_umword_t)after_rdpmc_insn;
   rdpmc_faulted = 1;
-  return L4RM_REPLY_SUCCESS;
+  return L4RM_REPLY_EMPTY;
 }
 
 static void

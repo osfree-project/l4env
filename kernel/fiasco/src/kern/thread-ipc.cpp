@@ -1553,7 +1553,7 @@ Thread::exception(Trap_state *ts)
 
       state_del(Thread_in_exception);
     }
-   else if (r.msg_word(0) == 1)
+   else if (r.msg_word(0) == 1 && state() & Thread_alien)
      state_add(Thread_dis_alien);
 
   // restore original utcb_handler
