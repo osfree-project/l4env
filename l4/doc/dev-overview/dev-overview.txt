@@ -60,7 +60,7 @@ you will of course need your favorite text editor.
 
 
  Development Tool                       | Required Version
-------------------------------------------------------------------------
+ ------------------------------------------------------------------------
  GCC                                    | 3.x
  GNU make                               | >= 3.77
  Binutils                               | >= 2.13.90
