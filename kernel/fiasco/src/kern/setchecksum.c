@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
   image = mmap(NULL, stats.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  if (!image)
+  if (image == MAP_FAILED)
     {
       perror("error: can't mmap kernel image: ");
       exit(1);
