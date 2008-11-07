@@ -2,11 +2,12 @@
 ifneq ($(KERNELRELEASE),)
 
 tis_oslo-objs:= tis_oslo_base.o tis.o
-obj-m	:= tis_oslo.o
+tis_oslo2-objs:= tis_oslo_base2.o tis.o
+obj-m	:= tis_oslo.o tis_oslo2.o
 
 else
 
-KDIR	:= /usr/src/linux/
+KDIR	?= /usr/src/linux/
 PWD	:= $(shell pwd)
 
 default:
