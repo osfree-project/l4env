@@ -110,7 +110,7 @@ $(OBJ_DIR)/% $(OBJ_DIR)/%/html:$(SRC_DIR)/%.cfg
 # define LOCAL_INSTALLDIR prior to including install.inc, where the install-
 # rules are defined. Same for INSTALLDIR.
 INSTALLDIR_HTML		?= $(DROPS_STDDIR)/doc/html
-INSTALLFILE_HTML	?= $(CP) -ap $(1) $(2)
+INSTALLFILE_HTML	?= $(CP) -pR $(1) $(2)
 INSTALLDIR_HTML_LOCAL	?= $(OBJ_BASE)/doc/html
 INSTALLFILE_HTML_LOCAL	?= for f in $(wildcard $(call absfilename,$(1))); do $(LN) -sf $$f $(2); done
 
@@ -231,8 +231,8 @@ SHOWPDF ?= $(SHOWTEX:.tex=.pdf)
 VIEWER_DVI	  ?= xdvi
 VIEWER_PS         ?= gv
 VIEWER_PDF	  ?= xpdf
-VIEWERREFRESH_DVI ?= killall -q -USR1 xdvi xdvi.bin xdvi.real || true
-VIEWERREFRESH_PS  ?= killall -q -HUP $(VIEWER_PS) || true
+VIEWERREFRESH_DVI ?= killall -USR1 xdvi xdvi.bin xdvi.real || true
+VIEWERREFRESH_PS  ?= killall -HUP $(VIEWER_PS) || true
 
 dvi:	$(SHOWDVI)
 show showdvi: dvi

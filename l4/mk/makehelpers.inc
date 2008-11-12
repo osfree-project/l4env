@@ -8,7 +8,7 @@
 # We use this file to browse doxygen files in the doc.mk rules.
 
 BID_print:
-	@echo -n $($(VAR))
+	@echo $($(VAR))
 BID_printm:
 	@$(foreach v, $(VARS), echo '$(v)=$($(v))';)
 
