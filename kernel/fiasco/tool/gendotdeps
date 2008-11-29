@@ -390,8 +390,8 @@ sub remove_trivial {
       delete $all_deps{$mod};
       print STDERR "$mod " if $verbose>0;
       foreach my $m (keys %modules) {
-	if (defined ${%{$modules{$m}}}{$mod}) {
-  	  delete ${%{$modules{$m}}}{$mod};
+	if (defined $%{$modules{$m}}{$mod}) {
+  	  delete $%{$modules{$m}}{$mod};
         }
       }
     }
@@ -499,7 +499,7 @@ sub print_dot {
     }
   }
 
-  print "};\n";
+  print "}\n";
 }
 
 #-------------------------------------------------------------
