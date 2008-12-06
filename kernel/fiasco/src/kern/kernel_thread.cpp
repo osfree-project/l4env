@@ -90,6 +90,9 @@ Kernel_thread::bootstrap()
 
   Timer::enable();
 
+  // all initializations done, go start the system
+  Proc::sti();
+
   bootstrap_arch();
 
   printf("Calibrating timer loop... ");

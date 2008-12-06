@@ -44,9 +44,6 @@ main (void)
   // Perform architecture specific initialization
   main_arch();
 
-  // all initializations done, go start the system
-  Proc::sti();
-
   // create kernel thread
   static Kernel_thread *kernel = new (Config::kernel_id) Kernel_thread;
 
