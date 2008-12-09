@@ -561,9 +561,9 @@ leave_by_trigger_exception:
 	str	r0, [r1, #(OFS__THREAD__EXCEPTION_IP)]
 
 	/* enforce user mode */
-	ldr	r0, [sp, #(13*4 + 12)]
+	ldr	r0, [sp, #(13*4 + 0)]
 	and 	r0, r0, #~0xcf /* mask out mode bits and IRQ flags */
-	str	r0, [sp, #(13*4 + 12)]
+	str	r0, [sp, #(13*4 + 0)]
 
 	enter_slowtrap_w_stack 0x00500000
 
