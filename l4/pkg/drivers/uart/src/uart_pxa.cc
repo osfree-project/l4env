@@ -55,10 +55,10 @@ namespace L4
   };
 
   unsigned long Uart_pxa::rd(unsigned long reg) const
-  { return *(unsigned long*)(_base + reg); }
+  { return *(volatile unsigned long*)(_base + reg); }
 
   void Uart_pxa::wr(unsigned long reg, unsigned long val) const
-  { *(unsigned long*)(_base + reg) = val; }
+  { *(volatile unsigned long*)(_base + reg) = val; }
 
   bool Uart_pxa::startup(unsigned long base)
   {
