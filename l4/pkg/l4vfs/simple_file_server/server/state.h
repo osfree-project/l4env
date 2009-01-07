@@ -20,13 +20,21 @@
  * 1 .. MAX_STATIC_FILES for the files
  */
 
+typedef struct chunk
+{
+    struct chunk        *next; //< queuing info
+    l4dm_dataspace_t    *ds;   //< dataspace we keep a chunk in
+    l4_umword_t         start; //< chunk start offset in file
+    l4_size_t           size;  //< chunk size
+    int                 refcnt; //< reference counter
+} simple_file_chunk_t;
+
 typedef struct
 {
-    char * name;
-    l4_uint8_t * data;
-    int length;
-    l4dm_dataspace_t *ds;
-    int ds_ref_count;
+    char * name;                //< file name
+    l4_uint8_t * data;          //< ptr to original file data
+    int length;                 //< file size
+    simple_file_chunk_t *chunks; //< mmap chunk list
 } simple_file_t;
 
 extern ARRAYLIST *files;

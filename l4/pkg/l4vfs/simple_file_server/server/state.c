@@ -56,7 +56,7 @@ void state_init(void) {
 
         s_file->data = (l4_uint8_t *) m->mod_start;
         s_file->length = m->mod_end - m->mod_start;
-        s_file->ds = NULL;
+        s_file->chunks = NULL;
 
         command = (char *)m->cmdline;
 

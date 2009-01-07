@@ -109,7 +109,7 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
     {
         res = l4rm_area_reserve(ds_size, L4RM_LOG2_ALIGNED, &addr, &area);
 
-        LOGd(_DEBUG,"reserved area with id: %u", area);
+        LOGd(_DEBUG,"reserved area with id: %u, result %d", area, res);
 
         if (res)
         {
@@ -123,6 +123,7 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
 
         res = l4rm_area_attach(&ds, area, length, offset, ds_flags,
                                (void *)&content_addr);
+		LOGd(_DEBUG, "attached area to address %p, result %d", content_addr, res);
     }
     else
     {
@@ -143,11 +144,12 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
 
         res = l4rm_area_attach(&ds, area, length, offset, ds_flags,
                                (void *)&content_addr);
+		LOGd(_DEBUG, "attached area to address %p, result %d", content_addr, res);
     }
 
     if (res)
     {
-        LOG("error on attaching ds, res: %d", res);
+        LOG("error attaching ds, res: %d", res);
 
         assert(res != -L4_EINVAL);
 
@@ -166,7 +168,7 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
     // 7. create local status information
     // fixme: this can fail
     temp = add_ds2server(&ds, file_desc.server_id, area);
-    assert(temp == 0);  // we don't currently know how to handle to
+    assert(temp == 0);  // we don't currently know how to handle too
                         // small management tables
 
     return ret;

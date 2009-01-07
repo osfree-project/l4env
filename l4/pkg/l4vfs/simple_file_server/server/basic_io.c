@@ -4,8 +4,9 @@
  *
  * \date   08/10/2004
  * \author Jens Syckor <js712688@inf.tu-dresden.de>
+ * \author Bjoern Doebel <doebel@os.inf.tu-dresden.de>
  */
-/* (c) 2004 Technische Universitaet Dresden
+/* (c) 2004 - 2008 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -30,6 +31,7 @@
 
 clientstate_t clients[MAX_CLIENTS];
 
+#define DEBUG
 #ifdef DEBUG
 static int _DEBUG = 1;
 #else
@@ -352,7 +354,9 @@ int clientstate_mmap(l4dm_dataspace_t *ds, size_t length, int prot, int flags, o
     char *buf;
     l4_uint32_t rights;
     l4_addr_t content_addr;
+	static int foo = 0;
 
+	LOGd_Enter(_DEBUG, " call count: %d", ++foo);
     // check errors
     if (fd < 0 || fd >= MAX_CLIENTS)
         return -EBADF;
@@ -371,8 +375,20 @@ int clientstate_mmap(l4dm_dataspace_t *ds, size_t length, int prot, int flags, o
     if (s_file == NULL)
         return -EBADF;
 
-    LOGd(_DEBUG, "iod = %d, len = %d, seek_pos = %d",
-         oid, s_file->length, clients[fd].seek_pos);
+    LOGd(_DEBUG, "iod = %d, len = %d (filelen = %d), seek_pos = %d",
+         oid, length, s_file->length, clients[fd].seek_pos);
+	LOGd(_DEBUG, "flags = %lx", flags);
+	LOGd(_DEBUG, "\t%s", flags & MAP_SHARED ? "map_shared" : "map_private");
+	if (flags & MAP_ANONYMOUS)
+		LOGd(_DEBUG, "\tmap anonymous");
+	if (flags & MAP_EXECUTABLE)
+		LOGd(_DEBUG, "\tmap executable");
+	if (flags & MAP_FIXED)
+		LOGd(_DEBUG, "\tmap fixed");
+	if (flags & MAP_LOCKED)
+		LOGd(_DEBUG, "\tmap locked");
+	if (flags & MAP_POPULATE)
+		LOGd(_DEBUG, "\tmap populate");
 
     if (offset > s_file->length)
     {
@@ -389,59 +405,69 @@ int clientstate_mmap(l4dm_dataspace_t *ds, size_t length, int prot, int flags, o
     if ((flags & MAP_SHARED) && (prot & PROT_WRITE))
         rights = L4DM_RW;
 
-    /* dataspace already exists, give client access rights, inc ds ref
-     * count and return */
-    if (s_file->ds != NULL)
+    /* Check, if we already have this chunk mapped. If so, increment
+     * ref count and return.
+     */
+    if (s_file->chunks != NULL)
     {
-        LOGd(_DEBUG,"dataspace already exists, share it now");
-        ds = s_file->ds;
-        s_file->ds_ref_count++;
-        return l4dm_share(s_file->ds,clients[fd].client,rights);
+	simple_file_chunk_t *chunk = s_file->chunks;
+	while (chunk != NULL)
+	{
+	    if (chunk->start == offset && chunk->size == length)
+	    {
+		LOGd(_DEBUG,"dataspace already exists, share it now");
+		ds = chunk->ds;
+		chunk->refcnt++;
+		return l4dm_share(chunk->ds, clients[fd].client, rights);
+	    }
+	    chunk = chunk->next;
+	}
     }
 
-    res = l4dm_mem_open(L4DM_DEFAULT_DSM,s_file->length,0,0,s_file->name,ds);
-
+    /* If we get here, no fitting chuk has been found. */
+    res = l4dm_mem_open(L4DM_DEFAULT_DSM, length, 0, 0, s_file->name, ds);
     if (res)
-    {
         return res;
-    }
 
-    LOGd(_DEBUG,"opened dataspace with name: %s",s_file->name);
+    LOGd(_DEBUG, "opened dataspace with name: %s", s_file->name);
 
-    res = l4rm_attach(ds,s_file->length,0,L4DM_RW,(void *)&content_addr);
-
+    res = l4rm_attach(ds, s_file->length, 0, L4DM_RW, (void *)&content_addr);
     if (res)
     {
        l4dm_close(ds);
        return res;
     }
 
-    LOGd(_DEBUG,"attached ds at address %ld",content_addr);
+    LOGd(_DEBUG, "attached ds at address %p", content_addr);
 
     buf = (char *) content_addr;
 
-    memcpy(buf, s_file->data, s_file->length);
+    LOGd(_DEBUG, "data %p, offs %d -> %p", s_file->data, offset, s_file->data + offset);
+    memcpy(buf, s_file->data + offset, length);
 
     res = l4rm_detach((void *)buf);
-
-    LOGd(_DEBUG,"res after detach %d",res);
-
+    LOGd(_DEBUG, "res after detach %d", res);
     if (res)
     {
         l4dm_close(ds);
         return res;
     }
 
-    res = l4dm_share(ds,clients[fd].client,rights);
-
+    res = l4dm_share(ds, clients[fd].client, rights);
     if (res)
     {
         l4dm_close(ds);
         return res;
     }
 
-    s_file->ds = ds;
-    s_file->ds_ref_count=1;
+    simple_file_chunk_t *ch = (simple_file_chunk_t*)malloc(sizeof(simple_file_chunk_t));
+    ch->ds = ds;
+    ch->start = offset;
+    ch->size = length;
+    ch->refcnt = 1;
+    ch->next = s_file->chunks;
+
+    s_file->chunks = ch;
 
     return 0;
 }
@@ -518,51 +544,60 @@ int clientstate_msync(const l4dm_dataspace_t *ds, l4_addr_t offset,
     for (i=0;i<arraylist->size(files);i++)
     {
         s_file = (simple_file_t *) arraylist->get_next(files);
+		simple_file_chunk_t *ch = s_file->chunks;
 
-        /* true if we have found mmap file */
-        if (s_file->ds->id == ds->id)
-        {
-            LOGd(_DEBUG,"found mmaped file");
+		/* File has mmaped regions? */
+		while (ch)
+		{
+			if (ch->ds->id == ds->id)
+				break;
+			ch = ch->next;
+		}
 
-            res = l4rm_attach(s_file->ds, length, offset, L4DM_RW,
-                          (void *)&content_addr);
+		// Didn't find correct region, continue to next file
+		if (!ch)
+			continue;
 
-            /* true if ds could not attached */
-            if (res)
-            {
-                assert(res != -L4_EINVAL);
+		LOGd(_DEBUG,"found mmaped file");
 
-                /* map to POSIX errno */
-                if (res == -L4_ENOMEM)
-                {
-                    res = -ENOMEM;
-                }
-                else
-                {
-                    res = -EACCES;
-                }
-            }
-            else
-            {
-                content = (l4_uint8_t *) content_addr;
+		res = l4rm_attach(ch->ds, length, offset, L4DM_RW,
+					  (void *)&content_addr);
 
-                LOGd(_DEBUG,"write back changed buffer to original file");
+		/* true if ds could not attached */
+		if (res)
+		{
+			assert(res != -L4_EINVAL);
 
-                /* calculate amount of bytes to copy */
-                size = offset+length;
-                if (size > s_file->length)
-                {
-                    size = s_file->length-offset;
-                }
+			/* map to POSIX errno */
+			if (res == -L4_ENOMEM)
+			{
+				res = -ENOMEM;
+			}
+			else
+			{
+				res = -EACCES;
+			}
+		}
+		else
+		{
+			content = (l4_uint8_t *) content_addr;
 
-                /* copy to original file */
-                memcpy(s_file->data+offset, content, size);
+			LOGd(_DEBUG,"write back changed buffer to original file");
 
-                flag=1;
-            }
+			/* calculate amount of bytes to copy */
+			size = length;
+			if (size > ch->size)
+			{
+				size = ch->size;
+			}
 
-            break;
-        }
+			/* copy to original file */
+			memcpy(s_file->data + ch->start + offset, content, size);
+
+			flag=1;
+		}
+
+		break;
     }
 
     if (flag)
@@ -586,26 +621,36 @@ int clientstate_munmap(const l4dm_dataspace_t *ds, l4_addr_t start, size_t lengt
     for (i=0;i<arraylist->size(files);i++) 
     {
         s_file = (simple_file_t *) arraylist->get_next(files);
+		simple_file_chunk_t *ch = s_file->chunks;
 
-        /* true if we have found mmaped file */
-        if (s_file->ds->id == ds->id)
-        {
-            /* check if reference count is one and client tries to munmap
-             * complete dataspace */
-            if (start==0 && length >= s_file->length
-                && s_file->ds_ref_count == 1)
-            {
-                res = l4dm_close(s_file->ds);
-                s_file->ds_ref_count = 0;
-                break;
-            }
-            else
-            {
-                s_file->ds_ref_count--;
-                res = 0;
-                break;
-            }
-        }
+		while (ch)
+		{
+			if (ch->ds->id == ds->id)
+				break;
+			ch = ch->next;
+		}
+
+		if (!ch)
+			continue;
+
+		/* check if reference count is one and client tries to munmap
+		 * complete dataspace */
+		if (start == 0
+			&& length >= ch->size
+			&& ch->refcnt == 1)
+		{
+			res = l4dm_close(ch->ds);
+
+			//XXX: remove chunk from s_file->chunks!
+
+			break;
+		}
+		else
+		{
+			ch->refcnt--;
+			res = 0;
+			break;
+		}
     }
 
     if (res)
