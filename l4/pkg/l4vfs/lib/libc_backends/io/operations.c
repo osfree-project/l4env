@@ -759,6 +759,67 @@ int lstat(const char* pathname, struct stat *buf)
     return -1;
 }
 
+static inline void stat2stat64(struct stat *src, struct stat64 *dest) 
+{
+    dest->st_dev = src->st_dev;
+
+    dest->__st_ino = src->st_ino;
+    dest->st_ino = src->st_ino;
+    dest->st_mode = src->st_mode;
+    dest->st_nlink = src->st_nlink;
+    dest->st_uid = src->st_uid;
+    dest->st_gid = src->st_gid;
+    dest->st_rdev = src->st_rdev;
+
+    dest->st_size = src->st_size;
+    dest->st_blksize = src->st_blksize;
+    dest->st_blocks = src->st_blocks;
+    
+    dest->st_atime = src->st_atime;
+    dest->st_atimensec = src->st_atimensec;
+    dest->st_mtime = src->st_mtime;
+    dest->st_mtimensec = src->st_mtimensec;
+    dest->st_ctime = src->st_ctime;
+    dest->st_ctimensec = src->st_ctimensec;
+}
+
+int stat64(const char *filename, struct stat64 *buf) 
+{
+    struct stat _buf;
+    int ret;
+    
+    ret = stat(filename, &_buf);
+    stat2stat64(&_buf, buf);
+    return ret;
+}
+
+int open64(const char *pathname, int flags,...) 
+{
+    return open(pathname, flags);
+}
+
+int lstat64(const char *filename, struct stat64 *buf)
+{
+    struct stat _buf;
+    int ret;
+    
+    ret = lstat(filename, &_buf);
+    stat2stat64(&_buf, buf);
+    return ret;
+}
+
+int fstat64(int filedes, struct stat64 *buf)
+{
+    struct stat _buf;
+    int ret;
+    
+    ret = fstat(filedes, &_buf);
+    stat2stat64(&_buf, buf);
+    return ret;
+}
+
+
+
 int rename(const char * oldpath, const char * newpath)
 {
 // fixme: do something useful here

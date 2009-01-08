@@ -1,3 +1,5 @@
+include/linux/a.out.h
+libc/sysdeps/linux/common/bits/statvfs.h 
 libc/string/_string.h
 libc/string/bcopy.c
 libc/string/bzero.c

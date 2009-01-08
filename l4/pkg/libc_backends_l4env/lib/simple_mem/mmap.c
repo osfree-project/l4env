@@ -33,12 +33,13 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
 void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
                  off_t offset)
 {
-    void * tmp;
+    void * tmp = 0;
     int res;
     l4_addr_t addr;
     l4_uint32_t area;
     l4dm_dataspace_t ds;
     l4_size_t ds_size;
+    int with_start = (start != 0);
 
     res = l4dm_mem_open(L4DM_DEFAULT_DSM, length, 0, 0, "libc heap", &ds);
 
@@ -56,7 +57,10 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
 
     LOGd(_DEBUG,"mem_size of created dataspace = %ld", (l4_addr_t)ds_size);
 
-    res = l4rm_area_reserve(ds_size, L4RM_LOG2_ALIGNED, &addr, &area);
+    if (with_start)
+        res = l4rm_area_reserve_region(start, ds_size, L4RM_LOG2_ALIGNED, &area);
+    else
+        res = l4rm_area_reserve(ds_size, L4RM_LOG2_ALIGNED, &addr, &area);
 
     LOGd(_DEBUG,"reserved area with id: %d", area);
 
@@ -73,7 +77,13 @@ void * mmap_anon(void *start, size_t length, int prot, int flags, int fd,
     }
 
 
-    res = l4rm_area_attach(&ds, area, ds_size, 0, L4DM_RW, &tmp);
+    if (with_start)
+    {
+        res = l4rm_area_attach_to_region(&ds, area, start, ds_size, 0, L4DM_RW);
+        tmp = start;
+    }
+    else
+        res = l4rm_area_attach(&ds, area, ds_size, 0, L4DM_RW, &tmp);
 
     if (res == 0)
     {

@@ -121,7 +121,11 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
             return MAP_FAILED;
         }
 
-        res = l4rm_area_attach(&ds, area, length, offset, ds_flags,
+        /* Note: attach()'s offset parameter is _0_, because it refers to
+         * the dataspace we just got from the file server. It does _NOT_
+         * refer to the offset in the file that we got as parameter!
+         */
+        res = l4rm_area_attach(&ds, area, length, 0, ds_flags,
                                (void *)&content_addr);
 		LOGd(_DEBUG, "attached area to address %p, result %d", content_addr, res);
     }
@@ -130,7 +134,7 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
         res = l4rm_area_reserve_region((l4_addr_t)start, ds_size,
                                        L4RM_LOG2_ALIGNED, &area);
 
-        LOGd(_DEBUG,"reserved area with id: %d",area);
+        LOGd(_DEBUG,"reserved area with id: %d, result %d",area);
 
         if (res)
         {
@@ -142,9 +146,13 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
             return MAP_FAILED;
         }
 
-        res = l4rm_area_attach(&ds, area, length, offset, ds_flags,
-                               (void *)&content_addr);
+        /* Note: attach()'s offset parameter is _0_, because it refers to
+         * the dataspace we just got from the file server. It does _NOT_
+         * refer to the offset in the file that we got as parameter!
+         */
+		res = l4rm_area_attach_to_region(&ds,area, start, length, 0, ds_flags);
 		LOGd(_DEBUG, "attached area to address %p, result %d", content_addr, res);
+		content_addr = start;
     }
 
     if (res)
