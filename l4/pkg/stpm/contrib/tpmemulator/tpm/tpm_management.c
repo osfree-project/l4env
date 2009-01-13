@@ -12,11 +12,12 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_management.c 100 2006-05-09 22:58:41Z hstamer $
+ * $Id: tpm_management.c 287 2008-03-22 12:12:47Z mast $
  */
 
 #include "tpm_emulator.h"
 #include "tpm_commands.h"
+#include "tpm_data.h"
 
 /*
  * Administrative Functions ([TPM_Part3], Section 9)
@@ -24,29 +25,31 @@
 
 TPM_RESULT TPM_FieldUpgrade()
 {
-  info("TPM_FieldUpgrade() not implemented yet");
-  /* TODO: implement TPM_FieldUpgrade() */
-  return TPM_FAIL;
+  info("TPM_FieldUpgrade()");
+  /* nothing to do so far */
+  return TPM_SUCCESS;
 }
 
-TPM_RESULT TPM_SetRedirection(
-  TPM_KEY_HANDLE keyHandle,
-  TPM_REDIR_COMMAND redirCmd,
-  UINT32 inputDataSize,
-  BYTE *inputData,
-  TPM_AUTH *auth1
-)
+TPM_RESULT TPM_SetRedirection(TPM_KEY_HANDLE keyHandle,
+                              TPM_REDIR_COMMAND redirCmd, UINT32 inputDataSize,
+                              BYTE *inputData, TPM_AUTH *auth1)
 {
-  info("TPM_SetRedirection() not implemented yet");
-  /* TODO: implement TPM_SetRedirection() */
-  return TPM_FAIL;
+  info("TPM_SetRedirection()");
+  /* this command is not supported by the TPM emulator */ 
+  return TPM_DISABLED_CMD;
 }
 
-TPM_RESULT TPM_ResetLockValue(
-  TPM_AUTH *auth1
-)
+TPM_RESULT TPM_ResetLockValue(TPM_AUTH *auth1)
 {
-  info("TPM_ResetLockValue not implemented yet");
-  /* TODO: implement TPM_ResetLockValue() */
-  return TPM_FAIL;
+  TPM_RESULT res;
+  
+  info("TPM_ResetLockValue");
+  if (tpmData.stclear.data.disableResetLock) return TPM_AUTHFAIL;
+  res = tpm_verify_auth(auth1, tpmData.permanent.data.ownerAuth, TPM_KH_OWNER);
+  if (res != TPM_SUCCESS) {
+    tpmData.stclear.data.disableResetLock = TRUE;
+    return res;
+  }
+  /* reset dictionary attack mitigation mechanism */
+  return TPM_SUCCESS;
 }

@@ -1,7 +1,7 @@
 /* Software-Based Trusted Platform Module (TPM) Emulator for Linux
  * Copyright (C) 2004 Mario Strasser <mast@gmx.net>,
  *                    Swiss Federal Institute of Technology (ETH) Zurich,
- *               2006 Heiko Stamer <stamer@gaos.org>
+ *               2006, 2008 Heiko Stamer <stamer@gaos.org>
  *
  * This module is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_capability.c 150 2006-11-14 13:34:56Z mast $
+ * $Id: tpm_capability.c 287 2008-03-22 12:12:47Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -148,12 +148,12 @@ static TPM_RESULT cap_property(UINT32 subCapSize, BYTE *subCap,
       /* TODO: TPM_CAP_PROP_DELEGATE_ROW */
       return TPM_FAIL;
 
-    case TPM_CAP_PROP_DAA_MAX:
-      debug("[TPM_CAP_PROP_DAA_MAX]");
+    case TPM_CAP_PROP_MAX_DAASESS:
+      debug("[TPM_CAP_PROP_MAX_DAASESS]");
       return return_UINT32(respSize, resp, TPM_MAX_SESSIONS_DAA);
 
-    case TPM_CAP_PROP_SESSION_DAA:
-      debug("[TPM_CAP_PROP_SESSION_DAA]");
+    case TPM_CAP_PROP_DAASESS:
+      debug("[TPM_CAP_PROP_DAASESS]");
       for (i = 0, j = TPM_MAX_SESSIONS_DAA; i < TPM_MAX_SESSIONS_DAA; i++)
         if (tpmData.stany.data.sessionsDAA[i].type != TPM_ST_INVALID) j--;
       return return_UINT32(respSize, resp, j);
@@ -199,8 +199,8 @@ static TPM_RESULT cap_property(UINT32 subCapSize, BYTE *subCap,
 
     case TPM_CAP_PROP_MAX_NV_AVAILABLE:
       debug("[TPM_CAP_PROP_MAX_NV_AVAILABLE]");
-      /* TODO: TPM_CAP_PROP_MAX_NV_AVAILABLE */
-      return TPM_FAIL;
+      return return_UINT32(respSize, resp, TPM_MAX_NV_SIZE
+                           - tpmData.permanent.data.nvDataSize);
 
     case TPM_CAP_PROP_INPUT_BUFFER:
       debug("[TPM_CAP_PROP_INPUT_BUFFER]");
@@ -248,6 +248,51 @@ static TPM_RESULT cap_mfr(UINT32 subCapSize, BYTE *subCap,
       }
       return TPM_SUCCESS;
   }
+}
+
+static TPM_RESULT cap_nv_list(UINT32 *respSize, BYTE **resp)
+{
+  UINT32 i, len;
+  BYTE *ptr = *resp = tpm_malloc(TPM_MAX_NVS * sizeof(TPM_NV_INDEX));
+  
+  if (ptr == NULL) return TPM_FAIL;
+  *respSize = 0;
+  for (i = 0; i < TPM_MAX_NVS; i++) {
+    if (tpmData.permanent.data.nvStorage[i].valid) {
+      len = sizeof(TPM_NV_INDEX);
+      ptr = (*resp) + *respSize;
+      *respSize += len;
+      if (tpm_marshal_UINT32(&ptr, &len, 
+          tpmData.permanent.data.nvStorage[i].pubInfo.nvIndex)) {
+        tpm_free(*resp);
+        return TPM_FAIL;
+      }
+    }
+  }
+  return TPM_SUCCESS;
+}
+
+static TPM_RESULT cap_nv_index(UINT32 subCapSize, BYTE *subCap,
+                               UINT32 *respSize, BYTE **resp)
+{
+  TPM_NV_INDEX nvIndex;
+  TPM_NV_DATA_SENSITIVE *nv;
+  UINT32 len;
+  BYTE *ptr;
+
+  if (tpm_unmarshal_TPM_NV_INDEX(&subCap, &subCapSize, &nvIndex))
+    return TPM_BAD_MODE;
+  nv = tpm_get_nvs(nvIndex);
+  if (nv == NULL) return TPM_BADINDEX;
+  len = *respSize = sizeof_TPM_NV_DATA_PUBLIC(nv->pubInfo);
+  ptr = *resp = tpm_malloc(len);
+  if (ptr == NULL 
+      || tpm_marshal_TPM_NV_DATA_PUBLIC(&ptr, &len, &nv->pubInfo)) {
+    tpm_free(*resp);
+    return TPM_FAIL;
+  }
+  *respSize -= len;
+  return TPM_SUCCESS;
 }
 
 static TPM_RESULT cap_handle(UINT32 subCapSize, BYTE *subCap,
@@ -352,19 +397,17 @@ static TPM_RESULT cap_ord(UINT32 subCapSize, BYTE *subCap,
     case TPM_ORD_GetAuditDigest:
     case TPM_ORD_GetAuditDigestSigned:
     case TPM_ORD_SetOrdinalAuditStatus:
-/* WATCH: not yet implemented
     case TPM_ORD_FieldUpgrade:
     case TPM_ORD_SetRedirection:
     case TPM_ORD_ResetLockValue:
-*/
     case TPM_ORD_Seal:
     case TPM_ORD_Unseal:
     case TPM_ORD_UnBind:
     case TPM_ORD_CreateWrapKey:
     case TPM_ORD_LoadKey2:
     case TPM_ORD_GetPubKey:
-/* WATCH: not yet implemented
     case TPM_ORD_Sealx:
+/* WATCH: not yet implemented
     case TPM_ORD_CreateMigrationBlob:
     case TPM_ORD_ConvertMigrationBlob:
     case TPM_ORD_AuthorizeMigrationKey:
@@ -375,12 +418,12 @@ static TPM_RESULT cap_ord(UINT32 subCapSize, BYTE *subCap,
     case TPM_ORD_CMK_CreateTicket:
     case TPM_ORD_CMK_CreateBlob:
     case TPM_ORD_CMK_ConvertMigration:
+*/
     case TPM_ORD_CreateMaintenanceArchive:
     case TPM_ORD_LoadMaintenanceArchive:
     case TPM_ORD_KillMaintenanceFeature:
     case TPM_ORD_LoadManuMaintPub:
     case TPM_ORD_ReadManuMaintPub:
-*/
     case TPM_ORD_SHA1Start:
     case TPM_ORD_SHA1Update:
     case TPM_ORD_SHA1Complete:
@@ -418,12 +461,12 @@ static TPM_RESULT cap_ord(UINT32 subCapSize, BYTE *subCap,
     case TPM_ORD_Delegate_ReadTable:
     case TPM_ORD_Delegate_UpdateVerification:
     case TPM_ORD_Delegate_VerifyDelegation:
+*/
     case TPM_ORD_NV_DefineSpace:
     case TPM_ORD_NV_WriteValue:
     case TPM_ORD_NV_WriteValueAuth:
     case TPM_ORD_NV_ReadValue:
     case TPM_ORD_NV_ReadValueAuth:
-*/
     case TPM_ORD_KeyControlOwner:
     case TPM_ORD_SaveContext:
     case TPM_ORD_LoadContext:
@@ -449,10 +492,8 @@ static TPM_RESULT cap_ord(UINT32 subCapSize, BYTE *subCap,
     case TPM_ORD_LoadAuthContext:
     case TPM_ORD_DirWriteAuth:
     case TPM_ORD_DirRead:
-/* WATCH: not yet implemented
     case TPM_ORD_ChangeAuthAsymStart:
     case TPM_ORD_ChangeAuthAsymFinish:
-*/
     case TPM_ORD_Reset:
     case TPM_ORD_OwnerReadPubek:
     case TPM_ORD_DisablePubekRead:
@@ -581,8 +622,8 @@ TPM_RESULT cap_version_val(UINT32 *respSize, BYTE **resp)
   
   version.tag = TPM_TAG_CAP_VERSION_INFO;
   version.version = tpmData.permanent.data.version;
-  version.specLevel = 2;
-  version.errataRev = 94;
+  version.specLevel = 0x0002; /* see [TPM_Part2], Section 21.6 */
+  version.errataRev = 0x01;   /* 0x01 = rev 94, 0x02 = rev 103 */
   len = 4, ptr = version.tpmVendorID;
   if (tpm_marshal_UINT32(&ptr, &len, TPM_MANUFACTURER))
     return TPM_FAIL;
@@ -650,8 +691,7 @@ TPM_RESULT TPM_GetCapability(TPM_CAPABILITY_AREA capArea, UINT32 subCapSize,
 
     case TPM_CAP_NV_LIST:
       debug("[TPM_CAP_NV_LIST]");
-      /* TODO: TPM_CAP_NV_LIST */
-      return TPM_FAIL;
+      return cap_nv_list(respSize, resp);
 
     case TPM_CAP_MFR:
       debug("[TPM_CAP_MFR]");
@@ -659,8 +699,7 @@ TPM_RESULT TPM_GetCapability(TPM_CAPABILITY_AREA capArea, UINT32 subCapSize,
 
     case TPM_CAP_NV_INDEX:
       debug("[TPM_CAP_NV_INDEX]");
-      /* TODO: TPM_CAP_NV_INDEX */
-      return TPM_FAIL;
+      return cap_nv_index(subCapSize, subCap, respSize, resp);
 
     case TPM_CAP_TRANS_ALG:
       debug("[TPM_CAP_TRANS_ALG]");

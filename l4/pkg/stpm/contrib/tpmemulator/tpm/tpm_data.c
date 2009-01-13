@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_data.c 151 2006-11-14 16:07:36Z mast $
+ * $Id: tpm_data.c 295 2008-04-25 11:32:35Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -31,12 +31,31 @@ BOOL tpm_get_physical_presence(void)
 
 static inline void init_pcr_attr(int pcr, BOOL reset, BYTE rl, BYTE el)
 {
-  unsigned int i;
   tpmData.permanent.data.pcrAttrib[pcr].pcrReset = reset;
-  for (i = 0; i < TPM_NUM_LOCALITY; i++) {
-    tpmData.permanent.data.pcrAttrib[pcr].pcrResetLocal[i] = (rl & (1 << i));
-    tpmData.permanent.data.pcrAttrib[pcr].pcrExtendLocal[i] = (el & (1 << i));
-  }
+  tpmData.permanent.data.pcrAttrib[pcr].pcrResetLocal = rl;
+  tpmData.permanent.data.pcrAttrib[pcr].pcrExtendLocal = el;
+}
+
+static void init_nv_storage(void)
+{
+    TPM_NV_DATA_SENSITIVE *nv;
+    memset(tpmData.permanent.data.nvData, 0xff, TPM_MAX_NV_SIZE);
+    /* init TPM_NV_INDEX_DIR */
+    nv = &tpmData.permanent.data.nvStorage[0];
+    memset(nv, 0, sizeof(TPM_NV_DATA_SENSITIVE));
+    nv->tag = TPM_TAG_NV_DATA_SENSITIVE;
+    nv->pubInfo.tag = TPM_TAG_NV_DATA_PUBLIC;
+    nv->pubInfo.nvIndex = TPM_NV_INDEX_DIR;
+    nv->pubInfo.pcrInfoRead.localityAtRelease = 0x1f;
+    nv->pubInfo.pcrInfoWrite.localityAtRelease = 0x1f;
+    nv->pubInfo.permission.tag = TPM_TAG_NV_ATTRIBUTES;
+    nv->pubInfo.permission.attributes = TPM_NV_PER_OWNERWRITE 
+                                        | TPM_NV_PER_WRITEALL;
+    nv->pubInfo.dataSize = 20;
+    nv->dataIndex = 0;
+    nv->valid = TRUE;
+    /* set NV data size */
+    tpmData.permanent.data.nvDataSize = 20;
 }
 
 void tpm_init_data(void)
@@ -94,6 +113,8 @@ void tpm_init_data(void)
   tpmData.permanent.flags.readPubek = TRUE;
   tpmData.permanent.flags.allowMaintenance = TRUE;
   tpmData.permanent.flags.enableRevokeEK = TRUE;
+  tpmData.permanent.flags.readSRKPub = TRUE;
+  tpmData.permanent.flags.nvLocked = TRUE;
   /* set TPM vision */
   memcpy(&tpmData.permanent.data.version, 
          &tpm_version, sizeof(TPM_VERSION));
@@ -128,16 +149,17 @@ void tpm_init_data(void)
 #endif
 #ifdef TPM_GENERATE_SEED_DAA
   /* generate the DAA seed (cf. [TPM_Part2], v1.2 rev 94, Section 7.4) */
-  tpm_get_random_bytes(tpmData.permanent.data.tpmDAASeed.digest, 
-    sizeof(tpmData.permanent.data.tpmDAASeed.digest));
+  tpm_get_random_bytes(tpmData.permanent.data.tpmDAASeed.nonce, 
+    sizeof(tpmData.permanent.data.tpmDAASeed.nonce));
 #else
   /* setup DAA seed */
-  memcpy(tpmData.permanent.data.tpmDAASeed.digest, 
+  memcpy(tpmData.permanent.data.tpmDAASeed.nonce, 
     "\x77\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-    "\x00\x00\x00\x77", 20);
+    "\x00\x00\x00\x77", sizeof(TPM_NONCE));
 #endif
-
   memcpy(tpmData.permanent.data.ekReset.nonce, "\xde\xad\xbe\xef", 4);
+  /* initialize predefined non-volatile storage */
+  init_nv_storage();
 }
 
 void tpm_release_data(void)
@@ -147,10 +169,12 @@ void tpm_release_data(void)
   if (tpmData.permanent.data.endorsementKey.size > 0)
     tpm_rsa_release_private_key(&tpmData.permanent.data.endorsementKey);
   if (tpmData.permanent.data.srk.valid)
-    tpm_rsa_release_private_key(&tpmData.permanent.data.srk.key);
+    free_TPM_KEY_DATA(tpmData.permanent.data.srk);
+  if (tpmData.permanent.data.manuMaintPub.valid)
+    free_TPM_PUBKEY_DATA(tpmData.permanent.data.manuMaintPub);
   for (i = 0; i < TPM_MAX_KEYS; i++)
     if (tpmData.permanent.data.keys[i].valid)
-      tpm_rsa_release_private_key(&tpmData.permanent.data.keys[i].key);
+      free_TPM_KEY_DATA(tpmData.permanent.data.keys[i]);
 }
 
 int tpm_store_permanent_data(void)
@@ -207,7 +231,8 @@ int tpm_restore_permanent_data(void)
       || tpm_unmarshal_TPM_PERMANENT_DATA(&ptr, &len, &tpmData.permanent.data)
       || tpm_unmarshal_TPM_STCLEAR_FLAGS(&ptr, &len, &tpmData.stclear.flags)      
       || tpm_unmarshal_TPM_STCLEAR_DATA(&ptr, &len, &tpmData.stclear.data)
-      || tpm_unmarshal_TPM_STANY_DATA(&ptr, &len, &tpmData.stany.data)) {
+      || tpm_unmarshal_TPM_STANY_DATA(&ptr, &len, &tpmData.stany.data)
+      || len > 0) {
     tpm_free(buf);
     return -1;
   }

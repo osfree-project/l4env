@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_transport.c 144 2006-11-11 23:56:11Z mast $
+ * $Id: tpm_transport.c 228 2007-12-16 13:22:53Z hstamer $
  */
 
 /* 
@@ -62,10 +62,14 @@ static void transport_log_in(TPM_COMMAND_CODE ordinal, BYTE parameters[20],
 {
   UINT32 tag = CPU_TO_BE32(TPM_TAG_TRANSPORT_LOG_IN);
   BYTE *ptr, buf[sizeof_TPM_TRANSPORT_LOG_IN(x)];
-  UINT32 len = sizeof(buf);
+  UINT32 len;
   tpm_sha1_ctx_t sha1;
+
+  ptr = buf; len = sizeof(buf);
   tpm_marshal_TPM_TAG(&ptr, &len, tag);
+/* removed since v1.2 rev 94
   tpm_marshal_TPM_COMMAND_CODE(&ptr, &len, ordinal);
+*/
   tpm_marshal_BYTE_ARRAY(&ptr, &len, parameters, 20);
   tpm_marshal_BYTE_ARRAY(&ptr, &len, pubKeyHash, 20);
   tpm_sha1_init(&sha1);
@@ -79,8 +83,10 @@ static void transport_log_out(TPM_CURRENT_TICKS *currentTicks, BYTE parameters[2
 {
   UINT32 tag = CPU_TO_BE32(TPM_TAG_TRANSPORT_LOG_OUT);
   BYTE *ptr, buf[sizeof_TPM_TRANSPORT_LOG_OUT(x)];
-  UINT32 len = sizeof(buf);
+  UINT32 len;
   tpm_sha1_ctx_t sha1;
+
+  ptr = buf; len = sizeof(buf);
   tpm_marshal_TPM_TAG(&ptr, &len, tag);
   tpm_marshal_TPM_CURRENT_TICKS(&ptr, &len, currentTicks);
   tpm_marshal_BYTE_ARRAY(&ptr, &len, parameters, 20);
@@ -106,9 +112,10 @@ TPM_RESULT TPM_EstablishTransport(TPM_KEY_HANDLE encHandle,
   TPM_KEY_DATA *key;
   TPM_TRANSPORT_AUTH trans_auth;
   TPM_SESSION_DATA *session;
-  BYTE *ptr, buf[4 + 4 + 4 + 36 + 20];
+  BYTE *ptr, buf[4 + 4 + 4 + sizeof_TPM_CURRENT_TICKS(x) + 20];
   UINT32 len;
   tpm_sha1_ctx_t sha1;
+
   info("TPM_EstablishTransport()");
   /* setup authorization data */
   if (encHandle == TPM_KH_TRANSPORT) {
@@ -147,16 +154,17 @@ TPM_RESULT TPM_EstablishTransport(TPM_KEY_HANDLE encHandle,
   memcpy(&session->transInternal.transPublic, transPublic,
     sizeof_TPM_TRANSPORT_PUBLIC((*transPublic)));
   memcpy(&session->transInternal.transNonceEven, transNonce, sizeof(TPM_NONCE));
-  memcpy(session->transInternal.authData, trans_auth.authData, sizeof(TPM_AUTHDATA));
+  memcpy(&session->transInternal.authData, trans_auth.authData, sizeof(TPM_AUTHDATA));
   *locality = tpmData.stany.flags.localityModifier;
   memcpy(currentTicks, &tpmData.stany.data.currentTicks, sizeof(TPM_CURRENT_TICKS));
   /* perform transport logging */
   if (transPublic->transAttributes & TPM_TRANSPORT_LOG) {
-    memset(buf, 0, 20);
+    memset(buf, 0, 20); /* set pubKeyHash to all zeros */
     transport_log_in(TPM_ORD_EstablishTransport, auth1->digest, buf,
       &session->transInternal.transDigest);
+    /* compute SHA-1 (output parameters) */
     ptr = buf; len = sizeof(buf);
-    tpm_marshal_UINT32(&ptr, &len, TPM_SUCCESS);
+    tpm_marshal_UINT32(&ptr, &len, TPM_SUCCESS); /* return code */
     tpm_marshal_TPM_COMMAND_CODE(&ptr, &len, TPM_ORD_EstablishTransport);
     tpm_marshal_TPM_MODIFIER_INDICATOR(&ptr, &len, *locality);
     tpm_marshal_TPM_CURRENT_TICKS(&ptr, &len, currentTicks);
@@ -233,7 +241,7 @@ TPM_RESULT TPM_ExecuteTransport(UINT32 inWrappedCmdSize, BYTE *inWrappedCmd,
   TPM_SESSION_DATA *session;
   TPM_REQUEST req;
   TPM_RESPONSE rsp;
-  BYTE *ptr, buf[4 + 4 + 36 + 4 + 20];
+  BYTE *ptr, buf[4 + 4 + 4 + sizeof_TPM_CURRENT_TICKS(x) + 20];
   UINT32 len, offset;
   tpm_sha1_ctx_t sha1;
   info("TPM_ExecuteTransport()");

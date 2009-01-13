@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_handles.c 101 2006-05-13 21:29:54Z hstamer $
+ * $Id: tpm_handles.c 210 2007-12-07 10:46:28Z hstamer $
  */
 
 #include "tpm_emulator.h"
@@ -55,6 +55,7 @@ TPM_KEY_DATA *tpm_get_key(TPM_KEY_HANDLE handle)
     case TPM_KH_ADMIN:
       return NULL;
     case TPM_KH_SRK:
+      debug("SRK valid? %.4x", tpmData.permanent.data.srk.valid);
       return (tpmData.permanent.data.srk.valid) ?
         &tpmData.permanent.data.srk : NULL;
   }

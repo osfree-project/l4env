@@ -19,7 +19,7 @@
 #define _BN_H_
 
 #include "tpm_emulator_config.h"
-#include <l4/gmp/gmp.h>
+#include <gmp.h>
 
 typedef mpz_t tpm_bn_t;
 

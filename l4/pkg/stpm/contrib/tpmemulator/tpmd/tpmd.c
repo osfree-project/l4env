@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpmd.c 164 2006-12-05 10:13:35Z mast $
+ * $Id: tpmd.c 206 2007-12-05 08:08:08Z mast $
  */
 
 #include <stdio.h>
@@ -28,6 +28,8 @@
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <pwd.h>
+#include <grp.h>
 #include "tpm_emulator_config.h"
 #include "tpm/tpm_emulator.h"
 
@@ -35,14 +37,17 @@
 #define TPM_CMD_BUF_SIZE    4096
 #define TPM_COMMAND_TIMEOUT 30
 #define TPM_RANDOM_DEVICE   "/dev/urandom"
+#undef  TPM_MKDIRS
 
 static volatile int stopflag = 0;
 static int is_daemon = 0;
 static int opt_debug = 0;
 static int opt_foreground = 0;
-static const char *opt_socket_name = "/var/tpm/" TPM_DAEMON_NAME "_socket:0";
-static const char *opt_storage_file = "/var/tpm/tpm_emulator-1.2."
+static const char *opt_socket_name = "/var/run/tpm/" TPM_DAEMON_NAME "_socket:0";
+static const char *opt_storage_file = "/var/lib/tpm/tpm_emulator-1.2."
                                       TPM_STR(VERSION_MAJOR) "." TPM_STR(VERSION_MINOR);
+static uid_t opt_uid = 0;
+static gid_t opt_gid = 0;
 static int tpm_startup = 2;
 static int rand_fh;
 
@@ -75,11 +80,13 @@ void tpm_get_random_bytes(void *buf, size_t nbytes)
 uint64_t tpm_get_ticks(void)
 {
     static uint64_t old_t = 0;
-    uint64_t new_t;
+    uint64_t new_t, res_t;
     struct timeval tv;
     gettimeofday(&tv, NULL);
     new_t = (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
-    return (old_t > 0) ? new_t - old_t : 0;
+    res_t = (old_t > 0) ? new_t - old_t : 0;
+    old_t = new_t;
+    return res_t;
 }
 
 int tpm_write_to_file(uint8_t *data, size_t data_length)
@@ -132,11 +139,14 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
 
 static void print_usage(char *name)
 {
-    printf("usage: %s [-d] [-f] [-h] [-s file] [-u socket] [startup mode]\n", name);
+    printf("usage: %s [-d] [-f] [-s storage file] [-u unix socket name] "
+           "[-o user name] [-g group name] [-h] [startup mode]\n", name);
     printf("  d : enable debug mode\n");
     printf("  f : forces the application to run in the foreground\n");
-    printf("  s : the storage file (default: %s)\n", opt_storage_file);
-    printf("  u : the unix socket name to listen (default: %s)\n", opt_socket_name);
+    printf("  s : storage file to use (default: %s)\n", opt_storage_file);
+    printf("  u : unix socket name to use (default: %s)\n", opt_socket_name);
+    printf("  o : effective user the application should run as\n");
+    printf("  g : effective group the application should run as\n");
     printf("  h : print this help message\n");
     printf("  startup mode : must be 'clear', "
            "'save' (default) or 'deactivated\n");
@@ -145,8 +155,12 @@ static void print_usage(char *name)
 static void parse_options(int argc, char **argv)
 {
     char c;
+    struct passwd *pwd;
+    struct group *grp;
+    opt_uid = getuid();
+    opt_gid = getgid();
     info("parsing options");
-    while ((c = getopt (argc, argv, "dfs:u:h")) != -1) {
+    while ((c = getopt (argc, argv, "dfs:u:o:g:h")) != -1) {
         debug("handling option '-%c'", c);
         switch (c) {
             case 'd':
@@ -159,12 +173,28 @@ static void parse_options(int argc, char **argv)
                 opt_foreground = 1;
                 break;
             case 's':
-		opt_storage_file=optarg;
-                debug("use storage %s", opt_storage_file);
+                opt_storage_file = optarg;
+                debug("using storage file '%s'", opt_storage_file);
                 break;
             case 'u':
-		opt_socket_name=optarg;
-                debug("use socket %s", opt_socket_name);
+                opt_socket_name = optarg;
+                debug("using unix socket '%s'", opt_socket_name);
+                break;
+            case 'o':
+                pwd  = getpwnam(optarg);
+                if (pwd == NULL) {
+                    error("invalid user name '%s'\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
+                opt_uid = pwd->pw_uid;
+                break;
+            case 'g':
+                grp  = getgrnam(optarg);
+                if (grp == NULL) {
+                    error("invalid group name '%s'\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
+                opt_gid = grp->gr_gid;
                 break;
             case '?':
                 error("unknown option '-%c'", optopt);
@@ -189,6 +219,24 @@ static void parse_options(int argc, char **argv)
                   "'save' (default) or 'deactivated", argv[optind]);
             print_usage(argv[0]);
             exit(EXIT_SUCCESS);
+        }
+    }
+}
+
+static void switch_uid_gid(void)
+{
+    if (opt_gid != getgid()) {
+        info("switching effective group ID to %d", opt_gid);  
+        if (setgid(opt_gid) == -1) {
+            error("switching effective group ID to %d failed: %s", opt_gid, strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+    }
+    if (opt_uid != getuid()) {
+        info("switching effective user ID to %d", opt_uid);
+        if (setuid(opt_uid) == -1) {
+            error("switching effective user ID to %d failed: %s", opt_uid, strerror(errno));
+            exit(EXIT_FAILURE);
         }
     }
 }
@@ -257,6 +305,23 @@ static void daemonize(void)
     info("process was successfully daemonized: pid=%d sid=%d", pid, sid);
 }
 
+static int mkdirs(const char *path)
+{
+    char *copy = strdup(path);
+    char *p = strchr(copy + 1, '/');
+    while (p != NULL) {
+        *p = '\0';
+        if ((mkdir(copy, 0755) == -1) && (errno != EEXIST)) {
+            free(copy);
+            return errno;
+        }
+        *p = '/';
+        p = strchr(p + 1, '/');
+    }
+    free(copy);
+    return 0;
+}
+
 static int init_socket(const char *name)
 {
     int sock;
@@ -267,8 +332,12 @@ static int init_socket(const char *name)
         error("socket(AF_UNIX) failed: %s", strerror(errno));
         return -1;
     }
+#ifdef TPM_MKDIRS
+    mkdirs(name);
+#endif
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, name, sizeof(addr.sun_path));
+    umask(0177);
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         error("bind(%s) failed: %s", addr.sun_path, strerror(errno));
         close(sock);
@@ -281,7 +350,8 @@ static int init_socket(const char *name)
 static void main_loop(void)
 {
     int sock, fh, res;
-    uint32_t in_len, out_len;
+    int32_t in_len;
+    uint32_t out_len;
     uint8_t in[TPM_CMD_BUF_SIZE], *out;
     struct sockaddr_un addr;
     socklen_t addr_len;
@@ -351,7 +421,6 @@ static void main_loop(void)
                         res = write(fh, out, out_len);
                         if (res < 0) {
                             error("write(%d) failed: %s", out_len, strerror(errno));
-                            tpm_free(out);
                             break;
                         }
                         out_len	-= res;
@@ -377,6 +446,8 @@ int main(int argc, char **argv)
     syslog(LOG_INFO, "--- separator ---\n");
     info("starting TPM Emulator daemon");
     parse_options(argc, argv);
+    /* switch uid/gid if required */
+    switch_uid_gid();
     /* open random device */
     init_random();
     /* init signal handlers */

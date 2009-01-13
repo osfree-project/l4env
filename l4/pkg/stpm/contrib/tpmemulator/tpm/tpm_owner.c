@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_owner.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_owner.c 286 2008-03-22 11:01:52Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -140,24 +140,22 @@ TPM_RESULT TPM_TakeOwnership(TPM_PROTOCOL_ID protocolID,
       || srkParams->algorithmParms.parmSize == 0
       || srkParams->algorithmParms.parms.rsa.keyLength != 2048
       || srkParams->algorithmParms.parms.rsa.numPrimes != 2
-      || srkParams->algorithmParms.parms.rsa.exponentSize != 0)
-    return TPM_BAD_KEY_PROPERTY;
+      || srkParams->algorithmParms.parms.rsa.exponentSize != 0
+      || srkParams->PCRInfoSize != 0) return TPM_BAD_KEY_PROPERTY;
   /* setup and generate SRK */
   srk->keyFlags = srkParams->keyFlags;
+  srk->keyFlags |= TPM_KEY_FLAG_PCR_IGNORE;
+  srk->keyFlags &= ~TPM_KEY_FLAG_HAS_PCR;
   srk->keyUsage = srkParams->keyUsage;
   srk->encScheme = srkParams->algorithmParms.encScheme;
   srk->sigScheme = srkParams->algorithmParms.sigScheme;
   srk->authDataUsage = srkParams->authDataUsage;
-  debug("[ srk->authDataUsage=%.2x ]", srk->authDataUsage);
+  debug("srk->authDataUsage = %02x", srk->authDataUsage);
+  srk->parentPCRStatus = FALSE;
   srkParams->algorithmParms.parms.rsa.keyLength = 2048;
   if (tpm_rsa_generate_key(&srk->key, 
       srkParams->algorithmParms.parms.rsa.keyLength)) return TPM_FAIL;
   srk->valid = TRUE;
-  /* we do not allow binding of the SRK to PCRs */
-  if (srkParams->PCRInfoSize != 0) return TPM_BAD_KEY_PROPERTY;
-  srk->keyFlags |= TPM_KEY_FLAG_PCR_IGNORE;
-  srk->keyFlags &= ~TPM_KEY_FLAG_HAS_PCR;
-  srk->parentPCRStatus = FALSE;
   /* generate context Key */
   tpm_get_random_bytes(tpmData.permanent.data.contextKey,
     sizeof(tpmData.permanent.data.contextKey));
@@ -190,6 +188,8 @@ void tpm_owner_clear()
   /* invalidate stany and stclear data */
   memset(&tpmData.stany.data, 0 , sizeof(tpmData.stany.data));
   memset(&tpmData.stclear.data, 0 , sizeof(tpmData.stclear.data));
+  /* release SRK */
+  tpm_rsa_release_private_key(&tpmData.permanent.data.srk.key);
   /* invalidate permanent data */
   memset(&tpmData.permanent.data.ownerAuth, 0, 
     sizeof(tpmData.permanent.data.ownerAuth));

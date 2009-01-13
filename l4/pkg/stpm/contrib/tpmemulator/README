@@ -8,7 +8,7 @@
  A Software-based Trusted Platform Module (TPM) Emulator for Linux.
 --------------------------------------------------------------------------
 
-$Id: README 168 2006-12-28 09:45:03Z mast $
+$Id: README 298 2008-07-18 08:28:54Z mast $
 
 Copyright
 --------------------------------------------------------------------------
@@ -43,10 +43,10 @@ d) tpm_dev - the (obsolete) kernel-space TPM emulator.
 
 Configuration
 --------------------------------------------------------------------------
-Firs of all, you have to make sure that the GNU MP library (http://
+First of all, you have to make sure that the GNU MP library (http://
 www.gnu.org/software/gmp/gmp.html) is properly installed on your system;
-in particular that the required library and header files exist and are
-located within the search path of the compiler and linker.
+in particular that the required shared library and header files exist
+and are located within the search path of the compiler and linker.
 
 The compilation and installation process of the kernel modules uses the
 build environment for external kernel modules of the 2.5.X Linux kernels,
@@ -68,6 +68,8 @@ done as follows:
 # cd tpm_emulator-X.Y
 # make
 # make install
+
+Please note that the user and group 'tss' must exists on the target host.
 
 
 Startup
@@ -119,7 +121,7 @@ struct sockaddr_un addr;
 fh = socket(PF_UNIX, SOCK_STREAM, 0);
 if (fh < 0) { /* handle error */ }
 addr.sun_family = AF_UNIX;
-strncpy(addr.sun_path, "/var/tpm/tpmd_socket:0", sizeof(addr.sun_path));
+strncpy(addr.sun_path, "/var/run/tpm/tpmd_socket:0", sizeof(addr.sun_path));
 res = connect(fh, (struct sockaddr*)&addr, sizeof(struct sockaddr_un));
 if (res < 0) { /* handle error */ }
 
@@ -129,6 +131,8 @@ expected.
 
 Notes
 --------------------------------------------------------------------------
+* Since release 0.5.1 the emulator supports Free- and OpenBSD; thanks go
+  to Sebastian Schuetz.
 * Since release 0.5 the kernel-based emulator (tpm_dev) is obsolete.
 * The name and format of the persistent-storage file has changed between
   release 0.2 and 0.3 as well as between release 0.4 and 0.4.1.

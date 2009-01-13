@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_commands.h 135 2006-11-06 23:05:46Z mast $
+ * $Id: tpm_commands.h 286 2008-03-22 11:01:52Z mast $
  */
 
 #ifndef _TPM_COMMANDS_H_
@@ -1017,23 +1017,27 @@ TPM_RESULT TPM_CreateMaintenanceArchive(
 
 /**
  * TPM_LoadMaintenanceArchive - loads in a maintenance archive
- * @inArgumentsSize: [in] Size of the vendor specific arguments
- * @inArguments: [in] Vendor specific arguments 
+ * @archiveSize: [in] Size of encrypted key archive
+ * @archive: [in] Encrypted key archive
+ * @sigSize: [in] Size of archive signature
+ * @sig: [in] archive signature
+ * @randomSize: [in] Size of the random data
+ * @random: [in] Random data to XOR with encrypted archive
  * @auth1: [in, out] Authorization protocol parameters
- * @outArgumentsSize: [out] Size of the vendor specific arguments
- * @outArguments: [out] Vendor specific arguments
  * Returns: TPM_SUCCESS on success, a TPM error code otherwise.
  * 
  * Description: ([TPM_Part3], Section 12.2)
  * This command loads in a maintenance archive that has been massaged 
  * by the manufacturer to load into another TPM.
  */
-TPM_RESULT TPM_LoadMaintenanceArchive(  
-  UINT32 inArgumentsSize,
-  BYTE *inArguments,
-  TPM_AUTH *auth1,  
-  UINT32 *outArgumentsSize,
-  BYTE **outArguments  
+TPM_RESULT TPM_LoadMaintenanceArchive(
+  UINT32 archiveSize,
+  BYTE *archive,
+  UINT32 sigSize,
+  BYTE *sig,
+  UINT32 randomSize,
+  BYTE *random,
+  TPM_AUTH *auth1
 );
 
 /**
@@ -1936,6 +1940,8 @@ TPM_RESULT TPM_NV_DefineSpace(
  * TPM_NV_WriteValue - writes a value to a defined NV area
  * @nvIndex: [in] The index of the area to set
  * @offset: [in] The offset into the NV Area
+ * @dataSize: [in] The size of the data area
+ * @data: [in] The data to set the area to
  * @auth1: [in, out] Authorization protocol parameters
  * Returns: TPM_SUCCESS on success, a TPM error code otherwise.
  * 
@@ -1947,6 +1953,8 @@ TPM_RESULT TPM_NV_DefineSpace(
 TPM_RESULT TPM_NV_WriteValue(  
   TPM_NV_INDEX nvIndex,
   UINT32 offset,
+  UINT32 dataSize,
+  BYTE *data,
   TPM_AUTH *auth1
 );
 
@@ -2569,13 +2577,13 @@ TPM_RESULT TPM_DirRead(
  * TPM_ChangeAuthAsymStart - starts the ChangeAuth process
  * @idHandle: [in] Handle of a loaded identity ID key 
  * @antiReplay: [in] The nonce to be inserted into the certifyInfo structure 
- * @inTempKey: [in] All parameters of the ephemeral key
+ * @inTempKey: [in] Structure containing all parameters of the ephemeral key
  * @auth1: [in, out] Authorization protocol parameters
  * @certifyInfo: [out] The certifyInfo structure that is to be signed
  * @sigSize: [out] The used size of the output area for the signature 
  * @sig: [out] The signature of the certifyInfo parameter
- * @ephHandle: [out] Handle to be used by ChangeAuthAsymFinish 
- * @outTempKey: [out] All parameters and public part of the ephemeral key
+ * @ephHandle: [out] Handle to be used by ChangeAuthAsymFinish for ephemeral key
+ * @outTempKey: [out] Structure containing all parameters and public part of ephemeral key
  * Returns: TPM_SUCCESS on success, a TPM error code otherwise.
  * 
  * Description: ([TPM_Part3], Section 28.4.1)

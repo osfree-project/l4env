@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_cmd_handler.c 150 2006-11-14 13:34:56Z mast $
+ * $Id: tpm_cmd_handler.c 295 2008-04-25 11:32:35Z mast $
  */
 
 #include "tpm_marshalling.h"
@@ -49,6 +49,7 @@ UINT32 tpm_get_in_param_offset(TPM_COMMAND_CODE ordinal)
     case TPM_ORD_OwnerReadInternalPub:
 */
     case TPM_ORD_Quote:
+    case TPM_ORD_Quote2:
     case TPM_ORD_ReleaseTransportSigned:
     case TPM_ORD_SaveKeyContext:
     case TPM_ORD_Seal:
@@ -1246,34 +1247,27 @@ static TPM_RESULT execute_TPM_LoadMaintenanceArchive(TPM_REQUEST *req, TPM_RESPO
 {
   BYTE *ptr;
   UINT32 len;
-  UINT32 inArgumentsSize;
-  BYTE *inArguments;
-  UINT32 outArgumentsSize;
-  BYTE *outArguments = NULL;
-  TPM_RESULT res;
+  UINT32 archiveSize;
+  BYTE *archive;
+  UINT32 sigSize;
+  BYTE *sig;
+  UINT32 randomSize;
+  BYTE *random;
   /* compute parameter digest */
   tpm_compute_in_param_digest(req);
   /* unmarshal input */
   ptr = req->param;
   len = req->paramSize;
-  if (tpm_unmarshal_UINT32(&ptr, &len, &inArgumentsSize)
-      || tpm_unmarshal_BLOB(&ptr, &len, &inArguments, inArgumentsSize)
+  if (tpm_unmarshal_UINT32(&ptr, &len, &archiveSize)
+      || tpm_unmarshal_BLOB(&ptr, &len, &archive, archiveSize)
+      || tpm_unmarshal_UINT32(&ptr, &len, &sigSize)
+      || tpm_unmarshal_BLOB(&ptr, &len, &sig, sigSize)
+      || tpm_unmarshal_UINT32(&ptr, &len, &randomSize)
+      || tpm_unmarshal_BLOB(&ptr, &len, &random, randomSize)
       || len != 0) return TPM_BAD_PARAMETER;
   /* execute command */
-  res = TPM_LoadMaintenanceArchive(inArgumentsSize, inArguments, &req->auth1, 
-    &outArgumentsSize, &outArguments);
-  if (res != TPM_SUCCESS) return res;
-  /* marshal output */
-  rsp->paramSize = len = 4 + outArgumentsSize;
-  rsp->param = ptr = tpm_malloc(len);
-  if (ptr == NULL
-      || tpm_marshal_UINT32(&ptr, &len, outArgumentsSize)
-      || tpm_marshal_BLOB(&ptr, &len, outArguments, outArgumentsSize)) {
-    tpm_free(rsp->param);
-    res = TPM_FAIL;
-  }
-  tpm_free(outArguments);
-  return res;
+  return TPM_LoadMaintenanceArchive(archiveSize, archive, sigSize, sig,
+   randomSize, random, &req->auth1);
 }
 
 static TPM_RESULT execute_TPM_KillMaintenanceFeature(TPM_REQUEST *req, TPM_RESPONSE *rsp)
@@ -2378,6 +2372,8 @@ static TPM_RESULT execute_TPM_NV_WriteValue(TPM_REQUEST *req, TPM_RESPONSE *rsp)
   UINT32 len;
   TPM_NV_INDEX nvIndex;
   UINT32 offset;
+  UINT32 dataSize;
+  BYTE *data;
   /* compute parameter digest */
   tpm_compute_in_param_digest(req);
   /* unmarshal input */
@@ -2385,9 +2381,11 @@ static TPM_RESULT execute_TPM_NV_WriteValue(TPM_REQUEST *req, TPM_RESPONSE *rsp)
   len = req->paramSize;
   if (tpm_unmarshal_TPM_NV_INDEX(&ptr, &len, &nvIndex)
       || tpm_unmarshal_UINT32(&ptr, &len, &offset)
+      || tpm_unmarshal_UINT32(&ptr, &len, &dataSize)
+      || tpm_unmarshal_BLOB(&ptr, &len, &data, dataSize)
       || len != 0) return TPM_BAD_PARAMETER;
   /* execute command */
-  return TPM_NV_WriteValue(nvIndex, offset, &req->auth1);
+  return TPM_NV_WriteValue(nvIndex, offset, dataSize, data, &req->auth1);
 }
 
 static TPM_RESULT execute_TPM_NV_WriteValueAuth(TPM_REQUEST *req, TPM_RESPONSE *rsp)
@@ -2796,7 +2794,7 @@ static TPM_RESULT execute_TPM_CreateCounter(TPM_REQUEST *req, TPM_RESPONSE *rsp)
   res = TPM_CreateCounter(&authData, label, &req->auth1, &countID, &counterValue);
   if (res != TPM_SUCCESS) return res;
   /* marshal output */
-  rsp->paramSize = len = 4 + 10;
+  rsp->paramSize = len = 4 + sizeof_TPM_COUNTER_VALUE(counterValue);
   rsp->param = ptr = tpm_malloc(len);
   if (ptr == NULL
       || tpm_marshal_TPM_COUNT_ID(&ptr, &len, countID)

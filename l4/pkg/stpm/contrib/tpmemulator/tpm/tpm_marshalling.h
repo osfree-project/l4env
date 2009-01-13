@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_marshalling.h 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_marshalling.h 285 2008-03-21 21:32:53Z mast $
  */
 
 #ifndef _MARSHALLING_H_
@@ -154,7 +154,7 @@ static inline int tpm_unmarshal_UINT64(BYTE **ptr, UINT32 *length, UINT64 *v)
 }
 
 static inline int tpm_marshal_BLOB(BYTE **ptr, UINT32 *ptr_length,
-                            BYTE *b, UINT32 b_length)
+                                   BYTE *b, UINT32 b_length)
 {
   if (*ptr_length < b_length) return -1;
   if (b_length) memcpy(*ptr, b, b_length);
@@ -163,7 +163,7 @@ static inline int tpm_marshal_BLOB(BYTE **ptr, UINT32 *ptr_length,
 }
 
 static inline int tpm_unmarshal_BLOB(BYTE **ptr, UINT32 *ptr_length,
-                              BYTE **b, UINT32 b_length)
+                                     BYTE **b, UINT32 b_length)
 {
   if (*ptr_length < b_length) return -1;
   *b = (b_length) ? *ptr : NULL;
@@ -172,7 +172,7 @@ static inline int tpm_unmarshal_BLOB(BYTE **ptr, UINT32 *ptr_length,
 }
 
 static inline int tpm_marshal_BYTE_ARRAY(BYTE **ptr, UINT32 *ptr_length,
-                                  BYTE *b, UINT32 b_length)
+                                         BYTE *b, UINT32 b_length)
 {
   if (*ptr_length < b_length) return -1;
   memcpy(*ptr, b, b_length);
@@ -181,7 +181,7 @@ static inline int tpm_marshal_BYTE_ARRAY(BYTE **ptr, UINT32 *ptr_length,
 }
 
 static inline int tpm_unmarshal_BYTE_ARRAY(BYTE **ptr, UINT32 *ptr_length,
-                                    BYTE *b, UINT32 b_length)
+                                           BYTE *b, UINT32 b_length)
 {
   if (*ptr_length < b_length) return -1;
   if (b_length) memcpy(b, *ptr, b_length);
@@ -310,7 +310,7 @@ int tpm_unmarshal_TPM_NONCE(BYTE **ptr, UINT32 *length, TPM_NONCE *v);
 int tpm_marshal_TPM_AUTHDATA(BYTE **ptr, UINT32 *length, TPM_AUTHDATA *v);
 int tpm_unmarshal_TPM_AUTHDATA(BYTE **ptr, UINT32 *length, TPM_AUTHDATA *v);
 
-#define tpm_marshal_TPM_SECRET                 tpm_marshal_TPM_AUTHDATA 
+#define tpm_marshal_TPM_SECRET                 tpm_marshal_TPM_AUTHDATA
 #define tpm_unmarshal_TPM_SECRET               tpm_unmarshal_TPM_AUTHDATA
 #define tpm_marshal_TPM_ENCAUTH                tpm_marshal_TPM_AUTHDATA
 #define tpm_unmarshal_TPM_ENCAUTH              tpm_unmarshal_TPM_AUTHDATA
@@ -319,6 +319,9 @@ int tpm_marshal_TPM_AUTH(BYTE **ptr, UINT32 *length, TPM_AUTH *v);
 int tpm_unmarshal_TPM_AUTH(BYTE **ptr, UINT32 *length, TPM_AUTH *v);
 
 int tpm_marshal_TPM_KEY_HANDLE_LIST(BYTE **ptr, UINT32 *length, TPM_KEY_HANDLE_LIST *v);
+
+int tpm_marshal_TPM_CHANGEAUTH_VALIDATE(BYTE **ptr, UINT32 *length, TPM_CHANGEAUTH_VALIDATE *v);
+int tpm_unmarshal_TPM_CHANGEAUTH_VALIDATE(BYTE **ptr, UINT32 *length, TPM_CHANGEAUTH_VALIDATE *v);
 
 int tpm_marshal_TPM_COUNTER_VALUE(BYTE **ptr, UINT32 *length, TPM_COUNTER_VALUE *v);
 int tpm_unmarshal_TPM_COUNTER_VALUE(BYTE **ptr, UINT32 *length, TPM_COUNTER_VALUE *v);

@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_daa.c 152 2006-11-15 17:07:36Z mast $
+ * $Id: tpm_daa.c 182 2007-08-02 07:20:16Z hstamer $
  */
 
 #include "tpm_emulator.h"
@@ -1117,14 +1117,14 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
       }
       /* Obtain random data from the RNG and store it as 
        * DAA_session->DAA_contextSeed */
-      tpm_get_random_bytes(session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      tpm_get_random_bytes(session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       /* Obtain DAA_SIZE_r0 bits from MGF1("r0", 
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r0", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r0);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r0, 1, scratch);
@@ -1193,8 +1193,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r1", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r1);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r1, 1, scratch);
@@ -1269,8 +1269,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r2", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r2);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r2, 1, scratch);
@@ -1345,8 +1345,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r3", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r3);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r3, 1, scratch);
@@ -1566,8 +1566,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r0 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r0", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r0);
       tpm_bn_init(r0);
       tpm_bn_import(r0, DAA_SIZE_r0, 1, scratch);
@@ -1575,8 +1575,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r1 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r1", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r1);
       tpm_bn_init(r1);
       tpm_bn_import(r1, DAA_SIZE_r1, 1, scratch);
@@ -1704,8 +1704,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r0 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r0", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r0);
       tpm_bn_init(r0);
       tpm_bn_import(r0, DAA_SIZE_r0, 1, scratch);
@@ -1786,8 +1786,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r1 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r1", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r1);
       tpm_bn_init(r1);
       tpm_bn_import(r1, DAA_SIZE_r1, 1, scratch);
@@ -1867,8 +1867,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r2 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r2", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r2);
       tpm_bn_init(r2);
       tpm_bn_import(r2, DAA_SIZE_r2, 1, scratch);
@@ -1930,8 +1930,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r2 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r2", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r2);
       tpm_bn_init(r2);
       tpm_bn_import(r2, DAA_SIZE_r2, 1, scratch);
@@ -1993,8 +1993,8 @@ TPM_RESULT TPM_DAA_Join(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r3 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r3", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r3);
       tpm_bn_init(r3);
       tpm_bn_import(r3, DAA_SIZE_r3, 1, scratch);
@@ -2510,8 +2510,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
       tpm_daa_update_digestContext_sign(session, &sha1);
       /* Obtain random data from the RNG and store it as 
        * DAA_session->DAA_contextSeed */
-      tpm_get_random_bytes(session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      tpm_get_random_bytes(session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       /* Set outputData = NULL */
       *outputSize = 0, *outputData = NULL;
       /* Set DAA_session->DAA_stage = 2 */
@@ -2563,8 +2563,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r0", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r0);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r0, 1, scratch);
@@ -2632,8 +2632,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r1", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r1);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r1, 1, scratch);
@@ -2707,8 +2707,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r2", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r2);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r2, 1, scratch);
@@ -2782,8 +2782,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them Y */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r4", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r4);
       tpm_bn_init(Y);
       tpm_bn_import(Y, DAA_SIZE_r4, 1, scratch);
@@ -3000,8 +3000,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r0 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r0", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r0);
       tpm_bn_init(r0);
       tpm_bn_import(r0, DAA_SIZE_r0, 1, scratch);
@@ -3009,8 +3009,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r1 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r1", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r1);
       tpm_bn_init(r1);
       tpm_bn_import(r1, DAA_SIZE_r1, 1, scratch);
@@ -3227,8 +3227,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r0 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r0", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r0);
       tpm_bn_init(r0);
       tpm_bn_import(r0, DAA_SIZE_r0, 1, scratch);
@@ -3308,8 +3308,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r1 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r1", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r1);
       tpm_bn_init(r1);
       tpm_bn_import(r1, DAA_SIZE_r1, 1, scratch);
@@ -3434,8 +3434,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r2 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r2", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r2);
       tpm_bn_init(r2);
       tpm_bn_import(r2, DAA_SIZE_r2, 1, scratch);
@@ -3542,8 +3542,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r2 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r2", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r2);
       tpm_bn_init(r2);
       tpm_bn_import(r2, DAA_SIZE_r2, 1, scratch);
@@ -3642,8 +3642,8 @@ TPM_RESULT TPM_DAA_Sign(TPM_HANDLE handle, BYTE stage, UINT32 inputSize0,
        * DAA_session->DAA_contextSeed), and label them r4 */
       memset(scratch, 0, sizeof(scratch));
       memcpy(mgf1_seed, "r4", 2);
-      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.digest, 
-        sizeof(TPM_DIGEST));
+      memcpy(mgf1_seed + 2, session->DAA_session.DAA_contextSeed.nonce, 
+        sizeof(TPM_NONCE));
       tpm_rsa_mask_generation(mgf1_seed, sizeof(mgf1_seed), scratch, DAA_SIZE_r4);
       tpm_bn_init(r4);
       tpm_bn_import(r4, DAA_SIZE_r4, 1, scratch);

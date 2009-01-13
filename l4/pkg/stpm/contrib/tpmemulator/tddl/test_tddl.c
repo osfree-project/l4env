@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: test_tddl.c 158 2006-12-03 10:44:02Z mast $
+ * $Id: test_tddl.c 172 2007-03-23 07:35:23Z mast $
  */
 
 #include <stdio.h>
@@ -71,7 +71,7 @@ int main()
   BYTE buf[256];
   UINT32 buf_size = sizeof(buf);
   BYTE reset[] = {0, 193, 0, 0, 0, 10, 0, 0, 0, 90};
-  int i;
+  unsigned int i;
   
   res = Tddli_Open();
   if (res != TDDL_SUCCESS) {

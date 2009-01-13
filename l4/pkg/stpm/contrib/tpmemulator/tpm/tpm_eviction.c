@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_eviction.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_eviction.c 277 2008-03-12 21:10:11Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -32,7 +32,7 @@
  */
 
 /* invalidate all associated authorization and transport sessions */
-static void invalidate_sessions(TPM_HANDLE handle)
+void invalidate_sessions(TPM_HANDLE handle)
 {
   TPM_SESSION_DATA *session;
   int i;
@@ -54,7 +54,7 @@ TPM_RESULT TPM_FlushSpecific(TPM_HANDLE handle,
   int i;
   
   info("TPM_FlushSpecific()");
-  debug("[ handle=%.8x resourceType=%.8x ]", handle, resourceType);
+  debug("handle = %08x, resourceType = %08x", handle, resourceType);
   switch (resourceType) {
     case TPM_RT_CONTEXT:
       for (i = 0; i < TPM_MAX_SESSION_LIST; i++)
@@ -71,6 +71,11 @@ TPM_RESULT TPM_FlushSpecific(TPM_HANDLE handle,
       if (key == NULL) return TPM_INVALID_KEYHANDLE;
       if (key->keyControl & TPM_KEY_CONTROL_OWNER_EVICT)
         return TPM_KEY_OWNER_CONTROL;
+/* WATCH: temporarily inserted due to TSS test suite
+          (SRK was evicted by one of the tests) */
+      if (handle == TPM_KH_SRK)
+        return TPM_FAIL;
+/**/
       tpm_rsa_release_private_key(&key->key);
       memset(key, 0, sizeof(*key));
       invalidate_sessions(handle);

@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_identity.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_identity.c 279 2008-03-19 09:53:21Z hstamer $
  */
 
 #include "tpm_emulator.h"
@@ -415,9 +415,11 @@ TPM_RESULT TPM_ActivateIdentity(
   idKey = tpm_get_key(idKeyHandle);
   if (idKey == NULL)
     return TPM_INVALID_KEYHANDLE;
-  if (auth2->authHandle != TPM_INVALID_HANDLE) {
-    res = tpm_verify_auth(auth1, idKey->usageAuth, idKeyHandle);
-    if (res != TPM_SUCCESS) return res;
+  if (auth2->authHandle != TPM_INVALID_HANDLE) { 
+    if (idKey->authDataUsage != TPM_AUTH_NEVER) {
+      res = tpm_verify_auth(auth1, idKey->usageAuth, idKeyHandle);
+      if (res != TPM_SUCCESS) return res;
+    }
   }
   
   /* 3. Validate that the idKey is the public key of a valid TPM identity by 

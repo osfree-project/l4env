@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_counter.c 88 2006-01-22 23:11:23Z hstamer $
+ * $Id: tpm_counter.c 214 2007-12-07 13:38:27Z hstamer $
  */
 
 #include "tpm_emulator.h"
@@ -65,7 +65,8 @@ TPM_RESULT TPM_CreateCounter(TPM_ENCAUTH *authData, BYTE label[4],
   if (res != TPM_SUCCESS) return res;
   auth1->continueAuthSession = FALSE;
   session = tpm_get_auth(auth1->authHandle);
-  if (session->type != TPM_ST_OSAP) return TPM_AUTHFAIL;
+  if ((session->type != TPM_ST_OSAP) && (session->type != TPM_ST_DSAP))
+    return TPM_AUTHFAIL;
   /* decrypt authorization secret */
   tpm_decrypt_auth_secret(*authData, session->sharedSecret, 
     &session->lastNonceEven, counter->usageAuth);

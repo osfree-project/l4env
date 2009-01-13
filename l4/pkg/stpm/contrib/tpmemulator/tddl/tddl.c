@@ -12,9 +12,10 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tddl.c 167 2006-12-27 16:08:19Z mast $
+ * $Id: tddl.c 226 2007-12-15 16:14:49Z mast $
  */
 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <fcntl.h>
@@ -26,7 +27,7 @@
 
 /* device and socket names */
 static const char *tpm_device_name = "/dev/tpm";
-static const char *tpmd_socket_name = "/var/tpm/tpmd_socket:0";
+static const char *tpmd_socket_name = "/var/run/tpm/tpmd_socket:0";
 
 /* TPM device handle */
 static int tddli_dh = -1;

@@ -1,3 +1,140 @@
+2008-03-03  Heiko Stamer <stamer@gaos.org>
+	* tpm_deprecated.c, tpm_marshalling.c: TPM_ChangeAuthAsymFinish() added
+
+
+2008-02-21  Heiko Stamer <stamer@gaos.org>
+	* tpm_deprecated.c, tpm_storage.c: TPM_ChangeAuthAsymStart() added
+
+
+2008-02-12  Mario Strasser <mast@gmx.net>
+	* ChangeLog: changes updated for release 0.5.1
+
+
+2008-01-07  Mario Strasser <mast@gmx.net>
+	* tpmd_dev_openbsd/*: OpenBSD module added
+
+
+2007-12-19 Heiko Stamer <stamer@gaos.org> 
+	* tpm_cmd_handler.c, tpm_integrity.c: sig. bug in TPM_Quote2() fixed
+
+
+2007-12-16  Heiko Stamer <stamer@gaos.org>
+	* tpm_transport.c: missing ptr initialization fixed
+
+
+2007-12-15  Mario Strasser <mast@gmx.net>
+	* tddl.c, tpm_emulator_config.h: support for FreeBSD/OpenBSD added
+
+
+2007-12-07  Heiko Stamer <stamer@gaos.org>
+	* tpm_structures.h: session identifier added
+
+
+2007-12-07  Heiko Stamer <stamer@gaos.org>
+	* tpm_cmd_handler.c, tpm_counter.c: small fixes for counters
+
+
+2007-12-07  Heiko Stamer <stamer@gaos.org>
+	* tpm_authorization.c, tpm_eviction.c, tpm_handles.c:
+		fixes and debug calls for TSS Test Suite (TrouSerS)
+
+
+2007-12-07  Heiko Stamer <stamer@gaos.org>
+	* tpm_deprecated.c: fixed DIR index value, according to spec v1.2 rev 103
+
+
+2007-12-05  Mario Strasser <mast@gmx.net> 
+	* tpmd.c: optional creation of missing directories added
+
+
+2007-11-19  Mario Strasser <mast@gmx.net>
+	* Makefile: make rule for tpmd_dev.rules.in added
+
+
+2007-11-09  Mario Strasser <mast@gmx.net>
+	* tpm_storage.c, tpm_emulator_config.h: bug in TPMLoadKey fixed
+
+
+2007-09-08  Mario Strasser <mast@gmx.net>
+	* Makefile: make rules for tpmd_dev.rules added
+
+
+2007-09-05  Heiko Stamer <stamer@gaos.org>
+	* tpm_deprecated.c: minor bug fixes
+
+
+2007-09-05  Heiko Stamer <stamer@gaos.org>
+	* tpm_deprecated.c: TPM_ChangeAuthAsymStart() updated
+
+
+2007-09-02  Mario Strasser <mast@gmx.net>
+	* all Makefiles: some more install fixes
+
+
+2007-08-23  Mario Strasser <mast@gmx.net>
+	* tpmd.c: bug in tpm_get_ticks fixed
+
+
+2007-08-08  Mario Strasser <mast@gmx.net>
+	* tpm_integrity.c, tpm_startup.c: bug fixes regarding localityModifier
+
+
+2007-08-07  Mario Strasser <mast@gmx.net>
+	* tpmd.c: effective user/group can be specified
+
+
+2007-08-06  Mario Strasser <mast@gmx.net>
+	* all Makefiles: install-tool based installation
+
+
+2007-08-02  Mario Strasser <mast@gmx.net>
+	* tpm_data.c, tpm_marshalling.c: fixes to make rev 103 changes work
+	* tpmd_dev.rules: udev rules added  
+	
+
+2007-08-02  Heiko Stamer <stamer@gaos.org>
+	* tpm_credentials.c, tpm_crypto.c, tpm_daa.c, tpm_data.c,
+		tpm_marshalling.c, tpm_structures.h: fixes to make rev 103 changes work
+
+
+2007-08-02  Mario Strasser <mast@gmx.net>
+	* Makefile: soname added
+
+
+2007-08-01  Mario Strasser <mast@gmx.net> 
+	* tddl.c, tpm_storage.c, Makefile, tpmd.c,
+		tpmd_dev.c: default storage directories for state and sockets changed
+
+
+2007-07-28  Heiko Stamer <stamer@gaos.org>
+	* Makefile: setting soname (FIXME: need version?)
+
+
+2007-07-28  Heiko Stamer <stamer@gaos.org>
+	* tpm_capability.c, tpm_deprecated.c,
+		tpm_integrity.c: fixes needed for adapting v1.2 rev 103
+
+
+2007-07-27  Heiko Stamer <stamer@gaos.org>
+	* tpm_capability.c, tpm/tpm_commands.h, tpm_deprecated.c,
+		tpm_structures.h: changes from v1.2 rev 103
+
+
+2007-07-25  Heiko Stamer <stamer@gaos.org>
+	* tpm_integrity.c: fixing a specification error corrected in v1.2 rev 103
+
+2007-07-05  Mario Strasser <mast@gmx.net>
+	* tpmd.c: double free fixed, type bug fixed
+
+
+2007-03-23  Mario Strasser <mast@gmx.net>
+	* tpmd.c: additional tpmd paramters added
+
+
+2006-12-27  Mario Strasser <mast@gmx.net>
+	* Makefile, tddl.c: gcc 4.1 warnings removed
+
+
 2006-12-03  Mario Strasser <mast@gmx.net>
 	* Makefile: tpm_dev excluded from standard distribution
 

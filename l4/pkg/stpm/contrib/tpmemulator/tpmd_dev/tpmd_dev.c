@@ -11,7 +11,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
  * GNU General Public License for more details.
  *
- * $Id: tpmd_dev.c 158 2006-12-03 10:44:02Z mast $
+ * $Id: tpmd_dev.c 184 2007-08-02 10:06:26Z mast $
  */
 
 #include <linux/module.h>
@@ -26,7 +26,7 @@
 
 #define TPM_DEVICE_MINOR  224
 #define TPM_DEVICE_NAME   "tpm"
-#define TPM_MODULE_NAME   "tpm_dev"
+#define TPM_MODULE_NAME   "tpmd_dev"
 
 #define TPM_RESPONSE_SIZE 4096
 #define TPM_STATE_IS_OPEN 0
@@ -50,7 +50,7 @@ MODULE_DESCRIPTION("Trusted Platform Module (TPM) Emulator");
 MODULE_SUPPORTED_DEVICE(TPM_DEVICE_NAME);
 
 /* module parameters */
-char *tpmd_socket_name = "/var/tpm/tpmd_socket:0";
+char *tpmd_socket_name = "/var/run/tpm/tpmd_socket:0";
 module_param(tpmd_socket_name, charp, 0444);
 MODULE_PARM_DESC(tpmd_socket_name, " Sets the name of the TPM daemon socket.");
 

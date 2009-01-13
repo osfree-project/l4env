@@ -162,7 +162,7 @@ INTERFACE:
 #define CONFIG_KERNEL_VERSION_STRING \
   GREETING_COLOR_ANSI_TITLE "Welcome to Fiasco("CONFIG_XARCH")!\\n"            \
   GREETING_COLOR_ANSI_INFO "DD-L4("CONFIG_ABI")/" ARCH_NAME " "                \
-                           "microkernel (C) 1998-2008 TU Dresden\\n"           \
+                           "microkernel (C) 1998-2009 TU Dresden\\n"           \
                            "Rev: " CODE_VERSION " compiled with gcc " COMPILER \
                             " for " TARGET_NAME "    [" CONFIG_LABEL "] "      \
   GREETING_COLOR_ANSI_OFF

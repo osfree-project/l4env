@@ -11,7 +11,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
  * GNU General Public License for more details.
  *
- * $Id: linux_module.c 158 2006-12-03 10:44:02Z mast $
+ * $Id: linux_module.c 180 2007-08-01 13:10:41Z mast $
  */
 
 #include <linux/module.h>
@@ -32,7 +32,7 @@ char *startup = "save";
 module_param(startup, charp, 0444);
 MODULE_PARM_DESC(startup, " Sets the startup mode of the TPM. "
   "Possible values are 'clear', 'save' (default) and 'deactivated.");
-char *storage_file = "/var/tpm/tpm_emulator-1.2."
+char *storage_file = "/var/lib/tpm/tpm_emulator-1.2."
   TPM_STR(VERSION_MAJOR) "." TPM_STR(VERSION_MINOR);
 module_param(storage_file, charp, 0644);
 MODULE_PARM_DESC(storage_file, " Sets the persistent-data storage file of the TPM.");

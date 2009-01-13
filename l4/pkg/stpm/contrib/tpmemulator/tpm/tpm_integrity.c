@@ -1,7 +1,7 @@
 /* Software-Based Trusted Platform Module (TPM) Emulator for Linux
  * Copyright (C) 2004 Mario Strasser <mast@gmx.net>,
  *                    Swiss Federal Institute of Technology (ETH) Zurich,
- *               2006 Heiko Stamer <stamer@gaos.org>
+ *               2006, 2007 Heiko Stamer <stamer@gaos.org>
  *
  * This module is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_integrity.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_integrity.c 277 2008-03-12 21:10:11Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -26,6 +26,9 @@
 
 /* import functions from tpm_capability.c */
 extern TPM_RESULT cap_version_val(UINT32 *respSize, BYTE **resp);
+/* import functions from tpm_crypto.c */
+extern TPM_RESULT tpm_sign(TPM_KEY_DATA *key, TPM_AUTH *auth, BOOL isInfo,
+  BYTE *areaToSign, UINT32 areaToSignSize, BYTE **sig, UINT32 *sigSize);
 
 /*
  * Integrity Collection and Reporting ([TPM_Part3], Section 16)
@@ -43,7 +46,7 @@ TPM_RESULT TPM_Extend(TPM_PCRINDEX pcrNum, TPM_DIGEST *inDigest,
 
   info("TPM_Extend()");
   if (pcrNum >= TPM_NUM_PCR) return TPM_BADINDEX;
-  if (!PCR_ATTRIB[pcrNum].pcrExtendLocal[LOCALITY]) return TPM_BAD_LOCALITY;
+  if (!(PCR_ATTRIB[pcrNum].pcrExtendLocal & (1 << LOCALITY))) return TPM_BAD_LOCALITY;
   /* compute new PCR value as SHA-1(old PCR value || inDigest) */
   tpm_sha1_init(&ctx);
   tpm_sha1_update(&ctx, PCR_VALUE[pcrNum].digest, sizeof(PCR_VALUE[pcrNum].digest));
@@ -119,14 +122,14 @@ TPM_RESULT TPM_PCR_Reset(TPM_PCR_SELECTION *pcrSelection)
     /* is PCR number i selected ? */
     if (pcrSelection->pcrSelect[i >> 3] & (1 << (i & 7))) {
       if (!PCR_ATTRIB[i].pcrReset) return TPM_NOTRESETABLE;
-      if (!PCR_ATTRIB[i].pcrResetLocal[LOCALITY]) return TPM_NOTLOCAL;
+      if (!(PCR_ATTRIB[i].pcrResetLocal & (1 << LOCALITY))) return TPM_NOTLOCAL;
     }
   }
   /* ... then we reset all registers at once */
   for (i = 0; i < pcrSelection->sizeOfSelect * 8; i++) {
     /* is PCR number i selected ? */
     if (pcrSelection->pcrSelect[i >> 3] & (1 << (i & 7))) {
-      memset(PCR_VALUE[i].digest, 0, sizeof(*PCR_VALUE[i].digest));
+      memset(PCR_VALUE[i].digest, 0, sizeof(PCR_VALUE[i].digest));
     }
   }
   return TPM_SUCCESS;
@@ -153,18 +156,23 @@ TPM_RESULT tpm_compute_pcr_digest(TPM_PCR_SELECTION *pcrSelection,
   }
   memcpy(&comp.select, pcrSelection, sizeof(TPM_PCR_SELECTION));
   comp.valueSize = j * sizeof(TPM_PCRVALUE);
-  /* marshal composite and compute hash */
-  len = sizeof_TPM_PCR_COMPOSITE(comp);
-  buf = ptr = tpm_malloc(len);
-  if (buf == NULL
-      || tpm_marshal_TPM_PCR_COMPOSITE(&ptr, &len, &comp)) {
-     tpm_free(buf);
-     return TPM_FAIL;
+  debug("comp.valueSize = %d", comp.valueSize);
+  if (comp.valueSize > 0) {
+    /* marshal composite and compute hash */
+    len = sizeof_TPM_PCR_COMPOSITE(comp);
+    buf = ptr = tpm_malloc(len);
+    if (buf == NULL
+        || tpm_marshal_TPM_PCR_COMPOSITE(&ptr, &len, &comp)) {
+       tpm_free(buf);
+       return TPM_FAIL;
+    }
+    tpm_sha1_init(&ctx);
+    tpm_sha1_update(&ctx, buf, sizeof_TPM_PCR_COMPOSITE(comp));
+    tpm_sha1_final(&ctx, digest->digest);
+    tpm_free(buf);
+  } else {
+    memset(digest, 0, sizeof(TPM_COMPOSITE_HASH));
   }
-  tpm_sha1_init(&ctx);
-  tpm_sha1_update(&ctx, buf, sizeof_TPM_PCR_COMPOSITE(comp));
-  tpm_sha1_final(&ctx, digest->digest);
-  tpm_free(buf);
   /* copy composite if requested */
   if (composite != NULL)
     memcpy(composite, &comp, sizeof(TPM_PCR_COMPOSITE));
@@ -234,37 +242,51 @@ TPM_RESULT TPM_Quote2(
     res = tpm_verify_auth(auth1, key->usageAuth, keyHandle);
     if (res != TPM_SUCCESS) return res;
   }
-  /* 2. The keyHandle->sigScheme MUST use SHA-1,
-   *    return TPM_INAPPROPRIATE_SIG if it does not */
-  if (key->sigScheme != TPM_SS_RSASSAPKCS1v15_SHA1)
+  /* 2. Validate that keyHandle->sigScheme is TPM_SS_RSASSAPKCS1v15_SHA1 or
+        TPM_SS_RSASSAPKCS1v15_INFO, if not return TPM_INAPPROPRIATE_SIG. */
+  if ((key->sigScheme != TPM_SS_RSASSAPKCS1v15_SHA1) && 
+       (key->sigScheme != TPM_SS_RSASSAPKCS1v15_INFO))
     return TPM_INAPPROPRIATE_SIG;
 
 /* WATCH: ??? specification error, missing check for key usage ???
-   A security issue seems to be the (mis)usage of the EK for signing. */
-/*
-  if (key->keyUsage != TPM_KEY_SIGNING && key->keyUsage != TPM_KEY_LEGACY
-      && key->keyUsage != TPM_KEY_IDENTITY)
-    return TPM_INVALID_KEYUSAGE;
-*/
+   A security issue may be the (mis)usage of the EK for signing.
+   WATCH: !!! This error has been corrected recently in v1.2 rev 103,
+              thus it might occur in some TPM v1.2 chip designs. !!! */
 
-  /* 3. Validate targetPCR is a valid TPM_PCR_SELECTION structure,
+  /* 3. Validate that keyHandle->keyUsage is TPM_KEY_SIGNING, TPM_KEY_IDENTITY,
+        or TPM_KEY_LEGACY, if not return TPM_INVALID_KEYUSAGE */
+  if ((key->keyUsage != TPM_KEY_SIGNING) && (key->keyUsage != TPM_KEY_LEGACY)
+      && (key->keyUsage != TPM_KEY_IDENTITY))
+    return TPM_INVALID_KEYUSAGE;
+  /* 4. Validate targetPCR is a valid TPM_PCR_SELECTION structure,
    *    on errors return TPM_INVALID_PCR_INFO */
   if (targetPCR->sizeOfSelect > sizeof(targetPCR->pcrSelect))
     return TPM_INVALID_PCR_INFO;
-  /* 4. Create H1 a SHA-1 hash of a TPM_PCR_COMPOSITE using the
+  /* 5. Create H1 a SHA-1 hash of a TPM_PCR_COMPOSITE using the
    *    TPM_STCLEAR_DATA->PCR[] indicated by targetPCR->pcrSelect */
   res = tpm_compute_pcr_digest(targetPCR, &H1, NULL);
   if (res != TPM_SUCCESS) return res;
-  /* 5. Create S1 a TPM_PCR_INFO_SHORT */
-  pcrData->pcrSelection.sizeOfSelect = targetPCR->sizeOfSelect;
-  memcpy(pcrData->pcrSelection.pcrSelect, targetPCR->pcrSelect, targetPCR->sizeOfSelect);
-  pcrData->localityAtRelease = tpmData.stany.flags.localityModifier;
-  memcpy(&pcrData->digestAtRelease, &H1, sizeof(TPM_COMPOSITE_HASH));
-  /* 6. Create Q1 a TPM_QUOTE_INFO2 structure */
+  /* 6. Create S1 a TPM_PCR_INFO_SHORT */
+    /* a. Set S1->pcrSelection to targetPCR */
+    pcrData->pcrSelection.sizeOfSelect = targetPCR->sizeOfSelect;
+    memcpy(pcrData->pcrSelection.pcrSelect, targetPCR->pcrSelect, targetPCR->sizeOfSelect);
+    /* b. Set S1->localityAtRelease to TPM_STANY_DATA -> localityModifier */
+    pcrData->localityAtRelease = tpmData.stany.flags.localityModifier;
+    /* c. Set S1->digestAtRelease to H1 */
+    memcpy(&pcrData->digestAtRelease, &H1, sizeof(TPM_COMPOSITE_HASH));
+  /* 7. Create Q1 a TPM_QUOTE_INFO2 structure */
   Q1.tag = TPM_TAG_QUOTE_INFO2;
-  memcpy(Q1.fixed, "QUT2", 4);
-  memcpy(&Q1.infoShort, pcrData, sizeof_TPM_PCR_INFO_SHORT((*pcrData)));
-  memcpy(&Q1.externalData, externalData, sizeof(TPM_NONCE));
+    /* a. Set Q1->fixed to "QUT2" */
+    Q1.fixed[0] = 'Q', Q1.fixed[1] = 'U', Q1.fixed[2] = 'T', Q1.fixed[3] = '2';
+    /* b. Set Q1->infoShort to S1 */
+    Q1.infoShort.pcrSelection.sizeOfSelect = pcrData->pcrSelection.sizeOfSelect;
+    memcpy(Q1.infoShort.pcrSelection.pcrSelect,
+      pcrData->pcrSelection.pcrSelect, pcrData->pcrSelection.sizeOfSelect);
+    Q1.infoShort.localityAtRelease = pcrData->localityAtRelease;
+    memcpy(Q1.infoShort.digestAtRelease.digest, 
+      pcrData->digestAtRelease.digest, sizeof(TPM_COMPOSITE_HASH));
+    /* c. Set Q1->externalData to externalData */
+    memcpy(&Q1.externalData, externalData, sizeof(TPM_NONCE));
   size = len = sizeof_TPM_QUOTE_INFO2(Q1);
   buf = ptr = tpm_malloc(size);
   if (buf == NULL) return TPM_NOSPACE;
@@ -273,8 +295,9 @@ TPM_RESULT TPM_Quote2(
     tpm_free(buf);
     return TPM_FAIL;
   }
-  /* 7. If addVersion is TRUE */
+  /* 8. If addVersion is TRUE */
   if (addVersion == TRUE) {
+    debug("TPM_Quote2(): addVersion == TRUE");
     /* a. Concatenate to Q1 a TPM_CAP_VERSION_INFO structure */
     res = cap_version_val(&respSize, &resp);
     if (res != TPM_SUCCESS) {
@@ -292,11 +315,13 @@ TPM_RESULT TPM_Quote2(
         return TPM_FAIL;
     }
     *versionInfoSize = respSize;
-   } else { /* 8. Else */
-    /* a. Set versionInfoSize to 0 and return no bytes in versionInfo */
+   } else { /* 9. Else */
+    debug("TPM_Quote2(): addVersion == FALSE");
+    /* a. Set versionInfoSize to 0 */
     *versionInfoSize = 0;
+    /* b. Return no bytes in versionInfo */
   }
-  /* 9. Sign a SHA-1 hash of Q1 using keyHandle as the signature key */
+  /* 10. Sign a SHA-1 hash of Q1 using keyHandle as the signature key */
   tpm_sha1_init(&ctx);
   tpm_sha1_update(&ctx, buf, size);
   tpm_free(buf);
@@ -305,16 +330,6 @@ TPM_RESULT TPM_Quote2(
     tpm_free(resp);
   }
   tpm_sha1_final(&ctx, digest.digest);
-  *sigSize = key->key.size >> 3;
-  *sig = tpm_malloc(*sigSize);
-  if (*sig == NULL) return TPM_NOSPACE;
-  if (tpm_rsa_sign(&key->key, RSA_SSA_PKCS1_SHA1, digest.digest, 
-    sizeof(TPM_DIGEST), *sig)) {
-      debug("TPM_Quote2(): tpm_rsa_sign() failed.");
-      tpm_free(*sig);
-      return TPM_FAIL;
-  }
-  
-  /* 10. Return the signature in sig */
-  return TPM_SUCCESS;
+  /* 11. Return the signature in sig */
+  return tpm_sign(key, auth1, FALSE, digest.digest, sizeof(TPM_DIGEST), sig, sigSize);
 }

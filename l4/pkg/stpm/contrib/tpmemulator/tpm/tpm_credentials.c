@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_credentials.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_credentials.c 182 2007-08-02 07:20:16Z hstamer $
  */
 
 #include "tpm_emulator.h"
@@ -119,8 +119,8 @@ TPM_RESULT TPM_CreateRevocableEK(TPM_NONCE *antiReplay, TPM_KEY_PARMS *keyInfo,
   }
   memcpy(outputEKreset, &tpmData.permanent.data.ekReset, sizeof(TPM_NONCE));
   /* Create TPM_PERMANENT_DATA->TPM_DAA_TPM_SEED from the TPM RNG */
-  tpm_get_random_bytes(tpmData.permanent.data.tpmDAASeed.digest, 
-    sizeof(tpmData.permanent.data.tpmDAASeed.digest));
+  tpm_get_random_bytes(tpmData.permanent.data.tpmDAASeed.nonce, 
+    sizeof(tpmData.permanent.data.tpmDAASeed.nonce));
   return TPM_SUCCESS;
 }
 
@@ -135,8 +135,8 @@ TPM_RESULT TPM_RevokeTrust(TPM_NONCE *ekReset)
   tpm_rsa_release_private_key(&tpmData.permanent.data.endorsementKey);
   tpmData.permanent.data.endorsementKey.size = 0;
   /* Invalidate TPM_PERMANENT_DATA->tpmDAASeed */
-  memset(tpmData.permanent.data.tpmDAASeed.digest, 0, 
-    sizeof(tpmData.permanent.data.tpmDAASeed.digest));
+  memset(tpmData.permanent.data.tpmDAASeed.nonce, 0, 
+    sizeof(tpmData.permanent.data.tpmDAASeed.nonce));
   return TPM_SUCCESS;
 }
 

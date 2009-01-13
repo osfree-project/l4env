@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_context.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_context.c 297 2008-05-07 07:44:58Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -141,7 +141,7 @@ TPM_RESULT TPM_SaveContext(TPM_HANDLE handle, TPM_RESOURCE_TYPE resourceType,
   TPM_DAA_SESSION_DATA *sessionDAA = NULL;
   TPM_KEY_DATA *key = NULL;
   int i = 0;
-  info("TPM_SaveContext() resourceType = %.8x", resourceType);
+  info("TPM_SaveContext() resourceType = %08x", resourceType);
   /* setup context data */
   context.tag = TPM_TAG_CONTEXT_SENSITIVE;
   context.resourceType = resourceType;
@@ -157,6 +157,7 @@ TPM_RESULT TPM_SaveContext(TPM_HANDLE handle, TPM_RESOURCE_TYPE resourceType,
            sizeof(TPM_NONCE));
   } else if (resourceType == TPM_RT_KEY) {
     key = tpm_get_key(handle);
+    debug("resourceType = TPM_RT_KEY, handle = %08x, key = %p", handle, key);
     if (key == NULL) return TPM_INVALID_RESOURCE;
     if (key->keyControl & TPM_KEY_CONTROL_OWNER_EVICT) return TPM_OWNER_CONTROL;
     /* store key data */

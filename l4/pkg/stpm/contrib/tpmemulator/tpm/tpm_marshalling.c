@@ -13,7 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_marshalling.c 139 2006-11-10 16:09:00Z mast $
+ * $Id: tpm_marshalling.c 287 2008-03-22 12:12:47Z mast $
  */
 
 #include "tpm_marshalling.h"
@@ -160,6 +160,20 @@ int tpm_marshal_TPM_KEY_HANDLE_LIST(BYTE **ptr, UINT32 *length, TPM_KEY_HANDLE_L
   return 0;
 }
 
+int tpm_marshal_TPM_CHANGEAUTH_VALIDATE(BYTE **ptr, UINT32 *length, TPM_CHANGEAUTH_VALIDATE *v)
+{
+  if (tpm_marshal_TPM_SECRET(ptr, length, &v->newAuthSecret)
+      || tpm_marshal_TPM_NONCE(ptr, length, &v->n1)) return -1;
+  return 0;
+}
+
+int tpm_unmarshal_TPM_CHANGEAUTH_VALIDATE(BYTE **ptr, UINT32 *length, TPM_CHANGEAUTH_VALIDATE *v)
+{
+  if (tpm_unmarshal_TPM_SECRET(ptr, length, &v->newAuthSecret)
+      || tpm_unmarshal_TPM_NONCE(ptr, length, &v->n1)) return -1;
+  return 0;
+}
+
 int tpm_marshal_TPM_COUNTER_VALUE(BYTE **ptr, UINT32 *length, TPM_COUNTER_VALUE *v)
 {
   if (tpm_marshal_TPM_STRUCTURE_TAG(ptr, length, v->tag)
@@ -271,16 +285,16 @@ int tpm_unmarshal_TPM_PCR_INFO_SHORT(BYTE **ptr, UINT32 *length, TPM_PCR_INFO_SH
 int tpm_marshal_TPM_PCR_ATTRIBUTES(BYTE **ptr, UINT32 *length, TPM_PCR_ATTRIBUTES *v)
 {
   if (tpm_marshal_BOOL(ptr, length, v->pcrReset)
-      || tpm_marshal_BOOL_ARRAY(ptr, length, v->pcrResetLocal, TPM_NUM_LOCALITY)
-      || tpm_marshal_BOOL_ARRAY(ptr, length, v->pcrExtendLocal, TPM_NUM_LOCALITY)) return -1;
+      || tpm_marshal_TPM_LOCALITY_SELECTION(ptr, length, v->pcrResetLocal)
+      || tpm_marshal_TPM_LOCALITY_SELECTION(ptr, length, v->pcrExtendLocal)) return -1;
   return 0;
 }
 
 int tpm_unmarshal_TPM_PCR_ATTRIBUTES(BYTE **ptr, UINT32 *length, TPM_PCR_ATTRIBUTES *v)
 {
   if (tpm_unmarshal_BOOL(ptr, length, &v->pcrReset)
-      || tpm_unmarshal_BOOL_ARRAY(ptr, length, v->pcrResetLocal, TPM_NUM_LOCALITY)
-      || tpm_unmarshal_BOOL_ARRAY(ptr, length, v->pcrExtendLocal, TPM_NUM_LOCALITY)) return -1;
+      || tpm_unmarshal_TPM_LOCALITY_SELECTION(ptr, length, &v->pcrResetLocal)
+      || tpm_unmarshal_TPM_LOCALITY_SELECTION(ptr, length, &v->pcrExtendLocal)) return -1;
   return 0;
 }
 
@@ -857,7 +871,7 @@ int tpm_marshal_TPM_DAA_CONTEXT(BYTE **ptr, UINT32 *length, TPM_DAA_CONTEXT *v)
   if (tpm_marshal_TPM_STRUCTURE_TAG(ptr, length, v->tag)
       || tpm_marshal_TPM_DIGEST(ptr, length, &v->DAA_digestContext)
       || tpm_marshal_TPM_DIGEST(ptr, length, &v->DAA_digest)
-      || tpm_marshal_TPM_DIGEST(ptr, length, &v->DAA_contextSeed)
+      || tpm_marshal_TPM_NONCE(ptr, length, &v->DAA_contextSeed)
       || tpm_marshal_BYTE_ARRAY(ptr, length, v->DAA_scratch, sizeof(v->DAA_scratch))
       || tpm_marshal_BYTE(ptr, length, v->DAA_stage))
         return -1;
@@ -869,7 +883,7 @@ int tpm_unmarshal_TPM_DAA_CONTEXT(BYTE **ptr, UINT32 *length, TPM_DAA_CONTEXT *v
   if (tpm_unmarshal_TPM_STRUCTURE_TAG(ptr, length, &v->tag)
       || tpm_unmarshal_TPM_DIGEST(ptr, length, &v->DAA_digestContext)
       || tpm_unmarshal_TPM_DIGEST(ptr, length, &v->DAA_digest)
-      || tpm_unmarshal_TPM_DIGEST(ptr, length, &v->DAA_contextSeed)
+      || tpm_unmarshal_TPM_NONCE(ptr, length, &v->DAA_contextSeed)
       || tpm_unmarshal_BYTE_ARRAY(ptr, length, v->DAA_scratch, sizeof(v->DAA_scratch))
       || tpm_unmarshal_BYTE(ptr, length, &v->DAA_stage))
         return -1;
@@ -1111,6 +1125,24 @@ int tpm_unmarshal_TPM_NV_DATA_PUBLIC(BYTE **ptr, UINT32 *length, TPM_NV_DATA_PUB
       || tpm_unmarshal_BOOL(ptr, length, &v->bWriteSTClear)
       || tpm_unmarshal_BOOL(ptr, length, &v->bWriteDefine)
       || tpm_unmarshal_UINT32(ptr, length, &v->dataSize)) return -1;
+  return 0;
+}
+
+int tpm_marshal_TPM_NV_DATA_SENSITIVE(BYTE **ptr, UINT32 *length, TPM_NV_DATA_SENSITIVE *v)
+{
+  if (tpm_marshal_TPM_STRUCTURE_TAG(ptr, length, v->tag)
+      || tpm_marshal_TPM_NV_DATA_PUBLIC(ptr, length, &v->pubInfo)
+      || tpm_marshal_TPM_AUTHDATA(ptr, length, &v->authValue)
+      || tpm_marshal_UINT32(ptr, length, v->dataIndex)) return -1;
+  return 0;
+}
+
+int tpm_unmarshal_TPM_NV_DATA_SENSITIVE(BYTE **ptr, UINT32 *length, TPM_NV_DATA_SENSITIVE *v)
+{
+  if (tpm_unmarshal_TPM_STRUCTURE_TAG(ptr, length, &v->tag)
+      || tpm_unmarshal_TPM_NV_DATA_PUBLIC(ptr, length, &v->pubInfo)
+      || tpm_unmarshal_TPM_AUTHDATA(ptr, length, &v->authValue)
+      || tpm_unmarshal_UINT32(ptr, length, &v->dataIndex)) return -1;
   return 0;
 }
 
@@ -1377,6 +1409,41 @@ int tpm_unmarshal_RSA(BYTE **ptr, UINT32 *length, tpm_rsa_private_key_t *v)
   return 0;
 }
 
+int tpm_marshal_RSAPub(BYTE **ptr, UINT32 *length, tpm_rsa_public_key_t *v)
+{
+  size_t m_len, e_len;
+  if (*length < (UINT32)sizeof_RSAPub((*v))) return -1;
+  if (v->size > 0) {
+    tpm_rsa_export_public_modulus(v, &(*ptr)[4], &m_len);
+    tpm_rsa_export_public_exponent(v, &(*ptr)[4+m_len], &e_len);
+    tpm_marshal_UINT16(ptr, length, m_len);
+    tpm_marshal_UINT16(ptr, length, e_len);
+    *ptr += m_len + e_len;
+    *length -= m_len + e_len;
+  } else {
+    tpm_marshal_UINT16(ptr, length, 0);
+    tpm_marshal_UINT16(ptr, length, 0);
+  }
+  return 0;
+}
+
+int tpm_unmarshal_RSAPub(BYTE **ptr, UINT32 *length, tpm_rsa_public_key_t *v)
+{
+  UINT16 m_len, e_len;
+  if (tpm_unmarshal_UINT16(ptr, length, &m_len)
+      || tpm_unmarshal_UINT16(ptr, length, &e_len)) return -1;
+  if (m_len == 0) {
+    v->size = 0;
+    return 0;
+  }
+  if (*length < (UINT32)m_len + (UINT32)e_len
+      || tpm_rsa_import_public_key(v, RSA_MSB_FIRST, &(*ptr)[0], m_len, 
+                                   &(*ptr)[m_len], e_len)) return -1;
+  *ptr += m_len + e_len;
+  *length -= m_len + e_len;
+  return 0;
+}
+
 int tpm_marshal_TPM_KEY_DATA(BYTE **ptr, UINT32 *length, TPM_KEY_DATA *v)
 {
   if (tpm_marshal_BOOL(ptr, length, v->valid)) return -1;
@@ -1415,6 +1482,28 @@ int tpm_unmarshal_TPM_KEY_DATA(BYTE **ptr, UINT32 *length, TPM_KEY_DATA *v)
   return 0;
 }
 
+int tpm_marshal_TPM_PUBKEY_DATA(BYTE **ptr, UINT32 *length, TPM_PUBKEY_DATA *v)
+{
+  if (tpm_marshal_BOOL(ptr, length, v->valid)) return -1;
+  if (v->valid) {
+    if (tpm_marshal_TPM_ENC_SCHEME(ptr, length, v->encScheme)
+        || tpm_marshal_TPM_SIG_SCHEME(ptr, length, v->sigScheme)
+        || tpm_marshal_RSAPub(ptr, length, &v->key)) return -1;
+    }
+  return 0;
+}
+
+int tpm_unmarshal_TPM_PUBKEY_DATA(BYTE **ptr, UINT32 *length, TPM_PUBKEY_DATA *v)
+{
+  if (tpm_unmarshal_BOOL(ptr, length, &v->valid)) return -1;
+  if (v->valid) {
+    if (tpm_unmarshal_TPM_ENC_SCHEME(ptr, length, &v->encScheme)
+        || tpm_unmarshal_TPM_SIG_SCHEME(ptr, length, &v->sigScheme)
+        || tpm_unmarshal_RSAPub(ptr, length, &v->key)) return -1;
+    }
+  return 0;
+}
+
 int tpm_marshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_DATA *v)
 {
   UINT32 i;
@@ -1423,6 +1512,7 @@ int tpm_marshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_DAT
       || tpm_marshal_TPM_NONCE(ptr, length, &v->tpmProof)
       || tpm_marshal_TPM_SECRET(ptr, length, &v->ownerAuth)
       || tpm_marshal_TPM_SECRET(ptr, length, &v->operatorAuth)
+      || tpm_marshal_TPM_PUBKEY_DATA(ptr, length, &v->manuMaintPub)
       || tpm_marshal_TPM_NONCE(ptr, length, &v->ekReset)
       || tpm_marshal_RSA(ptr, length, &v->endorsementKey)
       || tpm_marshal_TPM_KEY_DATA(ptr, length, &v->srk)
@@ -1430,11 +1520,13 @@ int tpm_marshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_DAT
 /* removed since v1.2 rev 94
       || tpm_marshal_BYTE(ptr, length, v->tickType)
 */
+      || tpm_marshal_UINT32(ptr, length, v->maxNVBufSize)
       || tpm_marshal_UINT32(ptr, length, v->noOwnerNVWrite)
-      || tpm_marshal_TPM_DIGEST(ptr, length, &v->DIR)
+      || tpm_marshal_UINT32(ptr, length, v->nvDataSize)
+      || tpm_marshal_BYTE_ARRAY(ptr, length, v->nvData, sizeof(v->nvData))
       || tpm_marshal_BYTE_ARRAY(ptr, length, v->ordinalAuditStatus, sizeof(v->ordinalAuditStatus))
       || tpm_marshal_TPM_ACTUAL_COUNT(ptr, length, v->auditMonotonicCounter)
-      || tpm_marshal_TPM_DIGEST(ptr, length, &v->tpmDAASeed)) return -1;
+      || tpm_marshal_TPM_NONCE(ptr, length, &v->tpmDAASeed)) return -1;
   for (i = 0; i < TPM_MAX_COUNTERS; i++) {
     if (tpm_marshal_TPM_COUNTER_VALUE(ptr, length, &v->counters[i])
         || tpm_marshal_TPM_SECRET(ptr, length, &v->counters[i].usageAuth)
@@ -1447,17 +1539,25 @@ int tpm_marshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_DAT
   for (i = 0; i < TPM_MAX_KEYS; i++) {
     if (tpm_marshal_TPM_KEY_DATA(ptr, length, &v->keys[i])) return -1;
   }
+  for (i = 0; i < TPM_MAX_NVS; i++) {
+    if (tpm_marshal_BOOL(ptr, length, v->nvStorage[i].valid)) return -1;
+    if (v->nvStorage[i].valid) {
+      if (tpm_marshal_TPM_NV_DATA_SENSITIVE(ptr, length, &v->nvStorage[i])) return -1;
+    }
+  }
   return 0;
 }
 
 int tpm_unmarshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_DATA *v)
 {
   UINT32 i;
+
   if (tpm_unmarshal_TPM_STRUCTURE_TAG(ptr, length, &v->tag)
       || tpm_unmarshal_TPM_VERSION(ptr, length, &v->version)
       || tpm_unmarshal_TPM_NONCE(ptr, length, &v->tpmProof)
       || tpm_unmarshal_TPM_SECRET(ptr, length, &v->ownerAuth)
       || tpm_unmarshal_TPM_SECRET(ptr, length, &v->operatorAuth)
+      || tpm_unmarshal_TPM_PUBKEY_DATA(ptr, length, &v->manuMaintPub)
       || tpm_unmarshal_TPM_NONCE(ptr, length, &v->ekReset)
       || tpm_unmarshal_RSA(ptr, length, &v->endorsementKey)
       || tpm_unmarshal_TPM_KEY_DATA(ptr, length, &v->srk)
@@ -1465,11 +1565,13 @@ int tpm_unmarshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_D
 /* removed since v1.2 rev 94
       || tpm_unmarshal_BYTE(ptr, length, &v->tickType)
 */
+      || tpm_unmarshal_UINT32(ptr, length, &v->maxNVBufSize)
       || tpm_unmarshal_UINT32(ptr, length, &v->noOwnerNVWrite)
-      || tpm_unmarshal_TPM_DIGEST(ptr, length, &v->DIR)
+      || tpm_unmarshal_UINT32(ptr, length, &v->nvDataSize)
+      || tpm_unmarshal_BYTE_ARRAY(ptr, length, v->nvData, sizeof(v->nvData))
       || tpm_unmarshal_BYTE_ARRAY(ptr, length, v->ordinalAuditStatus, sizeof(v->ordinalAuditStatus))
       || tpm_unmarshal_TPM_ACTUAL_COUNT(ptr, length, &v->auditMonotonicCounter)
-      || tpm_unmarshal_TPM_DIGEST(ptr, length, &v->tpmDAASeed)) return -1;
+      || tpm_unmarshal_TPM_NONCE(ptr, length, &v->tpmDAASeed)) return -1;
   for (i = 0; i < TPM_MAX_COUNTERS; i++) {
     if (tpm_unmarshal_TPM_COUNTER_VALUE(ptr, length, &v->counters[i])
         || tpm_unmarshal_TPM_SECRET(ptr, length, &v->counters[i].usageAuth)
@@ -1482,6 +1584,12 @@ int tpm_unmarshal_TPM_PERMANENT_DATA(BYTE **ptr, UINT32 *length, TPM_PERMANENT_D
   for (i = 0; i < TPM_MAX_KEYS; i++) {
     if (tpm_unmarshal_TPM_KEY_DATA(ptr, length, &v->keys[i])) return -1;
   }
+  for (i = 0; i < TPM_MAX_NVS; i++) {
+    if (tpm_unmarshal_BOOL(ptr, length, &v->nvStorage[i].valid)) return -1;
+    if (v->nvStorage[i].valid) {
+      if (tpm_unmarshal_TPM_NV_DATA_SENSITIVE(ptr, length, &v->nvStorage[i])) return -1;
+    }
+  }
   return 0;
 }
 
@@ -1489,7 +1597,8 @@ int tpm_marshal_TPM_STCLEAR_DATA(BYTE **ptr, UINT32 *length, TPM_STCLEAR_DATA *v
 {
   if (tpm_marshal_TPM_STRUCTURE_TAG(ptr, length, v->tag)
       || tpm_marshal_TPM_NONCE(ptr, length, &v->contextNonceKey)
-      || tpm_marshal_TPM_COUNT_ID(ptr, length, v->countID) ) return -1;
+      || tpm_marshal_TPM_COUNT_ID(ptr, length, v->countID)
+      || tpm_marshal_BOOL(ptr, length, v->disableResetLock)) return -1;
   return 0;
 }
 
@@ -1497,7 +1606,8 @@ int tpm_unmarshal_TPM_STCLEAR_DATA(BYTE **ptr, UINT32 *length, TPM_STCLEAR_DATA 
 {
   if (tpm_unmarshal_TPM_STRUCTURE_TAG(ptr, length, &v->tag)
       || tpm_unmarshal_TPM_NONCE(ptr, length, &v->contextNonceKey)
-      || tpm_unmarshal_TPM_COUNT_ID(ptr, length, &v->countID) ) return -1;
+      || tpm_unmarshal_TPM_COUNT_ID(ptr, length, &v->countID)
+      || tpm_unmarshal_BOOL(ptr, length, &v->disableResetLock)) return -1;
   return 0;
 }
 

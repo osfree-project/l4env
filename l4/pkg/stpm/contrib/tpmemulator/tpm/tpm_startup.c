@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_startup.c 150 2006-11-14 13:34:56Z mast $
+ * $Id: tpm_startup.c 277 2008-03-12 21:10:11Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -56,9 +56,9 @@ TPM_RESULT TPM_Startup(TPM_STARTUP_TYPE startupType)
     /* reset PCR values */
     for (i = 0; i < TPM_NUM_PCR; i++) {
       if (tpmData.permanent.data.pcrAttrib[i].pcrReset)
-        SET_TO_ZERO(&tpmData.permanent.data.pcrValue[i].digest);
-      else
         SET_TO_0xFF(&tpmData.permanent.data.pcrValue[i].digest);
+      else
+        SET_TO_ZERO(&tpmData.permanent.data.pcrValue[i].digest);
     }
     /* reset STCLEAR_FLAGS */
     SET_TO_ZERO(&tpmData.stclear.flags);
@@ -78,6 +78,11 @@ TPM_RESULT TPM_Startup(TPM_STARTUP_TYPE startupType)
     SET_TO_RAND(&tpmData.stclear.data.contextNonceKey);
     /* invalidate counter handle */
     tpmData.stclear.data.countID = TPM_INVALID_HANDLE;
+    /* reset NV read and write flags */
+    for (i = 0; i < TPM_MAX_NVS; i++) {
+        tpmData.permanent.data.nvStorage[i].pubInfo.bReadSTClear = FALSE;
+        tpmData.permanent.data.nvStorage[i].pubInfo.bWriteSTClear = FALSE;
+    }
   } else if (startupType == TPM_ST_STATE) {
     if (!tpmData.permanent.flags.dataRestored) {
       error("restoring permanent data failed");

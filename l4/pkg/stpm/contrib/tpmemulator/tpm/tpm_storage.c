@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_storage.c 141 2006-11-11 20:34:57Z mast $
+ * $Id: tpm_storage.c 296 2008-05-06 14:01:36Z mast $
  */
 
 #include "tpm_emulator.h"
@@ -108,6 +108,24 @@ int tpm_decrypt_sealed_data(TPM_KEY_DATA *key, BYTE *enc, UINT32 enc_size,
   return 0;
 }
 
+void tpm_xor_encrypt(TPM_SESSION_DATA *session, TPM_NONCE *nonceOdd,
+                     BYTE *data, UINT32 data_size)
+{
+  BYTE seed[2 * sizeof(TPM_NONCE) + 3 + sizeof(TPM_SECRET)];
+  BYTE *ptr = seed;
+
+  /* set up seed */
+  memcpy(ptr, session->lastNonceEven.nonce, sizeof(TPM_NONCE));
+  ptr += sizeof(TPM_NONCE);
+  memcpy(ptr, nonceOdd->nonce, sizeof(TPM_NONCE));
+  ptr += sizeof(TPM_NONCE);
+  memcpy(ptr, (const BYTE*)"XOR", 3);
+  ptr += 3;
+  memcpy(ptr, session->sharedSecret, sizeof(TPM_SECRET));
+  /* decrypt data */
+  tpm_rsa_mask_generation(seed, sizeof(seed), data, data_size);
+}
+
 TPM_RESULT TPM_Seal(TPM_KEY_HANDLE keyHandle, TPM_ENCAUTH *encAuth,
                     UINT32 pcrInfoSize, TPM_PCR_INFO *pcrInfo,
                     UINT32 inDataSize, BYTE *inData,
@@ -160,6 +178,8 @@ TPM_RESULT TPM_Seal(TPM_KEY_HANDLE keyHandle, TPM_ENCAUTH *encAuth,
     debug("TPM_Seal(): compute_store_digest() failed.");
     return TPM_FAIL;
   }
+  if ((session->entityType & 0xff00) !=  TPM_ET_XOR)
+    return TPM_INAPPROPRIATE_ENC;
   tpm_decrypt_auth_secret(*encAuth, session->sharedSecret,
     &session->lastNonceEven, seal.authData);
   seal.dataSize = inDataSize; 
@@ -176,12 +196,83 @@ TPM_RESULT TPM_Seal(TPM_KEY_HANDLE keyHandle, TPM_ENCAUTH *encAuth,
   return TPM_SUCCESS;
 }
 
+TPM_RESULT TPM_Sealx(TPM_KEY_HANDLE keyHandle, TPM_ENCAUTH *encAuth,
+                    UINT32 pcrInfoSize, TPM_PCR_INFO *pcrInfo,
+                    UINT32 inDataSize, BYTE *inData,
+                    TPM_AUTH *auth1, TPM_STORED_DATA *sealedData)
+{
+  TPM_RESULT res;
+  TPM_KEY_DATA *key;
+  TPM_SESSION_DATA *session;
+  TPM_SEALED_DATA seal;
+
+  info("TPM_Sealx()");
+  if (inDataSize == 0) return TPM_BAD_PARAMETER;
+  /* get key */
+  key = tpm_get_key(keyHandle);
+  if (key == NULL) return TPM_INVALID_KEYHANDLE;
+  /* verify authorization */
+  res = tpm_verify_auth(auth1, key->usageAuth, keyHandle);
+  if (res != TPM_SUCCESS) return res;
+  auth1->continueAuthSession = FALSE;
+  session = tpm_get_auth(auth1->authHandle);
+  if (session->type != TPM_ST_OSAP) return TPM_AUTHFAIL;
+  /* verify key properties */
+  if (key->keyUsage != TPM_KEY_STORAGE
+      || key->keyFlags & TPM_KEY_FLAG_MIGRATABLE)
+    return TPM_INVALID_KEYUSAGE;
+  /* setup store */
+  if (pcrInfo->tag != TPM_TAG_PCR_INFO_LONG)
+    return TPM_BAD_PARAMETER;
+  if ((session->entityType & 0xff00) !=  TPM_ET_XOR)
+    return TPM_INAPPROPRIATE_ENC;
+  sealedData->tag = TPM_TAG_STORED_DATA12;
+  sealedData->et = TPM_ET_XOR | TPM_ET_KEY;
+  sealedData->encDataSize = 0;
+  sealedData->encData = NULL;
+  sealedData->sealInfoSize = pcrInfoSize;
+  if (pcrInfoSize > 0) {
+    sealedData->sealInfoSize = pcrInfoSize;
+    memcpy(&sealedData->sealInfo, pcrInfo, sizeof(TPM_PCR_INFO));
+    res = tpm_compute_pcr_digest(&pcrInfo->creationPCRSelection,
+      &sealedData->sealInfo.digestAtCreation, NULL);
+    if (res != TPM_SUCCESS) return res;
+    sealedData->sealInfo.localityAtCreation =
+      tpmData.stany.flags.localityModifier;
+  }  
+  /* setup seal */
+  seal.payload = TPM_PT_SEAL;
+  memcpy(&seal.tpmProof, &tpmData.permanent.data.tpmProof,
+    sizeof(TPM_NONCE));
+  if (compute_store_digest(sealedData, &seal.storedDigest)) {
+    debug("TPM_Sealx(): compute_store_digest() failed.");
+    return TPM_FAIL;
+  }
+  tpm_decrypt_auth_secret(*encAuth, session->sharedSecret,
+    &session->lastNonceEven, seal.authData);
+  tpm_xor_encrypt(session, &auth1->nonceOdd, inData, inDataSize);
+  seal.dataSize = inDataSize;
+  seal.data = inData;
+  /* encrypt sealed data */
+  sealedData->encDataSize = key->key.size >> 3;
+  sealedData->encData = tpm_malloc(sealedData->encDataSize);
+  if (sealedData->encData == NULL) return TPM_NOSPACE;
+  if (tpm_encrypt_sealed_data(key, &seal, sealedData->encData,
+                              &sealedData->encDataSize)) {
+    tpm_free(sealedData->encData);
+    return TPM_ENCRYPT_ERROR;
+  }
+  return TPM_SUCCESS;
+
+}
+
 TPM_RESULT TPM_Unseal(TPM_KEY_HANDLE parentHandle, TPM_STORED_DATA *inData,
                       TPM_AUTH *auth1, TPM_AUTH *auth2,  UINT32 *sealedDataSize, 
                       BYTE **secret)
 {
   TPM_RESULT res;
   TPM_KEY_DATA *key;
+  TPM_SESSION_DATA *session;
   TPM_SEALED_DATA seal;
   BYTE *seal_buf;
   TPM_DIGEST digest;
@@ -194,6 +285,10 @@ TPM_RESULT TPM_Unseal(TPM_KEY_HANDLE parentHandle, TPM_STORED_DATA *inData,
       || key->authDataUsage != TPM_AUTH_NEVER) {
     res = tpm_verify_auth(auth1, key->usageAuth, parentHandle);
     if (res != TPM_SUCCESS) return res;
+    auth1->continueAuthSession = FALSE;
+    session = tpm_get_auth(auth1->authHandle);
+  } else {
+    session = NULL;
   }
   /* verify key properties */
   if (key->keyUsage != TPM_KEY_STORAGE
@@ -229,6 +324,15 @@ TPM_RESULT TPM_Unseal(TPM_KEY_HANDLE parentHandle, TPM_STORED_DATA *inData,
   } else {
     res = tpm_verify_auth(auth1, seal.authData, TPM_INVALID_HANDLE);
     if (res != TPM_SUCCESS) return res;
+  }
+  /* encrypt data if required */
+  debug("entity type = %04x", inData->et & 0xff00);
+  if (inData->et != 0) {
+     if (auth2->authHandle == TPM_INVALID_HANDLE) return TPM_AUTHFAIL;
+     if (session->type != TPM_ST_OSAP) return TPM_BAD_MODE;
+     if ((inData->et & 0xff00) == TPM_ET_XOR) {
+        tpm_xor_encrypt(session, &auth1->nonceOdd, seal.data, seal.dataSize);
+     } else return TPM_INAPPROPRIATE_ENC;
   }
   /* return secret */
   *sealedDataSize = seal.dataSize;
@@ -461,7 +565,10 @@ TPM_RESULT TPM_CreateWrapKey(TPM_KEY_HANDLE parentHandle,
   }
   /* generate key and store it */
   key_length = keyInfo->algorithmParms.parms.rsa.keyLength;
-  if (tpm_rsa_generate_key(&rsa, key_length)) return TPM_FAIL;
+  if (tpm_rsa_generate_key(&rsa, key_length)) {
+    debug("TPM_CreateWrapKey(): tpm_rsa_generate_key() failed.");
+    return TPM_FAIL;
+  }
   wrappedKey->pubKey.keyLength = key_length >> 3;
   wrappedKey->pubKey.key = tpm_malloc(wrappedKey->pubKey.keyLength);
   store.privKey.keyLength = key_length >> 4;
@@ -517,19 +624,17 @@ TPM_RESULT TPM_LoadKey(TPM_KEY_HANDLE parentHandle, TPM_KEY *inKey,
   TPM_STORE_ASYMKEY store;
   info("TPM_LoadKey()");
   /* get parent key */
-  debug("[ parentHandle=%.8x ]", parentHandle);
+  debug("parentHandle = %08x", parentHandle);
   parent = tpm_get_key(parentHandle);
   if (parent == NULL) return TPM_INVALID_KEYHANDLE;
   /* verify authorization */
-  if (parent->authDataUsage != TPM_AUTH_NEVER) {
-    if (auth1->authHandle != TPM_INVALID_HANDLE) {
-      debug("[ authDataUsage=%.2x ]", parent->authDataUsage);
-      res = tpm_verify_auth(auth1, parent->usageAuth, parentHandle);
-      if (res != TPM_SUCCESS) return res;
-    } else {
-      debug("TPM_LoadKey(): parent key requires authorization.");
-      return TPM_AUTHFAIL;
-    }
+  if (auth1->authHandle != TPM_INVALID_HANDLE) {
+    debug("authDataUsage = %02x", parent->authDataUsage);
+    res = tpm_verify_auth(auth1, parent->usageAuth, parentHandle);
+    if (res != TPM_SUCCESS) return res;
+  } else if (parent->authDataUsage != TPM_AUTH_NEVER) {
+    debug("TPM_LoadKey(): parent key requires authorization.");
+    return TPM_AUTHFAIL;
   }
   if (parent->keyUsage != TPM_KEY_STORAGE) return TPM_INVALID_KEYUSAGE;
   /* verify key properties */
@@ -553,7 +658,7 @@ TPM_RESULT TPM_LoadKey(TPM_KEY_HANDLE parentHandle, TPM_KEY *inKey,
   /* decrypt private key */
   if (tpm_decrypt_private_key(parent, inKey->encData, inKey->encDataSize,
                               &store, &key_buf)) return TPM_DECRYPT_ERROR;
-  /* get a free key-slot if any is left */
+  /* get a free key-slot, if any free slot is left */
   *inkeyHandle = tpm_get_free_key();
   key = tpm_get_key(*inkeyHandle);
   if (key == NULL) {
@@ -669,18 +774,59 @@ TPM_RESULT TPM_GetPubKey(TPM_KEY_HANDLE keyHandle, TPM_AUTH *auth1,
   return TPM_SUCCESS;
 }
 
-TPM_RESULT TPM_Sealx(
-  TPM_KEY_HANDLE keyHandle,
-  TPM_ENCAUTH *encAuth,
-  UINT32 pcrInfoSize,
-  TPM_PCR_INFO *pcrInfo,
-  UINT32 inDataSize,
-  BYTE *inData,
-  TPM_AUTH *auth1,
-  TPM_STORED_DATA *sealedData
-)
+TPM_RESULT internal_TPM_LoadKey(TPM_KEY *inKey, TPM_KEY_HANDLE *inkeyHandle)
 {
-  debug("TPM_Sealx() not implemented yet");
-  /* TODO: implement TPM_Sealx() */
-  return TPM_FAIL;
+  TPM_KEY_DATA *parent, *key;
+  BYTE *key_buf;
+  TPM_STORE_ASYMKEY store;
+  info("internal_TPM_LoadKey()");
+  /* get SRK */
+  parent = tpm_get_key(TPM_KH_SRK);
+  if (parent == NULL) return TPM_FAIL;
+  /* verify key properties */
+  if (inKey->algorithmParms.algorithmID != TPM_ALG_RSA
+      || inKey->algorithmParms.parmSize == 0
+      || inKey->algorithmParms.parms.rsa.keyLength > 2048
+      || inKey->algorithmParms.parms.rsa.numPrimes != 2)
+    return TPM_BAD_KEY_PROPERTY;
+  /* decrypt private key */
+  if (tpm_decrypt_private_key(parent, inKey->encData, inKey->encDataSize,
+                              &store, &key_buf)) return TPM_DECRYPT_ERROR;
+  /* get a free key-slot, if any free slot is left */
+  *inkeyHandle = tpm_get_free_key();
+  key = tpm_get_key(*inkeyHandle);
+  if (key == NULL) {
+    tpm_free(key_buf);
+    return TPM_NOSPACE;
+  }
+  /* import key */
+  if (tpm_verify_key_digest(inKey, &store.pubDataDigest)
+      || inKey->pubKey.keyLength != (store.privKey.keyLength * 2)
+      || tpm_rsa_import_key(&key->key, RSA_MSB_FIRST,
+                        inKey->pubKey.key, inKey->pubKey.keyLength,
+                        inKey->algorithmParms.parms.rsa.exponent,
+                        inKey->algorithmParms.parms.rsa.exponentSize,
+                        store.privKey.key, NULL)) {
+    debug("internal_LoadKey(): tpm_verify_key_digest() or tpm_rsa_import_key() failed.");
+    memset(key, 0, sizeof(TPM_KEY_DATA));
+    tpm_free(key_buf);
+    return TPM_FAIL;
+  }
+  key->keyUsage = inKey->keyUsage;
+  key->keyFlags = inKey->keyFlags;
+  key->authDataUsage = inKey->authDataUsage;
+  key->encScheme = inKey->algorithmParms.encScheme;
+  key->sigScheme = inKey->algorithmParms.sigScheme;
+  memcpy(key->usageAuth, store.usageAuth, sizeof(TPM_SECRET));
+  /* setup PCR info */
+  if (inKey->PCRInfoSize > 0) {
+    memcpy(&key->pcrInfo, &inKey->PCRInfo, sizeof(TPM_PCR_INFO));
+    key->keyFlags |= TPM_KEY_FLAG_HAS_PCR;
+  } else {
+    key->keyFlags |= TPM_KEY_FLAG_PCR_IGNORE;
+    key->keyFlags &= ~TPM_KEY_FLAG_HAS_PCR;
+  }
+  key->parentPCRStatus = parent->parentPCRStatus;
+  tpm_free(key_buf);
+  return TPM_SUCCESS;
 }

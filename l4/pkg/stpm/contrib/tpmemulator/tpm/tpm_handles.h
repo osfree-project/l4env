@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: tpm_handles.h 97 2006-05-04 21:52:05Z hstamer $
+ * $Id: tpm_handles.h 277 2008-03-12 21:10:11Z mast $
  */
 
 #ifndef _TPM_HANDLES_
@@ -56,6 +56,7 @@ TPM_SESSION_DATA *tpm_get_auth(TPM_AUTHHANDLE handle);
 TPM_SESSION_DATA *tpm_get_transport(TPM_TRANSHANDLE handle);
 TPM_COUNTER_VALUE *tpm_get_counter(TPM_COUNT_ID handle);
 TPM_DAA_SESSION_DATA *tpm_get_daa(TPM_DAAHANDLE handle);
+TPM_NV_DATA_SENSITIVE *tpm_get_nvs(TPM_NV_INDEX index);
 
 #endif /* _TPM_HANDLES_ */
 

@@ -11,7 +11,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * $Id: rsa.c 154 2006-11-17 07:16:25Z mast $
+ * $Id: rsa.c 299 2008-10-13 15:39:25Z mast $
  */
 
 #include "rsa.h"
@@ -77,6 +77,7 @@ static int rsa_private(tpm_rsa_private_key_t *key,
     tpm_bn_add(c, m1, h);
     tpm_bn_clear(m1);
     tpm_bn_clear(m2);
+    tpm_bn_clear(h);
   }
   t = tpm_bn_bitsize(c);
   if (t > key->size) {
@@ -165,11 +166,11 @@ int tpm_rsa_import_key(tpm_rsa_private_key_t *key, int endian,
 void tpm_rsa_copy_key(tpm_rsa_private_key_t *dst, tpm_rsa_private_key_t *src)
 {
   tpm_bn_init_set(dst->n, src->n);
-  tpm_bn_init_set(dst->e, src->n);
-  tpm_bn_init_set(dst->d, src->n);
-  tpm_bn_init_set(dst->p, src->n);
-  tpm_bn_init_set(dst->q, src->n);
-  tpm_bn_init_set(dst->u, src->n);
+  tpm_bn_init_set(dst->e, src->e);
+  tpm_bn_init_set(dst->d, src->d);
+  tpm_bn_init_set(dst->p, src->p);
+  tpm_bn_init_set(dst->q, src->q);
+  tpm_bn_init_set(dst->u, src->u);
   dst->size = src->size;
 }
 
@@ -314,6 +315,48 @@ void tpm_rsa_export_prime2(tpm_rsa_private_key_t *key,
   tpm_bn_export(prime, length, 1, key->q);
 }
 
+void tpm_rsa_export_public_modulus(tpm_rsa_public_key_t *key,
+                                   uint8_t *modulus, size_t *length)
+{
+  tpm_bn_export(modulus, length, 1, key->n);
+}
+
+void tpm_rsa_export_public_exponent(tpm_rsa_public_key_t *key,
+                                    uint8_t *exponent, size_t *length)
+{
+  tpm_bn_export(exponent, length, 1, key->e);
+}
+
+size_t tpm_rsa_modulus_length(tpm_rsa_private_key_t *key)
+{
+  return (tpm_bn_bitsize(key->n) + 7) >> 3;
+}
+
+size_t tpm_rsa_exponent_length(tpm_rsa_private_key_t *key)
+{
+  return (tpm_bn_bitsize(key->e) + 7) >> 3;
+}
+
+size_t tpm_rsa_prime1_length(tpm_rsa_private_key_t *key)
+{
+  return (tpm_bn_bitsize(key->p) + 7) >> 3;
+}
+
+size_t tpm_rsa_prime2_length(tpm_rsa_private_key_t *key)
+{
+  return (tpm_bn_bitsize(key->q) + 7) >> 3;
+}
+
+size_t tpm_rsa_public_modulus_length(tpm_rsa_public_key_t *key)
+{
+  return (tpm_bn_bitsize(key->n) + 7) >> 3;
+}
+
+size_t tpm_rsa_public_exponent_length(tpm_rsa_public_key_t *key)
+{
+  return (tpm_bn_bitsize(key->e) + 7) >> 3;
+}
+
 void tpm_rsa_mask_generation(const uint8_t *seed, size_t seed_len, 
                              uint8_t *data, size_t data_len)
 {
@@ -401,7 +444,12 @@ static int encode_message(int type, const uint8_t *data, size_t data_len,
         &msg[1 + SHA1_DIGEST_LENGTH], msg_len - SHA1_DIGEST_LENGTH - 1);
       tpm_rsa_mask_generation(&msg[1 + SHA1_DIGEST_LENGTH], 
         msg_len - SHA1_DIGEST_LENGTH - 1, &msg[1], SHA1_DIGEST_LENGTH);
-      break; 
+      break;
+    case RSA_ES_PLAIN:
+        /* EM = data */
+        if (msg_len != data_len) return -1;
+        if (msg != data) memcpy(msg, data, data_len);
+        break;
     default:
       /* unsupported encoding method */
       return -1;

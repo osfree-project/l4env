@@ -8,17 +8,7 @@ Completely Missing:
 -------------------
   Mandatory Commands:
     TPM_SetCapability
-    TPM_ResetLockValue (protection against dictionary attacks)
     TPM_LoadKey2 (currently emulated by TPM_LoadKey)
     All Migration Functions
     TPM_DSAP
     All Delegation Functions
-    All NV Storage Functions
-  
-  Optional Commands:
-    TPM_FieldUpgrade
-    TPM_SetRedirection
-    TPM_Sealx
-    All Maintenance Functions
-    TPM_ChangeAuthAsymStart (deprecated since v1.2)
-    TPM_ChangeAuthAsymFinish (deprecated since v1.2)
