@@ -124,9 +124,9 @@ l4th_tcb_init(void)
 /**
  * \brief  Mark TCB of thread reserved, the thread id will not be used to
  *         create new threads
- * 
+ *
  * \param  thread        Thread id
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EINVAL  invalid thread id
  *         - -#L4_EUSED   thread already used
@@ -137,9 +137,31 @@ l4th_tcb_reserve(l4thread_t thread)
 {
   if ((thread < 0) || (thread >= l4thread_max_threads))
     return -L4_EINVAL;
-  
+
   /* try to reserve tcb */
   if (l4util_cmpxchg16(&l4th_tcbs[thread].state,TCB_UNUSED,TCB_RESERVED))
+    return 0;
+  else
+    return -L4_EUSED;
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Cancel a previous reservation.
+ *
+ * \param  thread        Thread id
+ *
+ * \return 0 on success, error code otherwise:
+ *         - -#L4_EINVAL  invalid thread id
+ *         - -#L4_EUSED   thread already used
+ */
+/*****************************************************************************/ 
+int l4th_tcb_unreserve(l4thread_t thread)
+{
+  if ((thread < 0) || (thread >= l4thread_max_threads))
+    return -L4_EINVAL;
+
+  if (l4util_cmpxchg16(&l4th_tcbs[thread].state, TCB_RESERVED, TCB_UNUSED))
     return 0;
   else
     return -L4_EUSED;

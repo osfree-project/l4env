@@ -343,7 +343,7 @@ __create(l4thread_t thread, l4thread_fn_t func, const char * name,
 	}
 
       /* prefill the stack for sanity reasons */
-#ifdef DEBUG_SANITY
+#if DEBUG_SANITY
       if (tcb->id >= 3)
         memset((void *)tcb->stack.map_addr, 0x99, tcb->stack.size);
 #endif
@@ -508,7 +508,7 @@ l4thread_create_named(l4thread_fn_t func, const char*name,
 /*****************************************************************************/
 l4thread_t
 l4thread_create_long(l4thread_t thread, l4thread_fn_t func,
-		     const char *name, l4_addr_t stack_pointer,
+                     const char *name, l4_addr_t stack_pointer,
                      l4_size_t stack_size, l4_prio_t prio,
                      void * data, l4_uint32_t flags)
 {

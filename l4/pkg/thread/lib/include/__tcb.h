@@ -107,6 +107,9 @@ l4th_tcb_free(l4th_tcb_t * tcb);
 int
 l4th_tcb_reserve(l4thread_t thread);
 
+int
+l4th_tcb_unreserve(l4thread_t thread);
+
 /* thread ids */
 L4_INLINE l4thread_t
 l4th_tcb_get_current_id(void);
