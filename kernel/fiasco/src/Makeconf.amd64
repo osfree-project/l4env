@@ -20,6 +20,12 @@ ifeq ($(CONFIG_SIMICS),y)
   SHARED_FLAGS		+= $(call CHECKCC,-march=opteron)
 endif
 
+SHARED_FLAGS            += $(call CHECKCC,-mno-mmx,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-sse,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-sse2,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-sse3,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-3dnow,)
+
 ASFLAGS				+= -m64 -mcmodel=kernel
 OFORMAT				:= elf64-x86-64
 LD_EMULATION-SYSTEM-FreeBSD	:= elf_x86_64_fbsd

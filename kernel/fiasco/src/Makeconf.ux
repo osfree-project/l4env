@@ -41,6 +41,12 @@ ifeq ($(CONFIG_IA32_K8),y)
   SHARED_FLAGS		+= $(call CHECKCC,-march=k8,-march=i686)
 endif
 
+SHARED_FLAGS            += $(call CHECKCC,-mno-mmx,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-sse,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-sse2,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-sse3,)
+SHARED_FLAGS            += $(call CHECKCC,-mno-3dnow,)
+
 ASFLAGS				+= -m32
 OFORMAT				:= elf32-i386
 LD_EMULATION-SYSTEM-FreeBSD	:= elf_i386_fbsd
