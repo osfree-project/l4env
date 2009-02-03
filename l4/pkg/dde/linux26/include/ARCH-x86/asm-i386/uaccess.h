@@ -568,10 +568,10 @@ long __must_check __strncpy_from_user(char *dst,
 #define __get_user(x,ptr) get_user(x,ptr)
 
 #define get_user(x,ptr)	\
-	({x = *ptr; 0;})
+	({(x) = *(ptr); 0;})
 
 #define put_user(x,ptr)	\
-	({*ptr = x; 0;})
+	({*(ptr) = (x); 0;})
 
 /* copy to / from user space  */
 
