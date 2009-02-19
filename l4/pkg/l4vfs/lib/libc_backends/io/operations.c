@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/io/operations.c
+ * \file   l4vfs/lib/libc_backends/io/operations.c
  * \brief  
  *
  * \date   08/10/2004

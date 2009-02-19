@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/io/fcntl.c
+ * \file   lib/libc_backends/io/fcntl.c
  * \brief  
  *
  * \date   09/13/2004

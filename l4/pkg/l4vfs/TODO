@@ -6,3 +6,10 @@ Lots of stuff ...
    [allow_reply_only]
  * generalize error codes
  * ...
+ * select misbehavior
+ ** enqueing for packets and checking consume some time
+ ** If timeout is to small and/or high priority threads running, it can happen
+ ** that notify thread of select doesn't manage to get info to thread calling select.
+ ** Phenomen: There seems to be no packets received, however they are.
+ ** Currently workaround (no fix!): add warning wenn timeout is small in select.c
+

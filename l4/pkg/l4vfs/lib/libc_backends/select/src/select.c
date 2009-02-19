@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/select/src/select.c
+ * \file   l4vfs/lib/libc_backends/select/src/select.c
  * \brief  
  *
  * \date   08/10/2004
@@ -341,6 +341,9 @@ int select(int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct t
     }
     else
     {
+        if (ms < 10)
+             LOG("warning: timeout is less than 10 ms (> %d)", ms);
+
        /* if notify listener did not get a notification during our
         * select_notify operation we wait ms for a semaphore up
         * made by select notify listener */

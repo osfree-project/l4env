@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/select/src/local.h
+ * \file   l4vfs/lib/libc_backends/select/src/local.h
  * \brief  
  *
  * \date   08/10/2004
@@ -9,8 +9,8 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#ifndef __DIETLIBC_LIB_BACKENDS_SELECT_SRC_LOCAL_H_
-#define __DIETLIBC_LIB_BACKENDS_SELECT_SRC_LOCAL_H_
+#ifndef __L4VFS_LIB_BACKENDS_SELECT_SRC_LOCAL_H_
+#define __L4VFS_LIB_BACKENDS_SELECT_SRC_LOCAL_H_
 #define SELECT_REQUEST   1
 #define SELECT_CLEAR     2
 

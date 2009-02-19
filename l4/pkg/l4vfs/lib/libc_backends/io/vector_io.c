@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/io/vector_io.c
+ * \file   l4vfs/lib/libc_backends/io/vector_io.c
  * \brief  vector io operations mapped to multiple single io calls
  *
  * \date   2004-06-01

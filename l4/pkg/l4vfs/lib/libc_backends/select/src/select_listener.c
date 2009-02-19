@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/select/src/select_listener.c
+ * \file   l4vfs/lib/libc_backends/select/src/select_listener.c
  * \brief  
  *
  * \date   08/10/2004

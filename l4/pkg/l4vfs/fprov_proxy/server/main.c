@@ -1,6 +1,6 @@
 /**
  * \file   l4vfs/fprov_proxy/server/main.c
- * \brief  Server implements generic_fprov interface and use the dietlibc
+ * \brief  Server implements generic_fprov interface and use the libc
  *         posix functions to resolve files (e.g. simplefileserver)
  *         
  *         Code is borrowed from TFTP server.

@@ -9,7 +9,7 @@ client libs provide posix-like functions, that is, the client libs act
 as an libc backend.
 
 Please also look into the documentation in 'l4/pkg/l4vfs/doc' and in
-'l4/pkg/dietlibc/'.
+'l4/pkg/uclibc/'.
 
 
 FAQ
@@ -18,7 +18,7 @@ FAQ
 * I think something is wrong with open(), create(), etc.  Files are
   opened with wrong access modi or not at all.  What gives?
 
-  In case you are using a mixed setup of oskit-libc/dietlibc servers
+  In case you are using a mixed setup of oskit-libc/dietlibc/uclibc servers
   and clients please make sure you do use the same definition of
   constants like (O_RDONLY, ...) or you must provide a wrapper
   (oskit defines O_RDONLY to 1, nearly all other libcs to 0).

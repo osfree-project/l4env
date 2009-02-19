@@ -1,6 +1,6 @@
 'fprov_proxy' is a small program which implements the 'generic_fprov'
 interface. It uses the posix functions (open,read,close)
-provided by the dietlibc and the 'l4vfs' to access/provide files.
+provided by the libc and the 'l4vfs' to access/provide files.
 
 The intention of the server is to provide a simple wrapper to use
 'generic_fprov' programs, mainly the 'loader', with 'l4vfs' fileservers,

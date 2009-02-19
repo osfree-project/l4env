@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/io/operations.h
+ * \file   l4vfs/lib/libc_backends/io/operations.h
  * \brief  
  *
  * \date   08/10/2004
@@ -9,8 +9,8 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#ifndef __DIETLIBC_LIB_BACKENDS_IO_OPERATIONS_H_
-#define __DIETLIBC_LIB_BACKENDS_IO_OPERATIONS_H_
+#ifndef __L4VFS_LIB_BACKENDS_IO_OPERATIONS_H_
+#define __L4VFS_LIB_BACKENDS_IO_OPERATIONS_H_
 
 // these should not be necesarry, as they are defined in libc header
 // files

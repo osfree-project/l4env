@@ -1,11 +1,11 @@
- I/O name-space documentation for dietLibC backends --- L4VFS
+ I/O name-space documentation for LibC backends --- L4VFS
 
  Martin Pohlack
 
 Introduction
 ############
 
-This document describes some ideas and concepts about the dietLibC
+This document describes some ideas and concepts about the LibC
 port and consequences.  It turned out that porting the basic functions
 (e.g. str*, mem*) is not hard at all.  The main problem is how to map
 libc functionality to the system's basic services, or worse, to
