@@ -38,6 +38,7 @@
 #include <l4/ipcmon/ipcmon.h>
 #ifdef USE_TASKLIB
 #include <l4/task/task_server.h>
+#include "events.h"
 #endif
 
 #include "elf-loader.h"
@@ -1490,6 +1491,14 @@ app_cleanup_extern(app_t *app)
       if ((error = l4ts_kill_task(app->tid, 0)))
         app_msg(app, "Error %d (%s) killing task (ignored)",
 		    error, l4env_errstr(error));
+      else
+      {
+        #ifdef USE_TASKLIB
+         if (events_send_kill(app->tid))
+           app_msg(app, "Error killing task "l4util_idfmt,
+	    	   l4util_idstr(app->tid));
+        #endif
+      } 
       killing = L4_INVALID_ID;
 
       return error;
@@ -1762,17 +1771,13 @@ app_kill(l4_taskid_t task_id, l4_taskid_t caller)
     {
       app_t * t_kill = task_to_app(task_id);
       app_t * t_caller = task_to_app(caller);
-      if (t_kill != NULL && t_caller != NULL)
+      if ((t_kill != NULL && l4_task_equal(t_kill->owner, caller)) ||
+          (t_kill != NULL && t_caller != NULL && t_caller->flags & APP_ALLOW_KILL))
+        return app_cleanup_extern(t_kill);
+      else
         {
-          if (t_caller->flags & APP_ALLOW_KILL)
-            {
-              return app_cleanup_extern(t_kill);
-            }
-          else
-            {
-              LOG("Task "l4util_idfmt" is not allowed to kill tasks", l4util_idstr(caller));
-              return -L4_EPERM;
-            }
+          LOG("Task "l4util_idfmt" is not allowed to kill tasks", l4util_idstr(caller));
+          return -L4_EPERM;
         }
     }
 

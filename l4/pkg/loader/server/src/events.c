@@ -29,6 +29,23 @@
 
 static l4_threadid_t loader_service_id;
 
+int events_send_kill(l4_threadid_t task)
+{
+  l4events_event_t event;
+  l4events_nr_t eventnr;
+  int ret;
+
+  /* sent exit_event */
+  event.len = sizeof(l4_threadid_t);
+  *(l4_threadid_t*)event.str = task;
+
+  if ((ret = l4events_send(L4EVENTS_EXIT_CHANNEL, &event, &eventnr,
+         L4EVENTS_SEND_ACK)))
+    return -L4_EUNKNOWN;
+
+  return 0;
+}
+
 /* This is tricky: If the loader fails to load an application it asks the
  * task server to kill that task. The task server generates an EXIT event
  * which is sent to all registered resource managers. And therefore _we_
@@ -88,7 +105,7 @@ events_init_and_wait(void *dummy)
     }
 }
 
-void
+int
 init_events(void)
 {
   static int events_init_done;
@@ -105,9 +122,13 @@ init_events(void)
 					L4THREAD_DEFAULT_SIZE,
 					L4THREAD_DEFAULT_PRIO,
 					0, L4THREAD_CREATE_ASYNC);
-      LOGdL(DEBUG_EVENTS, "started event thread at "l4util_idfmt,
-            l4util_idstr(l4thread_l4_id(events_tid)));
+      LOGdL(DEBUG_EVENTS, "started event thread at "l4util_idfmt" events_tid=%d",
+            l4util_idstr(l4thread_l4_id(events_tid)), events_tid);
+      if (events_tid < 0)
+        return 0;
 
       events_init_done = 1;
     }
+
+  return 1;
 }

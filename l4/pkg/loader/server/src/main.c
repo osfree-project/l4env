@@ -29,7 +29,11 @@
 char LOG_tag[9] = "loader";		     /**< tell logserver our log tag
 						  before main is called */
 const l4_ssize_t l4libc_heapsize = 128*1024; /**< init malloc heap */
+#ifdef USE_TASKLIB
+const int l4thread_max_threads = 6;	     /**< limit number of threads */
+#else
 const int l4thread_max_threads = 5;	     /**< limit number of threads */
+#endif
 const l4_size_t l4thread_stack_size = 16384; /**< limit stack size */
 
 int use_events;
@@ -65,8 +69,11 @@ main(int argc, const char **argv)
     return error;
 
   /* start thread listening for exit events */
-  if (use_events)
-    init_events();
+  if (use_events && !init_events())
+    {
+      printf("failed to start event handler\n");
+      return -L4_EINVAL;
+    }
 
   /* now we're ready to service ... */
   if (!names_register("LOADER"))

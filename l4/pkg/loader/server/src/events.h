@@ -16,6 +16,8 @@
 #ifndef LOADER_EVENTS_H
 #define LOADER_EVENTS_H
 
+#include <l4/sys/types.h>
+
 /*****************************************************************************
  *** config
  *****************************************************************************/
@@ -35,8 +37,11 @@
  *****************************************************************************/
 
 /* init event handling */
-void
+int
 init_events(void);
+
+/* send exit event */
+int events_send_kill(l4_threadid_t task);
 
 #endif /* LOADER_EVENTS_H */
 
