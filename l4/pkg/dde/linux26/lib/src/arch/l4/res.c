@@ -131,7 +131,7 @@ void __iomem * ioremap(unsigned long phys_addr, unsigned long size)
 	list_for_each(pos, head) {
 		struct dde_mem_region *mreg = list_entry(pos, struct dde_mem_region,
 		                                         list);
-		if (mreg->pa >= phys_addr && mreg->pa + mreg->size > phys_addr)
+		if (mreg->pa <= phys_addr && mreg->pa + mreg->size > phys_addr)
 			return (void *)(mreg->va + (phys_addr - mreg->pa));
 	}
 
