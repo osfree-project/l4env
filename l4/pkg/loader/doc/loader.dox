@@ -20,20 +20,20 @@ L4 tasks and Loader-style L4 tasks, which depend on the shared library
   -# The program's pager has to page only the runtime library. All other 
      program sections are paged by the region manager of the runtime library.
   -# The program gets the \e L4Env \e infopage passed. This contains
-     some system information, the default dataspace manager,
+     some system information, the default data space manager,
      default stack sizes and the default file provider. These parameters 
      and therefore the behavior of the application can be changed by the
      loader.
 
 \section p_usage Usage
 
-The loader application itself has to be loaded by the \e GRUB \e bootloader
+The loader application itself has to be loaded by the \e GRUB \e boot loader
 and started by the \c roottask. It depends on functionalities of the DROPS servers
 (see \ref p_example "example"):
 - \c roottask (resource manager)
 - \c names (name server)
 - \c log (log server)
-- \c dm_phys (dataspace manager)
+- \c dm_phys (data space manager)
 - \c simple_ts (task server)
 
 An L4 task is started either directly by specifying the filename or by
@@ -59,7 +59,38 @@ There are two examples:
 \page p_hello_page Example: Starting Hello
 
 The easiest way to start an L4 application using the L4 loader is to
-pass the name of the executable as command line argument to the loader:
+pass the name of the executable as command line argument to the loader.
+The example below assumes GRUB loads files via the network. Loader
+uses the BMODFS file provider, a simple RAM-based application, to access
+files:
+
+\verbatim
+ # menu.lst
+
+ set ND       = "(nd)/tftpboot/drops"
+ set BIN_PATH = "$(ND)/bin"
+
+ title Hello World
+ kernel $(BIN_PATH)/bootstrap
+ modaddr 0x02000000
+ module $(BIN_PATH)/fiasco -nokdb -serial -serial_esc
+ module $(BIN_PATH)/l4v2/sigma0
+ module $(BIN_PATH)/l4v2/roottask task modname "bmodfs" attached 1 modules
+ module $(BIN_PATH)/l4v2/names
+ module $(BIN_PATH)/l4v2/log
+ module $(BIN_PATH)/l4v2/dm_phys
+ module $(BIN_PATH)/l4v2/simple_ts
+ module $(BIN_PATH)/l4v2/bmodfs
+	 module $(BIN_PATH)/l4v2/hello
+ module $(BIN_PATH)/l4v2/loader --fprov=BMODFS hello
+\endverbatim
+
+\note The default file provider the loader communicates with is tftp. This
+server accepts filenames in the GRUB syntax and loads files through the network
+using the TFTP protocol. Therefore, you must prepend
+\c "(nd)/". The binary must be accessible by the TFTP protocol (e.g. the
+binaries must be world-readable). The above example using TFTP looks like
+this:
 
 \verbatim
  # menu.lst
@@ -77,14 +108,11 @@ pass the name of the executable as command line argument to the loader:
  module $(BIN_PATH)/l4v2/log
  module $(BIN_PATH)/l4v2/dm_phys
  module $(BIN_PATH)/l4v2/simple_ts
- module $(BIN_PATH)/l4v2/tftp --server=192.168.0.2 
+ module $(BIN_PATH)/l4v2/l4io
+ module $(BIN_PATH)/l4v2/ore
+ module $(BIN_PATH)/l4v2/tftp --server=192.168.0.2
  module $(BIN_PATH)/l4v2/loader $(BIN_PATH)/l4v2/hello
 \endverbatim
-
-\note The default file provider the loader communicates with is tftp. This
-server accepts filenames in the GRUB syntax. Therefore, you must prepend
-\c "(nd)/". The binary must be accessable by the TFTP protocol (e.g. the
-binaries must be readable by world).
 
 */
 
@@ -109,10 +137,11 @@ up we can start L4 tasks using the Linux utilities \ref r_run_l4 "run-l4".
 We have to take some special care when loading L<sup>4</sup>Linux because this
 application has special memory requirements. There should be at least 16 MB of
 memory available (more memory is recommended, also it depends on whether you 
-use a ramdisk or harddisk containing the root-filesystem).
+use a RAM disk or hard disk containing the root file system).
 
-Here is the GRUB \c menu.lst entry assuming that GRUB loads the binaries via
-network:
+The example \c menu.lst entry below assumes GRUB loads the binaries via the
+network.  The loader is configured to use the TFTP server as its file provider
+which in turn requires the ORe network switch to perform its duties.
 
 \verbatim
  # menu.lst
@@ -131,6 +160,7 @@ network:
  module $(BIN_PATH)/l4v2/dm_phys
  module $(BIN_PATH)/l4v2/simple_ts
  module $(BIN_PATH)/l4v2/l4io
+ module $(BIN_PATH)/l4v2/ore
  module $(BIN_PATH)/l4v2/l4dope --l4io
  module $(BIN_PATH)/l4v2/tftp --l4io --server=192.168.0.2
  module $(BIN_PATH)/l4v2/loader $(ND)/cfg/l4linux.conf
@@ -138,8 +168,8 @@ network:
 \endverbatim
 
 And here is the Loader \e config script for loading L<sup>4</sup>Linux assuming,
-that L<sup>4</sup>Linux starts in a ramdisk and is configured to use \c l4io (omega0 protocol)
-for requesting irqs:
+that L<sup>4</sup>Linux starts in a RAM disk and is configured to use \c l4io (omega0 protocol)
+for requesting IRQs:
 \verbatim
  # cfg/l4linux.conf
 
@@ -154,12 +184,12 @@ for requesting irqs:
 all L4 boot modules.
 
 \note L<sup>4</sup>Linux has to be compiled with the L<sup>4</sup>Linux option 
-<i>"Framebuffer driver for l4con and DOpE"</i> (CONFIG_L4_FB_DRIVER=y).
+<i>"Frame buffer driver for l4con and DOpE"</i> (CONFIG_L4_FB_DRIVER=y).
 
 \note The default file provider the loader communicates with is tftp. This
 server accepts filenames in the GRUB syntax. Therefore you must prepend
-\c "(nd)/". The binary must be accessable by the TFTP protocol (e.g. the
-binaries must be readable by world).
+\c "(nd)/". The binary must be accessible by the TFTP protocol (e.g. the
+binaries must be world-readable).
 
 <br>
 \ref p_tut_2
@@ -187,7 +217,7 @@ Launchpad Loader \e config script:
                    -a (nd)/tftpboot/drops/bin/l4v2/vtexttest"
 \endverbatim
 
-\note Of course, we have to place the run-l4 binary within the ramdisk.
+\note Of course, we have to place the run-l4 binary within the RAM disk.
 
 \note The "-a" option specifies an application entry the launchpad should
 provide. Optionally, we could use another file-provider by specifying the "-f"
@@ -226,13 +256,13 @@ Task "launchpad", #17
 
 /*! \page p_tut_4 Step 4: Dump memory usage of L4 tasks
 There is also an L<sup>4</sup>Linux task which dumps the memory map of
-the \b simple_dm dataspace manager:
+the \b simple_dm data space manager:
 
 \verbatim
 ./dump-ds 0
 \endverbatim
 
-\note The \b "0" argument of dump-ds means to dump the dataspaces
+\note The \b "0" argument of dump-ds means to dump the data spaces
 of all tasks. Alternate, we could request memory information about
 a specific L4 task by passing it's task number.
 
@@ -282,7 +312,7 @@ It may contain several directories separated by colons.
 
 \par binpath "<path>"
 Set default path where to search for binaries. If not set,
-the loader searches binaries in the directory described by modpath.
+the loader searches binaries in the directory described by \e modpath.
 
 \par libpath "<path>"
 Set default path where to search for shared libraries. If this path
@@ -379,7 +409,7 @@ The following information can be find there (see the
   Default is "TFTP".
 
 \par ds_manager "<name server ID>"
-  Specify a different dataspace manager for the new application.
+  Specify a different data space manager for the new application.
   Default is "DM_PHYS".
 
 \par memory \<size\> [\<memory_location\>] [ is '[' \<mem_flags\> ']' ]
@@ -429,7 +459,7 @@ The following information can be find there (see the
 \par hash_modules
   Specifies that any modules that are passed to the newly started task should
   be measured as well.
-  Attention: This requires addional memory, because a copy of the module has to
+  Attention: This requires additional memory, because a copy of the module has to
   be created, as the file provider may not be part of the trusted computing
   base.
 
