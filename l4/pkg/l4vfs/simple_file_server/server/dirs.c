@@ -44,7 +44,7 @@ void convert_to_dirent(int object_id, char *fname, l4vfs_dirent_t * entry)
                        // returnes slightly wrong number, at least for
                        // some FSs
     strncpy(entry->d_name, fname, L4VFS_MAX_NAME);
-    entry->d_name[L4VFS_MAX_NAME + 1] = '\0';
+    entry->d_name[L4VFS_MAX_NAME] = '\0';
 
     entry->d_reclen = dirent_size(fname);
 }

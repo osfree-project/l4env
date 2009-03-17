@@ -39,12 +39,12 @@ static l4_addr_t vm_start;  ///< VM start address
 static l4_addr_t vm_end;    ///< VM end address
 
 /**
- * pointer to region list 
+ * pointer to region list
  */
 static l4rm_region_desc_t * head = NULL;
 
 /**
- * region list lock 
+ * region list lock
  */
 l4lock_t region_list_lock = L4LOCK_UNLOCKED_INITIALIZER;
 
@@ -55,17 +55,17 @@ l4lock_t region_list_lock = L4LOCK_UNLOCKED_INITIALIZER;
 /*****************************************************************************/
 /**
  * \brief Insert region into region list.
- * 
- * \param  region        new region descriptor 
- * \param  rp            free region in which the new region should be 
+ *
+ * \param  region        new region descriptor
+ * \param  rp            free region in which the new region should be
  *                       inserted
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_NOMEM  out of memory allocating region descriptor
  *
  * Insert region into region list at the place described by rp.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static int
 __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
 {
@@ -78,51 +78,51 @@ __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
         region->start, region->end, rp->start, rp->end);
 
   /* insert */
-  if (rp->start == region->start) 
+  if (rp->start == region->start)
     {
       /* new region starts at beginning of the free region */
       if (rp->end == region->end)
-	{
-	  /* replace descriptor of free region with new descriptor */
-	  if (rp == head)
-	    {
-	      region->prev = NULL;
-	      region->next = rp->next;
-	      if (rp->next)
-		rp->next->prev = region;
-	      head = region;
-	    }
-	  else
-	    {
-	      region->prev = rp->prev;
-	      region->prev->next = region;
-	      region->next = rp->next;
-	      if (rp->next)
-		rp->next->prev = region;
-	    }
+        {
+          /* replace descriptor of free region with new descriptor */
+          if (rp == head)
+            {
+              region->prev = NULL;
+              region->next = rp->next;
+              if (rp->next)
+                rp->next->prev = region;
+              head = region;
+            }
+          else
+            {
+              region->prev = rp->prev;
+              region->prev->next = region;
+              region->next = rp->next;
+              if (rp->next)
+                rp->next->prev = region;
+            }
 
-	  /* release region descriptor */
-	  l4rm_region_desc_free(rp);
-	}
+          /* release region descriptor */
+          l4rm_region_desc_free(rp);
+        }
       else
-	{
-	  /* shrink free region and insert new region */
-	  rp->start = region->end + 1;
-	  if (rp == head)
-	    {
-	      region->prev = NULL;
-	      region->next = rp;
-	      rp->prev = region;
-	      head = region;
-	    }
-	  else
-	    {
-	      region->prev = rp->prev;
-	      rp->prev->next = region;
-	      region->next = rp;
-	      rp->prev = region;
-	    }
-	}
+        {
+          /* shrink free region and insert new region */
+          rp->start = region->end + 1;
+          if (rp == head)
+            {
+              region->prev = NULL;
+              region->next = rp;
+              rp->prev = region;
+              head = region;
+            }
+          else
+            {
+              region->prev = rp->prev;
+              rp->prev->next = region;
+              region->next = rp;
+              rp->prev = region;
+            }
+        }
     }
   else if (rp->end == region->end)
     {
@@ -131,7 +131,7 @@ __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
       region->next = rp->next;
       region->prev = rp;
       if (region->next)
-	region->next->prev = region;
+        region->next->prev = region;
       rp->next = region;
     }
   else
@@ -139,8 +139,8 @@ __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
       /* split free region */
       tmp =  l4rm_region_desc_alloc();
       if (tmp == NULL)
-	/* out of memory */
-	return -L4_ENOMEM;
+        /* out of memory */
+        return -L4_ENOMEM;
 
       /* new free region behind new region */
       tmp->start = region->end + 1;
@@ -149,18 +149,18 @@ __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
       tmp->prev = region;
       tmp->next = rp->next;
       if (tmp->next)
-	tmp->next->prev = tmp;
+        tmp->next->prev = tmp;
 
       rp->end = region->start - 1;
       rp->next = region;
-      
+
       region->prev = rp;
       region->next = tmp;
-    } 
+    }
 
   /* done */
   return 0;
-} 
+}
 
 /*****************************************************************************/
 /**
@@ -168,14 +168,14 @@ __insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
  * 
  * \param  region        region descriptor
  * \param  new_flags     new flags for region
- *	
+ *
  * Change the flags of region to new_flags. Check if the previous/next
  * region then have the same flags and join.
  * 
  * \note After __modify_region returned the pointer region might be invalid
  *       because the region was joined with with the previous/next region.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
 {
@@ -191,12 +191,12 @@ __modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
 #if DEBUG_REGION_MODIFY
   if (region->prev)
     LOG_printf("prev   0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n",
-	   region->prev->start, region->prev->end, region->prev->flags);
+               region->prev->start, region->prev->end, region->prev->flags);
   LOG_printf("region 0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n",
-	 region->start, region->end, region->flags);
+             region->start, region->end, region->flags);
   if (region->next)
     LOG_printf("next   0x"l4_addr_fmt"-0x"l4_addr_fmt", flags 0x%08x\n",
-	   region->next->start, region->next->end, region->next->flags);
+               region->next->start, region->next->end, region->next->flags);
 #endif
 
   /* check previous/next region */
@@ -207,7 +207,7 @@ __modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
       tmp->end = region->end;
       tmp->next = region->next;
       if (tmp->next)
-	tmp->next->prev = tmp;
+        tmp->next->prev = tmp;
 
       /* release region descriptor */
       l4rm_region_desc_free(region);
@@ -221,15 +221,15 @@ __modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
       tmp = region->next;
       tmp->start = region->start;
       if (region == head)
-	{
-	  tmp->prev = NULL;
-	  head = tmp;
-	}
+        {
+          tmp->prev = NULL;
+          head = tmp;
+        }
       else
-	{
-	  tmp->prev = region->prev;
-	  tmp->prev->next = tmp;
-	}
+        {
+          tmp->prev = region->prev;
+          tmp->prev->next = tmp;
+        }
 
       /* release region descriptor */
       l4rm_region_desc_free(region);
@@ -247,13 +247,13 @@ __modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
  * \param  align         Alignment of start address
  * \retval region        Region descriptor of free region
  * \retval addr          Start address of free region 
- *                       (not necessarily equal to region->start, depends on 
+ *                       (not necessarily equal to region->start, depends on
  *                        requested alignment)
- *	
+ *
  * \return 0 on success, 
  *         error code (-#L4_ENOMAP) if no suitabele region found
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static int
 __find_free_region(l4_size_t size, l4_uint32_t area, int align, 
                    l4rm_region_desc_t ** region, l4_addr_t * addr)
@@ -266,7 +266,7 @@ __find_free_region(l4_size_t size, l4_uint32_t area, int align,
   while (rp)
     {
       if (IS_FREE_REGION(rp) && (REGION_AREA(rp) == area))
-	{
+        {
           a_addr = (rp->start + a_size - 1) & ~(a_size - 1);
           offs = a_addr - rp->start;
           if ((rp->end - rp->start + 1) >= (size + offs))
@@ -292,19 +292,19 @@ __find_free_region(l4_size_t size, l4_uint32_t area, int align,
  * \param  size          Size of region
  * \param  area          Area id
  * \retval region        Region descriptor
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EINVAL  invlaid addr / size argument
  *         - -#L4_EUSED   region already used
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static int
 __find_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
               l4rm_region_desc_t ** region)
 {
   l4rm_region_desc_t * rp = head;
 
-  LOGdL(DEBUG_REGION_FIND, "addr 0x"l4_addr_fmt", size %lu, area 0x%05x", 
+  LOGdL(DEBUG_REGION_FIND, "addr 0x"l4_addr_fmt", size %lu, area 0x%05x",
         addr, (l4_addr_t)size, area);
 
   /* sanity checks */
@@ -320,7 +320,7 @@ __find_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
         ", flags 0x%08x", rp->start, rp->end, rp->flags);
 
   /* valid area? */
-  if (IS_USED_REGION(rp) || (REGION_AREA(rp) != area) || 
+  if (IS_USED_REGION(rp) || (REGION_AREA(rp) != area) ||
       (rp->end < (addr + size - 1)))
     return -L4_EUSED;
 
@@ -340,7 +340,7 @@ __find_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
  * 
  * \retval 0 on success, -1 if initialization failed.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 l4rm_init_regions(void)
 {
@@ -377,7 +377,7 @@ l4rm_init_regions(void)
 /**
  * \brief  Set new region
  * 
- * \param  region        Descriptor of new region, it must contain valid 
+ * \param  region        Descriptor of new region, it must contain valid
  *                       entries for the dataspace / pagefault handler and
  *                       region flags. 
  * \param  addr          region start address 
@@ -387,16 +387,16 @@ l4rm_init_regions(void)
  * \param  flags         flags:
  *                       - #L4RM_LOG2_ALIGNED  find a 2^(log2(size) + 1)
  *                                             aligned region
- *                       - #L4RM_SUPERPAGE_ALIGNED find a 
+ *                       - #L4RM_SUPERPAGE_ALIGNED find a
  *                                             superpage aligned region
- *                       - #L4RM_LOG2_ALLOC    allocate the whole 
+ *                       - #L4RM_LOG2_ALLOC    allocate the whole
  *                                             2^(log2(size) + 1) sized area
  *                       - #L4RM_MODIFY_DIRECT add new region without locking
  *                                             the region list and calling the
  *                                             region mapper thread
- *                       - #L4RM_TREE_INSERT   insert new region into region 
+ *                       - #L4RM_TREE_INSERT   insert new region into region
  *                                             tree
- * 	
+ *
  * \return 0 on success (the region descriptor contains the valid start / end
  *         entries), error code otherwise:
  *         - -#L4_ENOMAP    no suitable map area found
@@ -404,9 +404,9 @@ l4rm_init_regions(void)
  *         - -#L4_EUSED     address area already used
  *         - -#L4_NOMEM     out of memory
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size, 
+l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
                 l4_uint32_t area, l4_uint32_t flags)
 {
   int ret, align;
@@ -435,7 +435,7 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
         }
 
       if ((flags & L4RM_SUPERPAGE_ALIGNED) && (align < L4_LOG2_SUPERPAGESIZE))
-	align = L4_LOG2_SUPERPAGESIZE;
+        align = L4_LOG2_SUPERPAGESIZE;
 
       /* find free region */
       ret = __find_free_region(size, area, align, &rp, &map_addr);
@@ -481,7 +481,7 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
   ret = __insert_region(region, rp);
   if (ret < 0)
     {
-      LOGdL(DEBUG_ERRORS, "insert new region failed: %s (%d)", 
+      LOGdL(DEBUG_ERRORS, "insert new region failed: %s (%d)",
             l4env_errstr(ret), ret);
       return ret;
     }
@@ -495,7 +495,7 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
           if (ret == -L4_EEXISTS)
             /* this should never happen */
             Panic("corrupted region list or AVL tree!");
-          
+
           l4rm_free_region(region);
           return ret;
         }
@@ -511,7 +511,7 @@ l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size,
  * 
  * \param  region        region descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4rm_free_region(l4rm_region_desc_t * region)
 {
@@ -532,10 +532,10 @@ l4rm_free_region(l4rm_region_desc_t * region)
  * 
  * \param  area          area id
  *
- * Reset the area id of all regions which belong to area \a area to the 
+ * Reset the area id of all regions which belong to area \a area to the
  * default area id.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void 
 l4rm_reset_area(l4_uint32_t area)
 {
@@ -549,19 +549,19 @@ l4rm_reset_area(l4_uint32_t area)
       rp = head;
 
       while (rp && (REGION_AREA(rp) != area))
-	rp = rp->next;
+        rp = rp->next;
 
       if (!rp)
-	/* done */
-	done = 1;
+        /* done */
+        done = 1;
       else
-	{
-	  /* reset area id */
-	  SET_AREA(rp, L4RM_DEFAULT_REGION_AREA);
-	  __modify_region(rp, rp->flags);
-	}
+        {
+          /* reset area id */
+          SET_AREA(rp, L4RM_DEFAULT_REGION_AREA);
+          __modify_region(rp, rp->flags);
+        }
 
-      /* rp might be invalid after l4rm_modify_region, start from the 
+      /* rp might be invalid after l4rm_modify_region, start from the
        * list head again :( */
     }
   while (!done);
@@ -572,16 +572,16 @@ l4rm_reset_area(l4_uint32_t area)
  * \brief  Find region which given address belongs to
  * 
  * \param  addr          VM address
- *	
+ *
  * \return pointer to region NULL if not found
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4rm_region_desc_t *
 l4rm_find_region(l4_addr_t addr)
 {
   l4rm_region_desc_t * rp = head;
 
-  /* Argh: we must manually search the given address in the region list, 
+  /* Argh: we must manually search the given address in the region list,
    *       reserved areas are not inserted into the region tree
    */
 
@@ -612,7 +612,7 @@ l4rm_find_region(l4_addr_t addr)
  * 
  * \param  region        Region descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4rm_unmap_region(l4rm_region_desc_t * region)
 {
@@ -621,7 +621,7 @@ l4rm_unmap_region(l4rm_region_desc_t * region)
   int addr_align, log2_size, fpage_size;
 
   /* unmap pages
-   * we try to use as few l4_fpage_unmap calls as possible to minimize the 
+   * we try to use as few l4_fpage_unmap calls as possible to minimize the
    * detach overhead for large regions.
    */
   LOGdL(DEBUG_REGION_UNMAP, "unmap addr 0x"l4_addr_fmt", size %lu",
@@ -632,7 +632,7 @@ l4rm_unmap_region(l4rm_region_desc_t * region)
       LOGd(DEBUG_REGION_UNMAP,"0x"l4_addr_fmt", size %lu (0x%lx)",
            addr, (l4_addr_t)size, (l4_addr_t)size);
 
-      /* calculate the largest fpage we can unmap at address addr, 
+      /* calculate the largest fpage we can unmap at address addr,
        * it depends on the alignment of addr and the size */
       addr_align = (addr == 0) ? 32 : l4util_bsf(addr);
       log2_size = l4util_log2(size);
@@ -643,7 +643,7 @@ l4rm_unmap_region(l4rm_region_desc_t * region)
 
       /* unmap page */
       l4_fpage_unmap(l4_fpage(addr, fpage_size, 0, 0),
-		     L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
+                     L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 
       addr += (1UL << fpage_size);
       size -= (1UL << fpage_size);
@@ -654,17 +654,16 @@ l4rm_unmap_region(l4rm_region_desc_t * region)
 /**
  * \brief DEBUG: show region list
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4rm_show_region_list(void)
 {
   l4rm_region_desc_t * rp = head;
-
   LOG_printf("region list:\n");
   while (rp)
     {
       LOG_printf("  area 0x%05x: 0x"l4_addr_fmt" - 0x"l4_addr_fmt" [%7ldKiB]: ",
-             REGION_AREA(rp), rp->start, rp->end, 
+                 REGION_AREA(rp), rp->start, rp->end,
              (rp->end - rp->start + 1) >> 10);
       switch (REGION_TYPE(rp))
         {
@@ -676,11 +675,11 @@ l4rm_show_region_list(void)
           break;
         case REGION_DATASPACE:
           LOG_printf("ds %d at "l4util_idfmt, rp->data.ds.ds.id,
-                 l4util_idstr(rp->data.ds.ds.manager));
+                     l4util_idstr(rp->data.ds.ds.manager));
           break;
         case REGION_PAGER:
           LOG_printf("pager "l4util_idfmt,
-	      l4util_idstr(rp->data.pager.pager));
+                     l4util_idstr(rp->data.pager.pager));
           break;
         case REGION_EXCEPTION:
           LOG_printf("exception");
@@ -698,4 +697,9 @@ l4rm_show_region_list(void)
       rp = rp->next;
     }
   LOG_printf("\n");
+}
+
+l4rm_region_desc_t* l4rm_get_region_list(void)
+{
+  return head;
 }

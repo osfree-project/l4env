@@ -233,7 +233,7 @@ l4vfs_basic_io_creat_component(CORBA_Object _dice_corba_obj,
                                l4vfs_mode_t mode,
                                CORBA_Server_Environment *_dice_corba_env)
 {
-    // we dont support files in the name-server managed part of the namespace
+    LOG_Error("We dont support files in the name-server managed part of the namespace");
     return -EACCES;
 }
 

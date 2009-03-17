@@ -204,6 +204,7 @@ __call_dm(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
                    && (addr & 2)))
     {
       LOG_printf("L4RM: write page fault in read-only region\n");
+
       return __unknown_pf(addr, ip, src_id);
     }
 
@@ -212,6 +213,8 @@ __call_dm(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
 
   /* call dataspace manager */
   offset = addr - region->start + region->data.ds.offs;
+  LOGdL(DEBUG_PAGEFAULT, "addr %p - start %p + offs %p = offset %lx",
+        addr, region->start, region->data.ds.offs, offset);
   env.rcv_fpage = l4_fpage(addr & L4_PAGEMASK, L4_LOG2_PAGESIZE, 0, 0);
   ret = if_l4dm_generic_fault_call(&region->data.ds.ds.manager,
                                    region->data.ds.ds.id, offset,
@@ -278,6 +281,7 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
       LOG_printf("L4RM: map ipc failed " \
              "(page fault -- asked pager "l4util_idfmt", error=0x%02x)\n",
              l4util_idstr(region->data.pager.pager), error);
+
       return __unknown_pf(addr, ip, src_id);
     }
 
@@ -286,6 +290,7 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
       LOG_printf("L4RM: no fpage received "
              "(page fault -- asked pager "l4util_idfmt", result 0x"l4_addr_fmt
 	     ")\n", l4util_idstr(region->data.pager.pager), result.msgdope);
+
       return __unknown_pf(addr, ip, src_id);
     }
 
@@ -344,6 +349,7 @@ __handle_pf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
           /* pagefault to blocked region, whats that? */
           LOG_printf("L4RM: page fault in blocked region 0x"l4_addr_fmt
                      "-0x"l4_addr_fmt"\n", region->start, region->end);
+
           reply = __unknown_pf(addr, ip, src_id);
           break;
 
@@ -352,13 +358,17 @@ __handle_pf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
           LOG_printf("L4RM: page fault in unknown region 0x"l4_addr_fmt
                      "-0x"l4_addr_fmt", flags 0x%08x\n",
                      region->start, region->end, region->flags);
+
           reply = __unknown_pf(addr, ip, src_id);
         }
     }
   else
+	{
     /* no entry in region list */
+//     LOG("no entry in region list");
+    LOG("L4RM: page fault: no entry in region list");
     reply = __unknown_pf(addr, ip, src_id);
-
+   }
   return reply;
 }
 

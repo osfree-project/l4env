@@ -38,7 +38,7 @@ int clientstate_read(object_handle_t fd, l4_int8_t * buf, size_t count);
 int clientstate_write(object_handle_t fd, const l4_int8_t * buf, size_t count);
 int clientstate_seek(object_handle_t fd, off_t offset, int whence);
 int clientstate_getdents(int fd, l4vfs_dirent_t *dirp,int count, l4_threadid_t client);
-int clientstate_mmap(l4dm_dataspace_t *ds, size_t length, int prot, int flags, object_handle_t fd, off_t offset);
+int clientstate_mmap(l4dm_dataspace_t *ds, size_t length, int prot, unsigned flags, object_handle_t fd, off_t offset);
 int clientstate_msync(const l4dm_dataspace_t *ds, l4_addr_t start, size_t length, int flags);
 int clientstate_munmap(const l4dm_dataspace_t *ds, l4_addr_t start, size_t length);
 int clientstate_select_notify(object_handle_t *fd, int *mode);

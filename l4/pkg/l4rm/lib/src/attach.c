@@ -144,6 +144,8 @@ l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr,
 
   /* return address which points to ds_offs */
   *addr = r->start + map_offs;
+  LOGd(DEBUG_ATTACH, "addr= 0x"l4_addr_fmt"-0x"l4_addr_fmt,
+       *addr, map_offs);
 
   /* done */
   return 0;

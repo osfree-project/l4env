@@ -122,7 +122,7 @@ l4vfs_common_io_read_component (CORBA_Object _dice_corba_obj,
 {
     int ret;
 
-    ret = clientstate_read(fd, *buf, *count);
+    ret = clientstate_read(fd, *(l4_int8_t**)buf, *count);
 
     return ret;
 }
@@ -138,7 +138,7 @@ l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
 {
     int ret;
 
-    ret = clientstate_write(fd, buf, *count);
+    ret = clientstate_write(fd, (const l4_int8_t*)buf, *count);
 
     return ret;
 }
@@ -333,7 +333,6 @@ int main(int argc, char *argv[])
         }
     } while (option != -1);
 
-    names_register(SIMPLE_FILE_SERVER_NAME);
     state_init();
 
     l4_sleep(500);
@@ -359,6 +358,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    names_register(SIMPLE_FILE_SERVER_NAME);
     LOGd(_DEBUG, "registered");
 
     env.malloc = (dice_malloc_func)malloc;

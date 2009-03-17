@@ -23,13 +23,18 @@
 #include <l4/l4vfs/mmap_io.h>
 #include <l4/l4vfs/file-table.h>
 #include <l4/libc_backends_l4env/mmap_util.h>
-
+#include <l4/util/macros.h>
 
 #ifdef DEBUG
 static int _DEBUG = 1;
+#define DEBUG_MSG(x, ...) do { \
+    LOG_printf("\033[32m%s: "x"\033[0m\n", __func__, ##__VA_ARGS__); \
+    while (0);
 #else
 static int _DEBUG = 0;
+#define DEBUG_MSG(x, ...) do { } while (0)
 #endif
+
 
 void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
                    off_t offset);
@@ -127,14 +132,14 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
          */
         res = l4rm_area_attach(&ds, area, length, 0, ds_flags,
                                (void *)&content_addr);
-		LOGd(_DEBUG, "attached area to address %p, result %d", content_addr, res);
+        LOGd(_DEBUG, "attached area to address %p, result %d", (void*)content_addr, res);
     }
     else
     {
         res = l4rm_area_reserve_region((l4_addr_t)start, ds_size,
                                        L4RM_LOG2_ALIGNED, &area);
 
-        LOGd(_DEBUG,"reserved area with id: %d, result %d",area);
+        LOGd(_DEBUG,"reserved area with id: %d, result %d",area, res);
 
         if (res)
         {
@@ -150,9 +155,9 @@ void * mmap_normal(void *start, size_t length, int prot, int flags, int fd,
          * the dataspace we just got from the file server. It does _NOT_
          * refer to the offset in the file that we got as parameter!
          */
-		res = l4rm_area_attach_to_region(&ds,area, start, length, 0, ds_flags);
-		LOGd(_DEBUG, "attached area to address %p, result %d", content_addr, res);
-		content_addr = start;
+        res = l4rm_area_attach_to_region(&ds,area, start, length, 0, ds_flags);
+        LOGd(_DEBUG, "attached area to address %p, result %d", (void*)content_addr, res);
+        content_addr = (l4_addr_t)start;
     }
 
     if (res)
@@ -235,6 +240,7 @@ int munmap_normal(ds2server_t *current, void *start, size_t length)
     l4_size_t map_size;
     l4_threadid_t dummy;
 
+    DEBUG_MSG(l4util_idfmt" %p, %d", l4util_idstr(current->id), start, length);
     if (! current)
     {
         errno = EFAULT;
@@ -244,6 +250,8 @@ int munmap_normal(ds2server_t *current, void *start, size_t length)
     // fixme: we were probably called by munmap, which already did an
     //        l4rm_lookup(), maybe we should not do it again ???
     res = l4rm_lookup(start, &map_addr, &map_size, &ds, &offset, &dummy);
+    DEBUG_MSG("l4rm_lookup = %d, map_addr %p, map_size %d",
+              res, (void*)map_addr, map_size);
 
     if (res != L4RM_REGION_DATASPACE)
     {
@@ -255,11 +263,23 @@ int munmap_normal(ds2server_t *current, void *start, size_t length)
     }
 
     res = l4vfs_munmap(current->id, &ds, offset, length);
+    DEBUG_MSG("l4vfs_unmap() = %d", res);
 
-    if (! res)
+    /*
+     * If remote unmap succeeds, we still have the DS attached and the
+     * region reserved locally. Clean this up now.
+     */
+    if (!res)
     {
         res = del_ds2server(&(current->ds));
+        if (res != 0)
+            errno = EINVAL;
 
+        res = l4rm_detach((void*)map_addr);
+        if (res != 0)
+            errno = EINVAL;
+
+        res = l4rm_area_release_addr((void*)map_addr);
         if (res != 0)
             errno = EINVAL;
     }

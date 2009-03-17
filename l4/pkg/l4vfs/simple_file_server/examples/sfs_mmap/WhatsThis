@@ -1,0 +1,13 @@
+=== Bug reported by Aaron Pohle ===
+
+Description:
+------------
+  When mmap()'ing a file from a L4VFS file server, the corresponding region is
+  no longer available for reallocation after executing munmap().
+
+  Example triggering the bug in main.c
+
+Fix
+---
+  L4VFS' munmap_normal() implementation did only run munmap remotely at the
+  file server, but did not detach the corresponding region properly.

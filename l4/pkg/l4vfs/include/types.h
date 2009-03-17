@@ -21,21 +21,21 @@
 #define false 0
 
 
-#define MAX_FILES_OPEN 1024                /**< size of file table in client */
+#define MAX_FILES_OPEN 1024                     /**< size of file table in client */
 
-#define L4VFS_ILLEGAL_OBJECT_NAME_CHARS "/:"   /**< illegal chars. for names */
-#define L4VFS_ROOT_OBJECT_ID 0      /**< local object_id for usual root node */
-#define L4VFS_MAX_NAME 255                     /**< maximum file name length */
-#define L4VFS_PATH_SEPARATOR '/'   /**< char. used to separate path elements */
-#define L4VFS_PATH_PARENT    ".."     /**< char. used to point to parent dir */
-#define L4VFS_PATH_IDENTITY  '.'            /**< char. used to point to self */
+#define L4VFS_ILLEGAL_OBJECT_NAME_CHARS "/:"    /**< illegal chars. for names */
+#define L4VFS_ROOT_OBJECT_ID 0                  /**< local object_id for usual root node */
+#define L4VFS_MAX_NAME 255                      /**< maximum file name length */
+#define L4VFS_PATH_SEPARATOR '/'                /**< char. used to separate path elements */
+#define L4VFS_PATH_PARENT    ".."               /**< char. used to point to parent dir */
+#define L4VFS_PATH_IDENTITY  '.'                /**< char. used to point to self */
 
 #define SELECT_READ         1  /**< non-blocking read notification */
 #define SELECT_WRITE        2  /**< non-blocking write notification */
 #define SELECT_EXCEPTION    4  /**< exceptional condition notification */
 
 #define L4VFS_ILLEGAL_OBJECT_ID -1     /**< reserved illegal local object_id */
-#define L4VFS_ILLEGAL_VOLUME_ID -1           /**< reserved illegal volume_id */
+#define L4VFS_ILLEGAL_VOLUME_ID -1     /**< reserved illegal volume_id */
 
 typedef l4_int32_t volume_id_t;
 typedef l4_int32_t local_object_id_t;
@@ -65,7 +65,7 @@ typedef struct l4vfs_dirent
     unsigned char d_type;
 #elif defined(USE_DIETLIBC)
 #endif
-    char              d_name[L4VFS_MAX_NAME + 1];
+    char              d_name[L4VFS_MAX_NAME + 1]; /**< name plus trailing 0 */
 } l4vfs_dirent_t;
 
 typedef struct l4vfs_stat
