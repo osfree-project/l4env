@@ -73,7 +73,7 @@ task_next(unsigned owner)
   int i;
 
   if (owner >= ELEMENTS(__task))
-    return 0;
+    return -1;
 
   /* Find free task */
   for (i = 0; i < RMGR_TASK_MAX; i++)
@@ -97,7 +97,7 @@ task_next(unsigned owner)
 int task_next_explicit(unsigned owner, unsigned long task)
 {
   if (owner >= ELEMENTS(__task) || task >= ELEMENTS(__task))
-    return 0;
+    return -1;
 
   if (__task[task] != O_FREE)
     return -1;
