@@ -116,25 +116,25 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
   DICE_DECLARE_ENV(env);
   int error;
   int flags = 0;
-  l4_threadid_t tftp_id;
+  l4_threadid_t fprov_id;
   l4_threadid_t dm_id;
   l4dm_dataspace_t ds;
   void *addr;
   l4_size_t size;
-  char * vtpmname = vtpm_get_name();
-  int namesize = strlen(vtpmname);
+  struct slocal * slocal = get_vtpm_struct();
+  int namesize = strlen(slocal->vtpm_name);
   char * fname;
  
-  if (!names_waitfor_name("TFTP", &tftp_id, 40000))
+  if (!names_waitfor_name(slocal->fprov_name, &fprov_id, 40000))
     {
-      LOG("TFTP not found\n");
+      LOG("Fileprovider %s not found", slocal->fprov_name);
       return -1;
     }
 
   dm_id = l4env_get_default_dsm();
   if (l4_is_invalid_id(dm_id))
     {
-      LOG("No dataspace manager found\n");
+      LOG("No dataspace manager found");
       return -2;
     }
 
@@ -145,7 +145,7 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
     }
 
   memcpy(fname, "incoming/", 9);
-  memcpy(fname + 9, vtpmname, namesize);
+  memcpy(fname + 9, slocal->vtpm_name, namesize);
   fname[ 9 + namesize ] = 0;
 
   size = data_length + 2048;
@@ -154,14 +154,14 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
     
   if (!(addr = l4dm_mem_ds_allocate_named(size, flags, fname, &ds)))
     {
-      LOG("Allocating dataspace of size %d failed\n", size);
+      LOG("Allocating dataspace of size %d failed", size);
       free(fname);
       return -L4_ENOMEM;
     }
 
   if ((error = _seal_TPM(addr, &size, data, data_length)))
     {
-       LOG("Sealing failed, errorcode %d\n", error);
+       LOG("Sealing failed, errorcode %d", error);
        l4rm_detach(addr);
        l4dm_close(&ds);
        free(fname);
@@ -170,31 +170,31 @@ int tpm_write_to_file(uint8_t *data, size_t data_length)
 
   if ((error = l4rm_detach(addr)))
     {
-      LOG("Error %d attaching dataspace\n", error);
+      LOG("Error %d attaching dataspace", error);
       l4dm_close(&ds);
       free(fname);
       return -L4_ENOMEM;
     }
 
   /* set dataspace owner to server */
-  if ((error = l4dm_transfer(&ds, tftp_id)))
+  if ((error = l4dm_transfer(&ds, fprov_id)))
     {
-      LOG("Error transfering dataspace ownership: %s (%d)\n",
+      LOG("Error transfering dataspace ownership: %s (%d)",
              l4env_errstr(error), error);
       l4dm_close(&ds);
       free(fname);
       return -L4_EINVAL;
     }
 
-  if ((error = l4fprov_file_ext_write_call(&tftp_id, fname,
+  if ((error = l4fprov_file_ext_write_call(&fprov_id, fname,
                                            &ds, size, &env)))
     {
-      LOG("Error writing file\n");
+      LOG("Error writing file");
       free(fname);
       return -3;
     }
 
-  LOG("File %s was written.\n", fname);
+  LOG("File %s was written.", fname);
   free(fname);
 
   return 0;
@@ -210,8 +210,8 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
   l4_threadid_t fprov_id;
   l4_threadid_t dm_id;
   char * fname;
-  char * vtpmname = vtpm_get_name();
-  int namesize = strlen(vtpmname);
+  struct slocal * slocal = get_vtpm_struct();
+  int namesize = strlen(slocal->vtpm_name);
 
   /* dataspace manager */
   dm_id = l4env_get_default_dsm();
@@ -221,7 +221,7 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
       return -L4_ENODM;
     }
 
-  if (!names_waitfor_name("TFTP", &fprov_id, 5000))
+  if (!names_waitfor_name(slocal->fprov_name, &fprov_id, 5000))
     {
       LOG("Failed to lookup specified file provider.");
       return -1;
@@ -233,9 +233,16 @@ int tpm_read_from_file(uint8_t **data, size_t *data_length)
       return -L4_ENOMEM;
     }
 
-  memcpy(fname, "(nd)/incoming/", 14);
-  memcpy(fname + 14, vtpmname, namesize);
-  fname[ 14 + namesize ] = 0;
+  if (!strncmp("TFTP", slocal->fprov_name, 4))
+    {
+      memcpy(fname, "(nd)/incoming/", 14);
+      memcpy(fname + 14, slocal->vtpm_name, namesize);
+      fname[ 14 + namesize ] = 0;
+    } else {
+      memcpy(fname, "incoming/", 9);
+      memcpy(fname + 9, slocal->vtpm_name, namesize);
+      fname[ 9 + namesize ] = 0;
+    } 
 
   error = l4fprov_file_open_call(&fprov_id, fname, &dm_id, 0,
                                  &ds, &size, &env);

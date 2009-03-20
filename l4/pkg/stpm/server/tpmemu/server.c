@@ -34,8 +34,7 @@
 
 int l4libc_heapsize = 1024 * 1024;
 
-//static l4_taskid_t shutdown_on_exit = L4_INVALID_ID;
-static struct slocal slocal = { L4_INVALID_ID, "vtpm.bin" };
+static struct slocal slocal = { L4_INVALID_ID, L4_INVALID_ID, "vtpm.bin" };
 
 void *CORBA_alloc(unsigned long size){
 	return malloc(size);
@@ -110,9 +109,9 @@ stpmif_abort_component(CORBA_Object _dice_corba_obj,
   return -L4_ENOTSUPP;
 }
 
-char * vtpm_get_name(void)
+struct slocal * get_vtpm_struct(void)
 {
-  return slocal.vtpmname;
+  return &slocal;
 }
 
 int main(int argc, const char **argv)
@@ -121,7 +120,9 @@ int main(int argc, const char **argv)
 
   if ((error = parse_cmdline(&argc, &argv,
                'n', "name", "register with <name>, default is <vtpmemu>",
-               PARSE_CMD_STRING, "vtpmemu", &slocal.vtpmname,
+               PARSE_CMD_STRING, "vtpmemu", &slocal.vtpm_name,
+		           'f', "fprov", "specify file provider",
+		           PARSE_CMD_STRING, "TFTP", &slocal.fprov_name,
                0)))
   {
     switch (error)
@@ -135,14 +136,14 @@ int main(int argc, const char **argv)
     return 1;
   }
 
-  n = strlen(slocal.vtpmname);
+  n = strlen(slocal.vtpm_name);
   n = n < 8 ? n : 8;
 
-  memcpy(LOG_tag, slocal.vtpmname, n);
+  memcpy(LOG_tag, slocal.vtpm_name, n);
   for(; n < 9; n++)
     LOG_tag[n] = 0;
 
-  if (names_register(slocal.vtpmname) == 0)
+  if (names_register(slocal.vtpm_name) == 0)
   {
     LOG_Error("Registration error at nameserver\n");
     return 1;
@@ -161,6 +162,8 @@ int main(int argc, const char **argv)
     LOG_Error("Event thread setup failed.");
     return 1;
   }
+  slocal.names_unregister = l4_myself();
+
   l4_sleep(2000);
 
   // clear 1

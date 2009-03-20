@@ -27,13 +27,23 @@ static int
 __do_free_task(const l4_taskid_t *taskid,
                long (*func)(const_CORBA_Object _dice_corba_obj,
                             const l4_taskid_t *taskid,
-                            CORBA_Environment *_dice_corba_env))
+                            CORBA_Environment *_dice_corba_env),
+               unsigned owner)
 {
   CORBA_Environment _env = dice_default_environment;
   int error;
 
-  if (!l4ts_connected())
+  if (!l4ts_connected() || !taskid)
     return -L4_ENOTFOUND;
+
+  //Transfer ownership 
+  if (owner)
+    {
+      l4_threadid_t ret;
+      ret = l4_task_new(*taskid, l4ts_server().raw, 0, 0, L4_NIL_ID);
+      if (l4_is_nil_id(ret))
+        return -L4_ENOTFOUND;
+    }
 
   if ((error = func(&l4ts_server_id, taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))
@@ -49,11 +59,11 @@ __do_free_task(const l4_taskid_t *taskid,
 int
 l4ts_free_task(const l4_taskid_t *taskid)
 {
-  return __do_free_task(taskid, l4_ts_free_call);
+  return __do_free_task(taskid, l4_ts_free_call, 0);
 }
 
 int
 l4ts_free2_task(const l4_taskid_t *taskid)
 {
-  return __do_free_task(taskid, l4_ts_free2_call);
+  return __do_free_task(taskid, l4_ts_free2_call, 1);
 }

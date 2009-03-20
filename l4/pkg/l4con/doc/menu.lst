@@ -5,21 +5,28 @@
 # run this to test con in your box I'll keep and update the binaries
 
 title= Fiasco: con + demos
-kernel (nd)/tftpboot/ch12/static_ex/con/rmgr -sigma0 -serial
-module (nd)/tftpboot/ch12/static_ex/con/fiasco nowait 
-module (nd)/tftpboot/ch12/static_ex/con/sigma0
-module (nd)/tftpboot/ch12/static_ex/con/names
-module (nd)/tftpboot/ch12/static_ex/con/log
-module (nd)/tftpboot/ch12/static_ex/con/dm_phys
+kernel (nd)/tftpboot/bootstrap -serial
+module (nd)/tftpboot/fiasco
+module (nd)/tftpboot/sigma0
+module (nd)/tftpboot/roottask task modname "bmodfs" attached 4 modules
+module (nd)/tftpboot/names
+module (nd)/tftpboot/log
+module (nd)/tftpboot/l4io
+module (nd)/tftpboot/dm_phys
+module (nd)/tftpboot/simple_ts
 
 # con server
-module= (nd)/tftpboot/ch12/static_ex/con/con
+module (nd)/tftpboot/l4con
+
+module (nd)/tftpboot/bmodfs
 
 # con client applications
-module (nd)/tftpboot/ch12/static_ex/con/con_demo1
-module (nd)/tftpboot/ch12/static_ex/con/con_demo2
-module (nd)/tftpboot/ch12/static_ex/con/con_demo3
-module (nd)/tftpboot/ch12/static_ex/con/con_evdemo
+module (nd)/tftpboot/con_demo1
+module (nd)/tftpboot/con_demo2
+module (nd)/tftpboot/con_demo3
+module (nd)/tftpboot/con_evdemo
+
+module /boot/test/loader --fprov=BMODFS con_demo1 con_demo2 con_demo3 con_evdemo
 
 # set VESA mode (here 640x480x16)
 vbeset 0x111

@@ -60,7 +60,9 @@ avlt_node_index(avlt_t * node);
 /**
  * \brief Lock region slab cache.
  */
-static inline void
+L4_INLINE void
+l4rm_avl_node_cache_lock(void);
+L4_INLINE void
 l4rm_avl_node_cache_lock(void)
 {
   if (l4env_startup_done())
@@ -70,7 +72,9 @@ l4rm_avl_node_cache_lock(void)
 /**
  * \brief Unlock region slab cache.
  */
-static inline void
+L4_INLINE void
+l4rm_avl_node_cache_unlock(void);
+L4_INLINE void
 l4rm_avl_node_cache_unlock(void)
 {
   if (l4env_startup_done())

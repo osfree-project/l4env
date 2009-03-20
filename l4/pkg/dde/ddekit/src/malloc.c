@@ -22,13 +22,14 @@
 #include <l4/sys/consts.h>
 #include <l4/util/list_alloc.h>
 #include <l4/dm_mem/dm_mem.h>
-
+#include <l4/lock/lock.h>
 
 /* configuration */
 #define ALLOC_SIZE     (4 * L4_PAGESIZE)
 
 /* malloc pool is a list allocator */
 static l4la_free_t *malloc_pool;
+static l4lock_t     malloc_lock = L4LOCK_UNLOCKED;
 
 
 /**
@@ -44,6 +45,7 @@ static l4la_free_t *malloc_pool;
  */
 void *ddekit_simple_malloc(unsigned size)
 {
+	l4lock_lock(&malloc_lock);
 	/* we store chunk size in the first word of the chunk */
 	size += sizeof(unsigned);
 
@@ -57,11 +59,13 @@ void *ddekit_simple_malloc(unsigned size)
 		ds_size = (ds_size > ALLOC_SIZE) ? ds_size : ALLOC_SIZE;
 
 		void *res = l4dm_mem_allocate_named(ds_size, L4RM_MAP, "ddekit malloc");
-		if (!res) return 0;
-
-		l4la_free(&malloc_pool, res, ds_size);
-
-		p = l4la_alloc(&malloc_pool, size, 0);
+		if (!res) 
+			p = NULL;
+		else
+		{
+			l4la_free(&malloc_pool, res, ds_size);
+			p = l4la_alloc(&malloc_pool, size, 0);
+		}
 	}
 
 	/* store chunk size */
@@ -70,6 +74,7 @@ void *ddekit_simple_malloc(unsigned size)
 		p++;
 	}
 
+	l4lock_unlock(&malloc_lock);
 	return p;
 }
 
@@ -81,7 +86,9 @@ void *ddekit_simple_malloc(unsigned size)
  */
 void ddekit_simple_free(void *p)
 {
+	l4lock_lock(&malloc_lock);
 	unsigned *chunk = (unsigned *)p - 1;
 	if (p)
 		l4la_free(&malloc_pool, chunk, *chunk);
+	l4lock_unlock(&malloc_lock);
 }

@@ -15,6 +15,7 @@
 #include <l4/dde/ddekit/pgtab.h>
 #include <l4/dde/ddekit/printf.h>
 
+#include <l4/lock/lock.h>
 #include <l4/slab/slab.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/util/atomic.h>
@@ -171,6 +172,11 @@ static inline struct ddekit_pcache *_get_free_cache_entry(int contig)
 struct ddekit_slab
 {
 	l4slab_cache_t cache;
+	/* 
+	 * Lock to prevent concurrent access to the slab's grow() and
+	 * shrink() functions.
+	 */
+	l4lock_t       lock;
 	int            contiguous;
 };
 
@@ -185,7 +191,6 @@ static inline struct ddekit_slab *ddekit_slab_from_l4slab(l4slab_cache_t *s)
 {
 	return (struct ddekit_slab *)s;
 }
-
 
 /**
  * Grow slab cache
@@ -286,7 +291,12 @@ static void _slab_shrink(l4slab_cache_t *cache, void *page, void *data)
  */
 void *ddekit_slab_alloc(struct ddekit_slab * slab)
 {
-	return l4slab_alloc(&slab->cache);
+	void *ret = NULL;
+	l4lock_lock(&slab->lock);
+	ret = l4slab_alloc(&slab->cache);
+	l4lock_unlock(&slab->lock);
+
+	return ret;
 }
 
 
@@ -295,7 +305,9 @@ void *ddekit_slab_alloc(struct ddekit_slab * slab)
  */
 void  ddekit_slab_free(struct ddekit_slab * slab, void *objp)
 {
+	l4lock_lock(&slab->lock);
 	l4slab_free(&slab->cache, objp);
+	l4lock_unlock(&slab->lock);
 }
 
 
@@ -343,6 +355,7 @@ struct ddekit_slab * ddekit_slab_init(unsigned size, int contiguous)
 	int err;
 
 	slab = (struct ddekit_slab *) ddekit_simple_malloc(sizeof(*slab));
+	slab->lock = L4LOCK_UNLOCKED;
 	err = l4slab_cache_init(&slab->cache, size, 0, _slab_grow, _slab_shrink);
 	if (err) {
 		ddekit_debug("error initializing cache");

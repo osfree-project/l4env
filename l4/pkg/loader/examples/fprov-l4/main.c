@@ -6,7 +6,7 @@
  * \date	06/10/2001
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2003 - 2009 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
@@ -26,7 +26,7 @@
 #include <l4/env/errno.h>
 #include <l4/sys/syscalls.h>
 #include <l4/names/libnames.h>
-#include <l4/generic_fprov/generic_fprov-server.h>
+#include <l4/generic_fprov/fprov_ext-server.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/env/env.h>
 #include <l4/util/macros.h>
@@ -40,6 +40,7 @@ static l4_threadid_t dm_id;
 /** Should we ignore path names and look for all files in the directory
     the server is started in? */
 static int ignore_path;
+static int enable_writing = 0; //fprov write support, default: disabled
 
 /* placeholder for mapping a L4 page */
 static l4_page_t io_buf __attribute__ ((aligned(L4_PAGESIZE)));
@@ -86,6 +87,62 @@ linux_enter_kdebug(void)
       return;
     }
   close(fn);
+}
+
+long 
+l4fprov_file_ext_write_component (CORBA_Object _dice_corba_obj,
+                              const char* fname /* in */,
+                              const l4dm_dataspace_t *ds /* in */,
+                              l4_size_t size /* in */,
+                              CORBA_Server_Environment *_dice_corba_env)
+{
+  int error, fd, ret = 0;
+  l4_offs_t offs;
+  l4_size_t s = L4_PAGESIZE, w;
+
+  if (!enable_writing)
+    {
+      printf("Writing to files are disabled!\n");
+      return -L4_ENOTSUPP;
+    }
+
+  // sanity checks
+  if (fname == 0 || ds == 0 || size <= 0)
+    return -L4_EINVAL;
+
+  printf("create & write file %s (%uB)\n", fname, size);
+
+  // TODO fname check !
+  fd = open(fname, O_CREAT | O_APPEND | O_RDWR);
+  if (fd < 0)
+    return -L4_EOPEN;
+
+  for (offs=0; (s == L4_PAGESIZE) && !ret; offs += L4_PAGESIZE)
+    {
+      // map page of dataspace
+      s = (offs + L4_PAGESIZE > size) ? (size - offs) : L4_PAGESIZE;
+      error = l4dm_map_ds(ds, offs, (l4_addr_t)map_page, L4_PAGESIZE, L4DM_RO);
+
+      if (!error && mapped == 0)
+        mapped = 1;
+      if (error)
+        {
+          ret = -L4_ENOMAP;
+          break;
+        }
+      //printf("write s=%u offs=%lu size=%u\n", s, offs, size);
+      w = write(fd, map_page, s);
+      if (w != s)
+        ret = -L4_EIO;
+    }
+
+  // close file
+  close(fd);
+
+  // unmap ds area
+  free_map_area();
+
+  return ret;
 }
 
 /**
@@ -266,6 +323,8 @@ main(int argc, const char **argv)
   if ((error = parse_cmdline(&argc, &argv,
                 'n', "nopaths", "ignore paths in file names",
                 PARSE_CMD_SWITCH, 1, &ignore_path,
+                'w', "write", "enable fprov write support",
+                PARSE_CMD_SWITCH, 1, &enable_writing,
                 0)))
     {
       switch (error)
@@ -304,6 +363,6 @@ main(int argc, const char **argv)
   signal(SIGINT,  signal_handler);
 
   /* go into server mode */
-  l4fprov_file_server_loop(NULL);
+  l4fprov_file_ext_server_loop(NULL);
   return 0;
 }
