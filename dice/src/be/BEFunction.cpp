@@ -257,7 +257,6 @@ CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 	pFile << "\t";
 	// <return type>
 	WriteReturnType(pFile);
-	// in the header file we add function attributes
 	WriteFunctionAttributes(pFile);
 	pFile << "\n";
 	// <name> (
@@ -295,6 +294,7 @@ CBEFunction::WriteFunctionDefinition(CBEFile& pFile)
 	pFile << "\t";
 	// return type
 	WriteReturnType(pFile);
+	WriteFunctionAttributes(pFile);
 	pFile << "\n";
 	// <name>(
 	pFile << "\t";
