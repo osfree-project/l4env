@@ -111,7 +111,7 @@ l4util_test_bit32(int b, const volatile l4_uint32_t * dest)
      "btl   %2,%1   \n\t"
      "setc  %0      \n\t"
      :
-     "=r"  (bit)      /* 0,     old bit value */
+     "=q"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
@@ -142,7 +142,7 @@ l4util_bts(int b, volatile l4_umword_t * dest)
      "btsl  %2,%1   \n\t"
      "setc  %0      \n\t"
      :
-     "=r"  (bit)      /* 0,     old bit value */
+     "=q"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
@@ -165,7 +165,7 @@ l4util_btr(int b, volatile l4_umword_t * dest)
      "btrl  %2,%1   \n\t"
      "setc  %0      \n\t"
      :
-     "=r"  (bit)      /* 0,     old bit value */
+     "=q"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
@@ -187,8 +187,8 @@ l4util_btc(int b, volatile l4_umword_t * dest)
     (
      "btcl  %2,%1   \n\t"
      "setc  %0      \n\t"
-     : 
-     "=r"  (bit)      /* 0,     old bit value */
+     :
+     "=q"  (bit)      /* 0,     old bit value */
      :
      "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
