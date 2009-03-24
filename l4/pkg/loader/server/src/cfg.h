@@ -57,12 +57,14 @@ typedef struct cfg_cap_t
 #ifdef USE_INTEGRITY
 typedef struct
 {
+  char * integrity_service;
   integrity_id_t id;
   integrity_id_t parent_id;
 } cfg_integrity_t;
 #endif
-#define CFG_INTEGRITY_ID        1
-#define CFG_INTEGRITY_PARENT_ID 2
+#define CFG_INTEGRITY_ID         1
+#define CFG_INTEGRITY_PARENT_ID  2
+#define CFG_INTEGRITY_SERVICE_ID 3
 
 typedef struct
 {

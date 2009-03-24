@@ -14,10 +14,20 @@
 #define __INGERITY_TYPES_H
 
 #include <l4/crypto/sha1.h>
+
+typedef char          integrity_hash_t[SHA1_DIGEST_SIZE];
+
+#ifdef USE_INTEGRITY_LYON
 #include <l4/lyon/lyon.h>
 
 typedef lyon_id_t  integrity_id_t;
-typedef char       integrity_hash_t[SHA1_DIGEST_SIZE];
+#define integrity_nil_id lyon_nil_id
+#endif
+
+#ifdef USE_INTEGRITY_VTPM
+#include <l4/stpm/tcg/pcrs.h>
+typedef integrity_hash_t integrity_id_t;
+#endif
 
 #endif /* __INTEGRITY_TYPES_H */
 

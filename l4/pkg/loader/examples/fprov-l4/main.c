@@ -102,7 +102,8 @@ l4fprov_file_ext_write_component (CORBA_Object _dice_corba_obj,
 
   if (!enable_writing)
     {
-      printf("Writing to files are disabled!\n");
+      printf("  writing to files are disabled! Ignore attempt of "
+             l4util_idfmt" ...\n", l4util_idstr(*_dice_corba_obj));
       return -L4_ENOTSUPP;
     }
 
@@ -110,17 +111,22 @@ l4fprov_file_ext_write_component (CORBA_Object _dice_corba_obj,
   if (fname == 0 || ds == 0 || size <= 0)
     return -L4_EINVAL;
 
-  printf("create & write file %s (%uB)\n", fname, size);
+  printf("  create & write file %s (%uB)\n", fname, size);
 
   // TODO fname check !
   fd = open(fname, O_CREAT | O_APPEND | O_RDWR);
   if (fd < 0)
     return -L4_EOPEN;
 
+  // map in map area
+  memset(map_page, 0, sizeof(map_page));
+  memset(io_buf, 0, sizeof(io_buf));
+
   for (offs=0; (s == L4_PAGESIZE) && !ret; offs += L4_PAGESIZE)
     {
       // map page of dataspace
       s = (offs + L4_PAGESIZE > size) ? (size - offs) : L4_PAGESIZE;
+      // map page of dataspace
       error = l4dm_map_ds(ds, offs, (l4_addr_t)map_page, L4_PAGESIZE, L4DM_RO);
 
       if (!error && mapped == 0)
@@ -130,8 +136,11 @@ l4fprov_file_ext_write_component (CORBA_Object _dice_corba_obj,
           ret = -L4_ENOMAP;
           break;
         }
-      //printf("write s=%u offs=%lu size=%u\n", s, offs, size);
-      w = write(fd, map_page, s);
+
+      // copy file contents
+      memcpy(io_buf, map_page, s);
+
+      w = write(fd, io_buf, s);
       if (w != s)
         ret = -L4_EIO;
     }
@@ -263,9 +272,9 @@ l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
       free_map_area();
 
       /* map page of dataspace */
-      error = l4dm_map_pages((l4dm_dataspace_t *)ds,offs,L4_PAGESIZE,
-			     (l4_addr_t)map_page,L4_LOG2_PAGESIZE,0,L4DM_RW,
-			     &fpage_addr,&fpage_size);
+      error = l4dm_map_pages(ds, offs, L4_PAGESIZE,
+			     (l4_addr_t)map_page, L4_LOG2_PAGESIZE, 0, L4DM_RW,
+			     &fpage_addr, &fpage_size);
       mapped = 1;
       if (error < 0)
 	{

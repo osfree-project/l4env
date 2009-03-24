@@ -60,7 +60,7 @@ int yyparse(void);
 %token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER CAP_HANDLER
 %token <string>  NO_SIGMA0 SHOW_APP_AREAS ALL_SECTS_WRITABLE TASKNO
 %token <string>  UNSIGNED STRING L4ENV_BINARY ALLOW_IPC DENY_IPC
-%token <string>  INTEGRITY_PARENT_ID INTEGRITY_ID HASH_MODULES
+%token <string>  INTEGRITY_PARENT_ID INTEGRITY_ID HASH_MODULES INTEGRITY_SERVICE
 
 %type <number>   number memnumber memmodifier task_flag
 %type <number>   memflagspec memflags memflag
@@ -257,6 +257,14 @@ task_constraint	: task_modspec
                           if (cfg_task_integrity_id($2, CFG_INTEGRITY_PARENT_ID))
                             {
                               yyerror("Error setting integrity ID for parent.");
+                              YYABORT;
+                            }
+			}
+		| INTEGRITY_SERVICE string
+			{
+                          if (cfg_task_integrity_id($2, CFG_INTEGRITY_SERVICE_ID))
+                            {
+                              yyerror("Error setting integrity service.");
                               YYABORT;
                             }
 			}

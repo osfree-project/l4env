@@ -92,6 +92,7 @@ cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id,
       ct->iobitmap = malloc(8192);
       memcpy(ct->iobitmap, cfg_task_template.iobitmap, 8192);
     }
+
 }
 
 /** Create a task template. */
@@ -526,14 +527,24 @@ cfg_task_integrity_id(const char *id64, int type)
       memset(integrity, 0, sizeof(*integrity));
     }
 
-  id = type == CFG_INTEGRITY_ID ? &integrity->id : &integrity->parent_id;
+  if (type == CFG_INTEGRITY_SERVICE_ID)
+    {
+      int len = strlen(id64);
+      integrity->integrity_service = malloc(len + 1);
+      memcpy(integrity->integrity_service, id64, len);
+      integrity->integrity_service[len] = 0;
+    }
+  else
+    {
+      id = type == CFG_INTEGRITY_ID ? &integrity->id : &integrity->parent_id;
 
-  if (integrity_parse_id(id64, id))
-    return -L4_EINVAL;
+      if (integrity_parse_id(id64, id))
+        return -L4_EINVAL;
 
-  printf("%s: %s: '%s'\n", (*cfg_task_current)->task.fname,
+      printf("%s: %s: '%s'\n", (*cfg_task_current)->task.fname,
          type == CFG_INTEGRITY_ID ? "integrity ID" : "parent's integrity ID",
          id64);
+    }
 #endif
 
   return 0;
@@ -587,6 +598,13 @@ cfg_clear_task(cfg_task_t *ct)
       free((char*)ct->task.fname);
       free((char*)ct->task.args);
       free(ct->iobitmap);
+#ifdef USE_INTEGRITY
+      if (ct->integrity.integrity_service)
+        {
+          free(ct->integrity.integrity_service);
+          ct->integrity.integrity_service = 0;
+        }
+#endif
     }
 }
 
