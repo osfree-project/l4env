@@ -20,7 +20,7 @@ DIRS		:= libc/stdio libc/stdlib libc/stdlib/malloc libc/string \
 		   libc/inet libc/misc libc/misc/assert libc/misc/ctype \
 		   libc/misc/dirent libc/misc/internals libc/misc/locale \
 		   libc/misc/time libc/pwd_grp libc/unistd libc/termios \
-		   libc/misc/wctype libc/misc/wchar \
+		   libc/misc/wctype libc/misc/wchar libc/misc/fnmatch \
 		   libc/signal $(SYSDEPS)/$(UCLIBC_ARCH_$(ARCH)) \
 		   $(SYSDEPS)/common libm
 
@@ -32,6 +32,10 @@ SRC_S		:= $(foreach arch,all $(ARCH),\
 		    $(foreach dir,$(DIRS), \
 		     $(addprefix ARCH-$(arch)/$(dir)/,\
 		      $(notdir $(wildcard ../ARCH-$(arch)/$(dir)/*.S)))))
+
+# fnmatch_loop cannot be compiled alone but is included by fnmatch.c and
+# thus needs to be linked
+SRC_C		:= $(filter-out ARCH-all/libc/misc/fnmatch/fnmatch_loop.c,$(SRC_C))
 
 IDL_PATH	=
 PRIVATE_INCDIR	= $(SRC_DIR)/ARCH-$(ARCH)/include $(SRC_DIR)/ARCH-all/include \

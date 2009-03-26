@@ -21,8 +21,10 @@ void ddekit_sem_deinit(ddekit_sem_t *sem) {
 }
 
 void ddekit_sem_down(ddekit_sem_t *sem) {
-/*printf("%s:%d sem=%p l4sem=0x%08x\n", __FILE__, __LINE__, sem, sem->sem); */
-/*	enter_kdebug(""); */
+#if 0
+	printf("%s:%d sem=%p l4sem=0x%08x\n", __FILE__, __LINE__, sem, sem->sem); 
+	enter_kdebug("");
+#endif
 	l4semaphore_down(&sem->sem);
 /*printf("%s:%d\n", __FILE__, __LINE__); */
 }
@@ -38,6 +40,9 @@ int  ddekit_sem_down_timed(ddekit_sem_t *sem, int timo) {
 }
 
 void ddekit_sem_up(ddekit_sem_t *sem) {
+#if 0
+	printf("%s:%d sem=%p l4sem=0x%08x\n", __FILE__, __LINE__, sem, sem->sem); 
+#endif
 	l4semaphore_up(&sem->sem);
 }
 

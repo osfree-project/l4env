@@ -1,0 +1,16 @@
+=== Bug reported by Andre Puschmann ===
+
+main.c contains Linux kernel code that triggers 2 problems:
+
+1) list order violation in the list alloc lib
+2) threads hang after scheduling a very short timer, because
+   the timer thread seems to miss some events
+
+
+Fixes
+=====
+1) correct locking for ddekit's memory allocation functions
+   solves the problem
+2) fixed DDEKit's timer implementation to not use IPC for
+   notifications (because some got lost for atomicity reasons)
+   but use a counting semaphore

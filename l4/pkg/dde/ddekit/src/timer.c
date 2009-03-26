@@ -4,6 +4,7 @@
 #include <l4/dde/ddekit/panic.h>
 #include <l4/dde/ddekit/assert.h>
 #include <l4/dde/ddekit/memory.h>
+#include <l4/dde/ddekit/semaphore.h>
 
 #include <l4/thread/thread.h>
 #include <l4/lock/lock.h>
@@ -13,8 +14,6 @@
 #include <l4/util/rdtsc.h>
 
 #define	__DEBUG	0
-
-#define DDEKIT_TIMER_MAGIC	0xABCD1234
 
 /* Just to remind BjoernD of what this is:
  * HZ = clock ticks per second
@@ -35,13 +34,14 @@ typedef struct _timer
 	int                id;
 } ddekit_timer_t;
 
-static ddekit_timer_t *timer_list  = NULL;
-static l4lock_t       timer_lock   = L4LOCK_UNLOCKED;
-static l4_threadid_t  timer_thread = L4_NIL_ID;
-static ddekit_thread_t *timer_thread_ddekit = NULL;
+
+static ddekit_timer_t  *timer_list          = NULL; ///< list of pending timers
+static l4lock_t        timer_lock           = L4LOCK_UNLOCKED; ///< lock to access timer_list
+static l4_threadid_t   timer_thread         = L4_NIL_ID; ///< the timer thread
+static ddekit_thread_t *timer_thread_ddekit = NULL; ///< ddekit ID of timer thread
+static ddekit_sem_t    *notify_semaphore    = NULL; ///< timer thread's wait semaphore
 
 static int timer_id_ctr = 0;
-
 
 static void dump_list(char *msg)
 {
@@ -74,17 +74,7 @@ static inline void __notify_timer_thread(void)
 	if (l4_is_nil_id(timer_thread))
 		return;
 
-	err = l4_ipc_send(timer_thread, L4_IPC_SHORT_MSG,
-	                  DDEKIT_TIMER_MAGIC,
-	                  DDEKIT_TIMER_MAGIC,
-	                  L4_IPC_SEND_TIMEOUT_0,
-	                  &result);
-
-	/* This will either return 0 if notify succeeded or return
-	 * SETIMEOUT if the send timeout failed. Everything else should
-	 * make us nervous.
-	 */
-	Assert((err == 0 || err == L4_IPC_SETIMEOUT));
+	ddekit_sem_up(notify_semaphore);
 }
 
 
@@ -123,7 +113,8 @@ int ddekit_add_timer(void (*fn)(void *), void *args, unsigned long timeout)
 			it->next = t;
 	}
 
-	/* if we modified the first entry of the list, it is
+	/* 
+	 * if we modified the first entry of the list, it is
 	 * necessary to notify the timer thread.
 	 */
 	if (t == timer_list) {
@@ -159,11 +150,10 @@ int ddekit_del_timer(int timer)
 		ddekit_simple_free(timer_list);
 		timer_list = it;
 
-		/* XXX: Yes, we could notify the timer thread here, so that it can
-		 *      recalculate its sleep to now. However, this will require an
-		 *      unnecessary IPC here. The timer thread will wake up in any 
-		 *      case, find out that there is no timer for now, and return
-		 *      to sleep.
+		/*
+		 * We do not notify the timer thread here to save IPCs. The
+		 * thread will wakeup later and finally detect that there is
+		 * no timer pending anymore.
 		 */
 		goto out;
 	}
@@ -244,18 +234,20 @@ static ddekit_timer_t *get_next_timer(void)
 	return t;
 }
 
+enum
+{
+	DDEKIT_TIMEOUT_NEVER = 0xFFFFFFFF,
+};
 
 /** Let the timer thread sleep for a while. 
  *
- * \param	to	L4 IPC timeout
+ * \param	to	timeout in msec
  *
  * \return	1 if IPC timed out
  * 			0 if message received -> recalc timeout
  */
-static inline int __timer_sleep(l4_timeout_t to)
+static inline int __timer_sleep(unsigned to)
 {
-	l4_threadid_t any = L4_NIL_ID;
-	l4_threadid_t me = l4_myself();
 	l4_umword_t dummy;
 	l4_msgdope_t res;
 
@@ -263,19 +255,18 @@ static inline int __timer_sleep(l4_timeout_t to)
 	
 	l4lock_unlock(&timer_lock);
 
-	do {
+		if (to == DDEKIT_TIMEOUT_NEVER) {
+			ddekit_sem_down(notify_semaphore);
+		}
+		else {
 #if 0
-		ddekit_printf("Going to sleep for %lu µs (%lu ms)\n",
-		              l4util_l4to2micros(to.to.rcv_man, to.to.rcv_exp),
-					  (unsigned long )l4util_l4to2micros(to.to.rcv_man, to.to.rcv_exp) * 1000 / HZ);
+			ddekit_printf("Going to sleep for %lu µs (%lu ms)\n", to * 1000, to);
 #endif
-		err = l4_ipc_wait(&any, L4_IPC_SHORT_MSG, &dummy, &dummy, to, &res);
+			err = ddekit_sem_down_timed(notify_semaphore, to);
 #if 0
-		ddekit_printf("ipc from "l4util_idfmt"\n", l4util_idstr(any));
-		ddekit_printf("me: "l4util_idfmt"\n", l4util_idstr(me));
-		ddekit_printf("err: %x\n", err);
+			ddekit_printf("err: %x\n", err);
 #endif
-	} while (!err && !l4_task_equal(me, any));
+		}
 
 	l4lock_lock(&timer_lock);
 
@@ -286,13 +277,18 @@ static inline int __timer_sleep(l4_timeout_t to)
 static void ddekit_timer_thread(void *arg)
 {
 	timer_thread_ddekit = ddekit_thread_setup_myself("ddekit_timer");
+	
+	notify_semaphore = ddekit_sem_init(0);
+#if 0
+	l4thread_set_prio(l4thread_myself(), 0x11);
+#endif
 
 	l4thread_started(0);
 
 	l4lock_lock(&timer_lock);
 	while (1) {
-		ddekit_timer_t     *timer = NULL;
-		l4_timeout_t       to     = L4_IPC_NEVER;
+		ddekit_timer_t *timer = NULL;
+		unsigned long  to     = DDEKIT_TIMEOUT_NEVER;
 
 		if (timer_list) {
 #if 0
@@ -300,8 +296,8 @@ static void ddekit_timer_thread(void *arg)
 			ddekit_printf("\033[31mscheduling new timeout.\033[0m\n");
 			ddekit_printf("\033[31mjiffies diff = %ld (%d s)\033[0m\n", jdiff, jdiff/HZ);
 #endif
-			unsigned long usec = (timer_list->expires - jiffies) * 1000000 / HZ;
-			to = l4_timeout(L4_IPC_TIMEOUT_NEVER, l4util_micros2l4to(usec));
+			to = (timer_list->expires - jiffies) * 1000000 / HZ;
+			to /= 1000;
 		}
 
 		__timer_sleep(to);
@@ -310,8 +306,8 @@ static void ddekit_timer_thread(void *arg)
 			l4lock_unlock(&timer_lock);
 			//ddekit_printf("doing timer fn @ %p\n", timer->fn);
 			timer->fn(timer->args);
-			l4lock_lock(&timer_lock);
 			ddekit_simple_free(timer);
+			l4lock_lock(&timer_lock);
 		}
 	}
 }
@@ -325,6 +321,7 @@ ddekit_thread_t *ddekit_get_timer_thread()
 void ddekit_init_timers(void)
 {
 	l4_tsc_init(L4_TSC_INIT_AUTO);
+
 	/* XXX this module needs HZ and jiffies to work - so l4io info page must be mapped */
 	timer_thread = l4thread_l4_id( l4thread_create_named(ddekit_timer_thread,
 	                                "ddekit_timer", 0,

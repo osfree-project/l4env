@@ -382,11 +382,13 @@ libc/misc/dirent/scandir.c
 libc/misc/dirent/seekdir.c
 libc/misc/dirent/telldir.c
 libc/misc/dirent/scandir64.c
+libc/misc/fnmatch/fnmatch.c
+libc/misc/fnmatch/fnmatch_loop.c
+libc/misc/internals/errno.c
 libc/misc/locale/locale.c
 libc/misc/locale/localeconv.c
 libc/misc/locale/nl_langinfo.c
 libc/misc/locale/setlocale.c
-libc/misc/internals/errno.c
 libc/misc/time/time.c
 libc/misc/time/asctime.c
 libc/misc/time/asctime_r.c
