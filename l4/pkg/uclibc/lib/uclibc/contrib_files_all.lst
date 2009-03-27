@@ -410,6 +410,7 @@ libc/misc/time/timegm.c
 libc/misc/time/_time_mktime_tzi.c
 libc/misc/time/_time_localtime_tzi.c
 libc/misc/time/difftime.c
+libc/misc/wchar/btowc.c
 libc/misc/wchar/mbrlen.c
 libc/misc/wchar/mbrtowc.c
 libc/misc/wchar/mbsnrtowcs.c
@@ -418,6 +419,9 @@ libc/misc/wchar/wchar.c
 libc/misc/wchar/wcrtomb.c
 libc/misc/wchar/wcsnrtombs.c
 libc/misc/wchar/wcsrtombs.c
+libc/misc/wctype/iswctype.c
+libc/misc/wctype/wctype.c
+libc/misc/wctype/_wctype.c
 libc/sysdeps/linux/common/longjmp.c
 libc/sysdeps/linux/common/getcwd.c
 libc/sysdeps/linux/common/bits/cmathcalls.h

@@ -158,7 +158,7 @@ l4vfs_common_io_write_component(CORBA_Object _dice_corba_obj,
 
     // 2.
     strncpy(LOG_tag, clients[handle].node->name, 8);
-    LOG_tag[9] = 0;
+    LOG_tag[8] = 0;
 
     // 3.
     LOG_printf("%.*s", *count, buf);
