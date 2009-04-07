@@ -114,7 +114,7 @@ l4fprov_file_ext_write_component (CORBA_Object _dice_corba_obj,
   printf("  create & write file %s (%uB)\n", fname, size);
 
   // TODO fname check !
-  fd = open(fname, O_CREAT | O_APPEND | O_RDWR);
+  fd = open(fname, O_TRUNC | O_CREAT | O_APPEND | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   if (fd < 0)
     return -L4_EOPEN;
 
