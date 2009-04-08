@@ -55,14 +55,17 @@ void fastcall raise_softirq(unsigned int nr)
 	local_irq_restore(flags);
 }
 
-/** Initialize tasklet.
- *
- * Unimplemented.
+/**
+ * Initialize tasklet.
  */
 void tasklet_init(struct tasklet_struct *t,
                   void (*func)(unsigned long), unsigned long data)
 {
-	WARN_UNIMPL;
+	t->next  = NULL;
+	t->state = 0;
+	atomic_set(&t->count, 0);
+	t->func  = func;
+	t->data  = data;
 }
 
 /* enqueue tasklet */

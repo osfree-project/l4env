@@ -5,6 +5,7 @@ BIBTEX=         @BIBTEX@
 DVIPS=          @DVIPS@
 PDFLATEX=       @PDFLATEX@
 FIG2DEV=	@FIG2DEV@
+ECHO=		echo
 RM_F=          rm -f
 #NUMB=		>/dev/null
 NUMB=

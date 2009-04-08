@@ -55,6 +55,7 @@ AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
 		$(LTDLINCL)
 
 AM_CXXFLAGS = @DICE_CXXFLAGS@
+ECHO = echo
 
 CLEANFILES  = svnversion.h
 

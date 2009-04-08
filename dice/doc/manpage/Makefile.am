@@ -7,6 +7,7 @@ DOXFILES=	manpage.dox
 EXTRA_DIST=	$(DOXFILES) Doxyfile
 SUFFIXES=	.dox
 CLEANFILES=	version.dox
+ECHO=		echo
 
 if HAS_DOXYGEN
 man_MANS=	dice.1

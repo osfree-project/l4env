@@ -72,7 +72,7 @@ DICE_CXXFLAGS = @DICE_CXXFLAGS@
 DOXYGEN = @DOXYGEN@
 DSYMUTIL = @DSYMUTIL@
 DVIPS = @DVIPS@
-ECHO = @ECHO@
+ECHO = echo
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -193,9 +193,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  doc/manpage/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  doc/manpage/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign  doc/manpage/Makefile
+	  $(AUTOMAKE) --gnu  doc/manpage/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

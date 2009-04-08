@@ -7,6 +7,7 @@ DOXFILES=	mainpage.dox backend.dox frontend.dox
 EXTRA_DIST=	$(DOXFILES)
 SUFFIXES=	.dox
 CLEANFILES=	version.dox
+ECHO=		echo
 
 if HAS_DOXYGEN
 manual_HTML=	html/
