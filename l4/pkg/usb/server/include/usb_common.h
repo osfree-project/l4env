@@ -1,0 +1,6 @@
+#ifndef USB_SERVER_USB_COMMON_H
+#define USB_SERVER_USB_COMMON_H
+
+#define USB_NAMESERVER_NAME "dDeusB"
+
+#endif

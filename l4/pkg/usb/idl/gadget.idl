@@ -1,0 +1,50 @@
+import <l4/sys/l4int.h>
+import <l4/usb/usb_types.h>
+
+library ddeusb
+{
+	interface gadget
+	{	
+		/* This function registers a device to the client.
+		 * One can assume that the client has further subscribed to
+		 * the usb_device_id of the device.
+		 */
+		[oneway]
+		void register_device( [in] int dev_id,
+		                     [in] int speed,
+		                     [in] unsigned short bus_mA, 
+		                     [in] unsigned long long dma_mask);
+		
+		/* This function informs the client that he is not able to
+		 * serve the device anymore.
+		 * This can have several reasons:
+		 * - the device physically dissconnect from the USB bus.
+		 * - the server decided that this client should no more
+		 *   serve this device.(e.g. because an other client can serve
+		 *   it better)
+		 */
+		[oneway]
+		void disconnect([in] int dev);
+		
+		/* This function informs the client that the urb with the given
+		 * ID completed and transmits the chanded values of the urb.
+		 */
+		[oneway]
+		void urb_complete([in] int urb_id,
+		                  [in] int status,
+		                  [in] int actual_length,
+		                  [in] int interval,
+                          [in, ref ,size_is(tb_size),max_is(65536)] void *buffer,
+		                  [in] l4_size_t tb_size,
+		                  [in, ref, size_is(8)] void * setup_packet,
+                          [in] unsigned int transfer_flags,
+                          [in] int error_count,
+                          [in] int start_frame,
+                          [in, prealloc_client, ref, size_is(iso_frame_desc_size), max_is(1024)] char *iso_frame_desc,
+                          [in] l4_size_t iso_frame_desc_size);
+
+		
+		[oneway]
+        void ds_urb_complete([in] int id);
+	};
+};

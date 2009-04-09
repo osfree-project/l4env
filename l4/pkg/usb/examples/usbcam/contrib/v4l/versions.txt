@@ -1,0 +1,74 @@
+# Use this for stuff for drivers that don't compile
+[2.6.99]
+
+[2.6.29]
+# Needs defines that are only available from 2.6.29
+VIDEO_PXA27x
+
+[2.6.28]
+USB_STV06XX
+
+[2.6.26]
+# Requires struct i2c_device_id
+VIDEO_TVP514X
+# requires id_table and new i2c stuff
+RADIO_TEA5764
+
+[2.6.25]
+# Requires gpiolib
+SOC_CAMERA
+SOC_CAMERA_MT9V022
+SOC_CAMERA_MT9M001
+
+[2.6.23]
+# Needs field intf_assoc in struct usb_host_config
+VIDEO_CX231XX
+
+[2.6.22]
+#This driver requires I2C probe/remove fields
+VIDEO_TCM825X
+# This driver requires list_first_entry
+USB_STKWEBCAM
+# This driver needs div64_64
+DVB_DRX397XD
+# Assumes struct input_dev has a dev field
+DVB_DM1105
+# This driver needs print_hex_dump
+DVB_FIREDTV
+
+[2.6.20]
+#This driver requires HID_REQ_GET_REPORT
+USB_SI470X
+# use of struct delayed_work
+USB_GSPCA_FINEPIX
+# uses linux/hid.h and struct delayed_work
+USB_SI470X
+# due to INIT_WORK changes
+USB_GSPCA_SQ905
+VIDEO_HDPVR
+
+[2.6.19]
+#This driver were developed at kernel 2.6.19, requiring vmalloc_user/remap_vmalloc_range
+VIDEO_CAFE_CCIC
+#struct device vs struct class_device issues
+USB_ET61X251
+USB_SN9C102
+USB_PWC
+USB_PWC_DEBUG
+USB_OV511
+USB_STV680
+USB_S2255
+VIDEO_USBVISION
+# Uses supports_autosuspend
+USB_MR800
+USB_DSBR
+
+# Uses remap_vmalloc_range()
+[2.6.18]
+VIDEOBUF_VMALLOC
+# Uses new class interface, which did not start to appear until 2.6.18.
+VIDEO_PVRUSB2_SYSFS
+
+# DVB_CORE_ATTACH relies on symbol_put_addr which hangs pre-2.6.17
+[2.6.17]
+DVB_CORE_ATTACH

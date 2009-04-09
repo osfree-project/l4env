@@ -1,0 +1,41 @@
+import <l4/sys/types.h>
+import <l4/sys/l4int.h>
+import <l4/usb/usb_types.h>
+import <l4/dm_generic/types.h>
+
+library ddeusb 
+{
+    [uuid(1)]
+	interface core
+	{
+		/**
+		 * Registers a new USB driver
+		 */
+		
+		int register([in, string] char* name,[in] l4_threadid_t gadget_server_th);
+		int subscribe_for_device_id([in] ddeusb_usb_device_id * id);
+		int deregister();
+        
+        int ddeusb_setup_control_ds([in] l4dm_dataspace_t *ds, [in] l4_offs_t offset, [in] l4_size_t size);
+
+        int unlink_urb([in] int urb_id);
+		int ddeusb_submit_urb([in] int urb_id,
+                              [in] int dev_id,
+                              [in] int type,
+                              [in] int direction,
+                              [in] int endpoint,
+                              [in] unsigned int transfer_flags,
+                              [in] int interval,
+                              [in] int start_frame,
+                              [in] int number_of_packets,
+                              [in, ref, size_is(8)] void * setup_packet,
+		                      [in, ref, size_is(data_size), max_is(65536)] void *data,
+		                      [in] l4_size_t data_size,
+		                      [in, ref, size_is(iso_frame_desc_size), max_is(1024)] char *iso_frame_desc,
+		                      [in] l4_size_t iso_frame_desc_size);
+        int ddeusb_ds_submit_urb([in] int id); 
+        
+	};
+	
+};
+

@@ -1,0 +1,43 @@
+Overview
+########
+
+DDEUSB is a  USB driver Framework.  It consists of the DDEUSB server "usbcore"
+and its clients. This package contains two sample clients.  First, usbcam a 
+USB camera viewer for dope and usbhid a USB human interface device driver, 
+which forwards input events to the L4Input  injection proxy.
+
+How-to run it
+#############
+
+If everything compiles fine (I hope so...) add the following to your 
+menu.lst
+
+  the server:
+=================
+	module (nd)/tftpboot/path_to/l4v2/usbcore
+
+
+  for the usbhid example: 
+=========================
+
+	module (nd)/tftpboot/path_to/l4v2/usbhid
+	
+	Furthermore there has to be a application using L4Input 
+	(e.g. Dope or L4con).
+
+  for the usbcam example:
+=========================
+
+	module (nd)/tftpboot/path_to/l4v2/usbcam
+
+	This application needs DOPE to be running.
+
+	
+
+
+Porting Linux USB device drivers
+################################
+
+Do it  as you would do it for normal other Linux device drivers but link
+libddeusb26  to the binary.  This will add a virtual USB host controller to 
+the driver, which will talk to the DDEUSB server.

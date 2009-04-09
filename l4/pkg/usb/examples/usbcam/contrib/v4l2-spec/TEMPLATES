@@ -1,0 +1,90 @@
+These are templates for various tables. Happy copy-and-pasting!
+
+cs-str;  are colspecs for a struct table
+cs-ustr; are colspecs for a struct table with substructs (four columns)
+cs-def;  are colspecs for a defines or enums table
+
+<table pgwide="1" frame="none" id="v4l2-">
+  <title>struct <structname>v4l2_</structname></title>
+  <tgroup cols="3">
+    &cs-str;
+    <tbody valign="top">
+      <row>
+	<entry></entry>
+	<entry><structfield></structfield></entry>
+	<entry></entry>
+      </row>
+    </tbody>
+  </tgroup>
+</table>
+
+<table pgwide="1" frame="none" id="v4l2-">
+  <title>struct <structname>v4l2_</structname></title>
+  <tgroup cols="4">
+    &cs-ustr;
+    <tbody valign="top">
+      <row>
+	<entry>type</entry>
+	<entry><structfield>name</structfield></entry>
+	<entry></entry>
+	<entry>descr</entry>
+      </row>
+      <row>
+	<entry></entry>
+	<entry>type</entry>
+	<entry><structfield>name</structfield></entry>
+	<entry>descr</entry>
+      </row>
+    </tbody>
+  </tgroup>
+</table>
+
+<table pgwide="1" frame="none" id="v4l2-">
+  <title>enum v4l2_</title>
+  <tgroup cols="3">
+    &cs-def;
+    <tbody valign="top">
+      <row>
+	<entry><constant></constant></entry>
+	<entry>1</entry>
+	<entry></entry>
+      </row>
+    </tbody>
+  </tgroup>
+</table>
+
+<table pgwide="1" frame="none" id="">
+  <title> Flags</title>
+  <tgroup cols="3">
+    &cs-def;
+    <tbody valign="top">
+      <row>
+	<entry><constant>V4L2_</constant></entry>
+	<entry>0x</entry>
+	<entry></entry>
+      </row>
+    </tbody>
+  </tgroup>
+</table>
+
+<figure id="banana">
+  <title>Banana Example</title>
+  <mediaobject>
+    <imageobject>
+      <imagedata fileref="banana.gif" format="gif">
+    </imageobject>
+    <textobject>
+      <phrase>A banana</phrase>
+    </textobject>
+  </mediaobject>
+</figure>
+
+For EMACS, put that at the end of each sgml file.
+
+<!--
+Local Variables:
+mode: sgml
+sgml-parent-document: "v4l2.sgml"
+indent-tabs-mode: nil
+End:
+-->

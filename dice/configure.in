@@ -48,7 +48,7 @@ if test "$YACC" = yacc; then
   AC_MSG_ERROR(['bison' is missing from your system.])
 fi
 AC_CACHE_CHECK([for bison version], dice_bison_version, [
-  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'`
+  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /g'`
   if test "(" "${1}" = "2" -a "(" "${2}" = "1a" -o "${2}" = "1b" -o "${2}" = "2" -o "${2}" = "3" ")" ")"; then
     dice_bison_version="${1}.${2} (ok)"
   else

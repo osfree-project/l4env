@@ -1,0 +1,20 @@
+This is the DocBook source of the Video For Linux Two API Specification.
+
+The latest version is part of the v4l-dvb master repository:
+
+  http://linuxtv.org/hg/v4l-dvb
+
+If you have ideas or questions regarding V4L2, please try the
+linux-media mailing list. Information on how to join is here:
+
+  http://www.linuxtv.org/lists.php
+
+The Makefile supports the following targets:
+
+html-single	A single HTML file (default)
+html		Tree of HTML files
+pdf		A PDF file
+coffeebreak 	All of the above
+
+Note: the V4L1_API.html is here just for reference. The V4L2 API replaces
+V4L1.
