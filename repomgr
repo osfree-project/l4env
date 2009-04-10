@@ -213,6 +213,7 @@ my %modules =
 		      l4/pkg/stpm
 		      l4/pkg/tftp
                       l4/pkg/usbhid
+                      l4/pkg/usb
                       l4/pkg/verner
                      ) ],
    },
