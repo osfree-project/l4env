@@ -88,7 +88,7 @@
  
 static inline unsigned long virt_to_phys(volatile void * address)
 {
-	return __pa(address);
+	return __pa((unsigned long)address);
 }
 
 /**

@@ -118,7 +118,6 @@ void set_user_nice(struct task_struct *p, long nice)
 void __sched io_schedule(void)
 {
 	WARN_UNIMPL;
-	return 0;  
 }
 
 long __sched io_schedule_timeout(long timeout)

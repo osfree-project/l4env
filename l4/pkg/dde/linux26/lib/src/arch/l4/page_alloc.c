@@ -210,11 +210,11 @@ fastcall void free_pages(unsigned long addr, unsigned int order)
 
 unsigned long page_to_phys(struct page *p)
 {
-	return __pa(p->virtual) & PAGE_MASK;
+	return __pa((unsigned long)p->virtual) & PAGE_MASK;
 }
 
 
-unsigned long __pa(volatile void *addr)
+unsigned long __pa(volatile unsigned long addr)
 {
 	return ddekit_pgtab_get_physaddr((void*)addr);
 }

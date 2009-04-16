@@ -128,7 +128,7 @@ extern int page_is_ram(unsigned long pagenr);
 #define __pa_symbol(x)          __pa(RELOC_HIDE((unsigned long)(x),0))
 #define __va(x)			((void *)((unsigned long)(x)+PAGE_OFFSET))
 #else /* DDE_LINUX */
-extern unsigned long __pa(volatile void *addr);
+extern unsigned long __pa(volatile unsigned long addr);
 extern void *__va(unsigned long addr);
 #endif /* DDE_LINUX */
 #define pfn_to_kaddr(pfn)      __va((pfn) << PAGE_SHIFT)
