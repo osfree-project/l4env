@@ -19,16 +19,16 @@ VPATH =  $(USB_CONTRIB_PATH):$(MY_CONTRIB_PATH)
 
 
 SRC_C		=        main.c                    \
-			 l4evdev.c                     \
-		         driver/usb/input/hid-core.c   \
-                         dummy.c                       \
-		         driver/hid/hid-core.c         \
-		         driver/hid/hid-input.c       \
-		         driver/input/input.c
+			         l4evdev.c                     \
+                     driver/usb/input/hid-core.c   \
+                     dummy.c                       \
+		             driver/hid/hid-core.c         \
+		             driver/hid/hid-input.c       \
+		             driver/input/input.c
 			
 			
 
-LIBS			+= --whole-archive -lddeusb26 --no-whole-archive        \
+LIBS			+= --whole-archive -lddeusb26  --no-whole-archive  \
 			   -lddeusb          \
 			   -lusb_core_client \
 			   -ldde_linux26     \
@@ -37,7 +37,7 @@ LIBS			+= --whole-archive -lddeusb26 --no-whole-archive        \
 			   -lomega0 	     \
 			   -llist_alloc	 
 
-PRIVATE_INCDIR	= $(PKGDIR_ABS)/linux26/include \
+PRIVATE_INCDIR	= $(PKGDIR_ABS)/include \
 		  $(MY_DDE_INCDIR)              \
 		  $(MY_LINUX26_INCDIR)          \
 		  $(OBJ_BASE)/include/uclibc    \
@@ -48,7 +48,7 @@ PRIVATE_INCDIR	= $(PKGDIR_ABS)/linux26/include \
 
 
 LIBCINCDIR  = -nostdinc $(I_GCCINCDIR)
-DEFINES     = -DDDEUSB26_GADGET -DDEBUG -D__KERNEL__ -DDDE_LINUX   $(KBUILD_DEFINES)
+DEFINES     = -DDDEUSB26_GADGET -D__KERNEL__ -DDDE_LINUX   $(KBUILD_DEFINES)
 CPPFLAGS 	+= $(KBUILD_CPPFLAGS)
 
 include $(PKGDIR)/../dde/linux26/Makeconf

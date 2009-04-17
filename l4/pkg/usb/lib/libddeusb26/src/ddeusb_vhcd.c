@@ -26,8 +26,8 @@
 #include <l4/dm_mem/dm_mem.h>
 
 
-#include "../../../contrib/driver/usb/core/hcd.h"
-#include "../../../contrib/driver/usb/core/usb.h"
+#include "../../../common/contrib/drivers/usb/core/hcd.h"
+#include "../../../common/contrib/drivers/usb/core/usb.h"
 	
 //#define DDEUSB_DEBUG 1
 

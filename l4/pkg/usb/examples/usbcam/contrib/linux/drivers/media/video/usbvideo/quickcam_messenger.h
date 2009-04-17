@@ -1,6 +1,8 @@
 #ifndef quickcam_messenger_h
 #define quickcam_messenger_h
 
+#undef CONFIG_INPUT
+
 #ifndef CONFIG_INPUT
 /* if we're not using input we dummy out these functions */
 #define qcm_register_input(...)

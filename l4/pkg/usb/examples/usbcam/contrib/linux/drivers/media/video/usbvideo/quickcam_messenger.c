@@ -63,6 +63,7 @@ static const int debug;
 
 #define USB_LOGITECH_VENDOR_ID	0x046D
 #define USB_QCM_PRODUCT_ID	0x08F0
+#define MY_USB_QCM_PRODUCT_ID	0x08F6
 
 #define MAX_CAMERAS	1
 
@@ -82,7 +83,8 @@ static int whiteness =	MAX_WHITENESS;
 static struct usbvideo *cams;
 
 static struct usb_device_id qcm_table [] = {
-	{ USB_DEVICE(USB_LOGITECH_VENDOR_ID, USB_QCM_PRODUCT_ID) },
+	{ USB_DEVICE(USB_LOGITECH_VENDOR_ID, USB_QCM_PRODUCT_ID),
+	  USB_DEVICE(USB_LOGITECH_VENDOR_ID, MY_USB_QCM_PRODUCT_ID)},
 	{ }
 };
 MODULE_DEVICE_TABLE(usb, qcm_table);
@@ -1012,7 +1014,7 @@ good_videoep:
 		err("Couldn't read sensor values. Err %d\n",err);
 		return err;
 	}
-	if (sensor_id != cpu_to_le16(0x08F0)) {
+	if (sensor_id != cpu_to_le16(0x08F6)) {
 		err("Sensor ID %x != %x. Unsupported. Sorry\n",
 			le16_to_cpu(sensor_id), (0x08F0));
 		return -ENODEV;

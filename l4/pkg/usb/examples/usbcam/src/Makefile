@@ -17,6 +17,10 @@ DEFAULT_RELOC  = 0x03010000
 VPATH =  $(USB_CONTRIB_PATH):$(MY_CONTRIB_PATH)
 
 
+QUICKCAM_SRC_C =    linux/drivers/media/video/usbvideo/usbvideo.c \
+                    linux/drivers/media/video/usbvideo/quickcam_messenger.c
+
+
 UVCVIDEO_SRC_C =    linux/drivers/media/video/uvc/uvc_driver.c\
                     linux/drivers/media/video/uvc/uvc_queue.c\
                     linux/drivers/media/video/uvc/uvc_v4l2.c\
@@ -70,6 +74,7 @@ SRC_C           =   main.c \
 					$(V4L_SRC_C)\
 					$(CPIA_SRC_C) \
 					$(GSPCA_SRC_C) \
+					$(QUICKCAM_SRC_C) \
 					$(UVCVIDEO_SRC_C)
 
 LIBS			+= -ll4dope          \
