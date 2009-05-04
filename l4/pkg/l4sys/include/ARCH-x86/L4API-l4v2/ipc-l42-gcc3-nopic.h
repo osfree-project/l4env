@@ -131,7 +131,8 @@ l4_ipc_send_tag(l4_threadid_t dest,
      "c" (timeout),
      "S" (dest.raw),
      "D" (tag.raw)
-     );
+     :
+     "memory");
   return L4_IPC_ERROR(*result);
 }
 
