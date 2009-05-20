@@ -43,7 +43,10 @@ struct tvec_base boot_tvec_bases __attribute__((unused));
 
 static DEFINE_PER_CPU(struct tvec_base *, tvec_bases) __attribute__((unused)) = &boot_tvec_bases;
 
-void init_timer(struct timer_list *timer) { }
+void init_timer(struct timer_list *timer)
+{
+	timer->ddekit_timer_id = -1;
+}
 
 void add_timer(struct timer_list *timer)
 {

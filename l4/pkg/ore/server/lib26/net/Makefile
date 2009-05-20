@@ -41,6 +41,11 @@ E1000_FILES = e1000_hw.c e1000_main.c e1000_param.c e1000_ethtool.c
 src-$(CONFIG_ORE_E1000) += $(addprefix e1000/, $(E1000_FILES))
 PRIVATE_INCDIR-$(CONFIG_ORE_E1000) += $(PKGDIR)/server/lib26/net/e1000
 
+E1000E_FILES = 82571.c ethtool.c ich8lan.c param.c es2lan.c \
+			  lib.c netdev.c phy.c
+src-$(CONFIG_ORE_E1000E) += $(addprefix e1000e/, $(E1000E_FILES))
+PRIVATE_INCDIR-$(CONFIG_ORE_E1000E) += $(PKGDIR)/server/lib26/net/e1000e
+
 PHY_FILES = $(addprefix phy/, phy.c phy_device.c mdio_bus.c)
 
 SRC_C = loopback.c $(src-y) $(PHY_FILES)

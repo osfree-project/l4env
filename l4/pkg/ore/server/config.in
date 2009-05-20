@@ -11,7 +11,7 @@ if [ "$CONFIG_ORE_DDE24" == "y" ]; then
 		bool '  AMD PCNET32' CONFIG_ORE_PCNET32
 #		bool '  Broadcom Tigon3 support <BROKEN>' CONFIG_ORE_TIGON3
 		bool '  EtherexpressPro/100 support' CONFIG_ORE_EEPRO100
-		bool '  Intel Pro/1000 support' CONFIG_ORE_PRO1000
+		bool '  Intel Pro/1000 support (Linux e1000)' CONFIG_ORE_PRO1000
 		bool '  NE2000' CONFIG_ORE_NE2000
 		bool '  Tulip support'    CONFIG_ORE_TULIP
 		bool '  VIA Rhine support' CONFIG_ORE_RHINE
@@ -20,7 +20,8 @@ else
 		bool '  AMD PCNET32' CONFIG_ORE_PCNET32
 		bool '  Broadcom Tigon3 support'   CONFIG_ORE_TIGON3
 		bool '  EtherexpressPro/100 support' CONFIG_ORE_EEPRO100
-		bool '  E1000 chips support' CONFIG_ORE_E1000
+		bool '  E1000 chips support (Linux e1000)' CONFIG_ORE_E1000
+		bool '  Newer E1000 driver (Linux e1000e)' CONFIG_ORE_E1000E
 		bool '  NE2000'	CONFIG_ORE_NE2000
 		bool '  RealTek RTL-8139' CONFIG_ORE_RTL8139
 		bool '  RealTek RTL-8139C+' CONFIG_ORE_RTL8139CP
