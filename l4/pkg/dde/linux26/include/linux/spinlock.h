@@ -46,6 +46,7 @@
  *  linux/spinlock.h:     builds the final spin_*() APIs.
  */
 
+#include <linux/typecheck.h>
 #include <linux/preempt.h>
 #include <linux/linkage.h>
 #include <linux/compiler.h>
@@ -71,7 +72,7 @@
 #define LOCK_SECTION_END                        \
         ".previous\n\t"
 
-#define __lockfunc fastcall __attribute__((section(".spinlock.text")))
+#define __lockfunc __attribute__((section(".spinlock.text")))
 
 /*
  * Pull the raw_spinlock_t and raw_rwlock_t definitions:
@@ -120,6 +121,17 @@ do {								\
 #endif
 
 #define spin_is_locked(lock)	__raw_spin_is_locked(&(lock)->raw_lock)
+
+#ifdef CONFIG_GENERIC_LOCKBREAK
+#define spin_is_contended(lock) ((lock)->break_lock)
+#else
+
+#ifdef __raw_spin_is_contended
+#define spin_is_contended(lock)	__raw_spin_is_contended(&(lock)->raw_lock)
+#else
+#define spin_is_contended(lock)	(((void)(lock), 0))
+#endif /*__raw_spin_is_contended*/
+#endif
 
 /**
  * spin_unlock_wait - wait until the spinlock gets unlocked
@@ -177,8 +189,14 @@ do {								\
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 # define spin_lock_nested(lock, subclass) _spin_lock_nested(lock, subclass)
+# define spin_lock_nest_lock(lock, nest_lock)				\
+	 do {								\
+		 typecheck(struct lockdep_map *, &(nest_lock)->dep_map);\
+		 _spin_lock_nest_lock(lock, &(nest_lock)->dep_map);	\
+	 } while (0)
 #else
 # define spin_lock_nested(lock, subclass) _spin_lock(lock)
+# define spin_lock_nest_lock(lock, nest_lock) _spin_lock(lock)
 #endif
 
 #define write_lock(lock)		_write_lock(lock)
@@ -186,23 +204,53 @@ do {								\
 
 #if defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)
 
-#define spin_lock_irqsave(lock, flags)	flags = _spin_lock_irqsave(lock)
-#define read_lock_irqsave(lock, flags)	flags = _read_lock_irqsave(lock)
-#define write_lock_irqsave(lock, flags)	flags = _write_lock_irqsave(lock)
+#define spin_lock_irqsave(lock, flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		flags = _spin_lock_irqsave(lock);	\
+	} while (0)
+#define read_lock_irqsave(lock, flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		flags = _read_lock_irqsave(lock);	\
+	} while (0)
+#define write_lock_irqsave(lock, flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		flags = _write_lock_irqsave(lock);	\
+	} while (0)
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
-#define spin_lock_irqsave_nested(lock, flags, subclass) \
-	flags = _spin_lock_irqsave_nested(lock, subclass)
+#define spin_lock_irqsave_nested(lock, flags, subclass)			\
+	do {								\
+		typecheck(unsigned long, flags);			\
+		flags = _spin_lock_irqsave_nested(lock, subclass);	\
+	} while (0)
 #else
-#define spin_lock_irqsave_nested(lock, flags, subclass) \
-	flags = _spin_lock_irqsave(lock)
+#define spin_lock_irqsave_nested(lock, flags, subclass)			\
+	do {								\
+		typecheck(unsigned long, flags);			\
+		flags = _spin_lock_irqsave(lock);			\
+	} while (0)
 #endif
 
 #else
 
-#define spin_lock_irqsave(lock, flags)	_spin_lock_irqsave(lock, flags)
-#define read_lock_irqsave(lock, flags)	_read_lock_irqsave(lock, flags)
-#define write_lock_irqsave(lock, flags)	_write_lock_irqsave(lock, flags)
+#define spin_lock_irqsave(lock, flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		_spin_lock_irqsave(lock, flags);	\
+	} while (0)
+#define read_lock_irqsave(lock, flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		_read_lock_irqsave(lock, flags);	\
+	} while (0)
+#define write_lock_irqsave(lock, flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		_write_lock_irqsave(lock, flags);	\
+	} while (0)
 #define spin_lock_irqsave_nested(lock, flags, subclass)	\
 	spin_lock_irqsave(lock, flags)
 
@@ -229,27 +277,51 @@ do {								\
 # define read_unlock_irq(lock)		_read_unlock_irq(lock)
 # define write_unlock_irq(lock)		_write_unlock_irq(lock)
 #else
-# define spin_unlock(lock)		__raw_spin_unlock(&(lock)->raw_lock)
-# define read_unlock(lock)		__raw_read_unlock(&(lock)->raw_lock)
-# define write_unlock(lock)		__raw_write_unlock(&(lock)->raw_lock)
-# define spin_unlock_irq(lock) \
-    do { __raw_spin_unlock(&(lock)->raw_lock); local_irq_enable(); } while (0)
-# define read_unlock_irq(lock) \
-    do { __raw_read_unlock(&(lock)->raw_lock); local_irq_enable(); } while (0)
-# define write_unlock_irq(lock) \
-    do { __raw_write_unlock(&(lock)->raw_lock); local_irq_enable(); } while (0)
+# define spin_unlock(lock) \
+    do {__raw_spin_unlock(&(lock)->raw_lock); __release(lock); } while (0)
+# define read_unlock(lock) \
+    do {__raw_read_unlock(&(lock)->raw_lock); __release(lock); } while (0)
+# define write_unlock(lock) \
+    do {__raw_write_unlock(&(lock)->raw_lock); __release(lock); } while (0)
+# define spin_unlock_irq(lock)			\
+do {						\
+	__raw_spin_unlock(&(lock)->raw_lock);	\
+	__release(lock);			\
+	local_irq_enable();			\
+} while (0)
+# define read_unlock_irq(lock)			\
+do {						\
+	__raw_read_unlock(&(lock)->raw_lock);	\
+	__release(lock);			\
+	local_irq_enable();			\
+} while (0)
+# define write_unlock_irq(lock)			\
+do {						\
+	__raw_write_unlock(&(lock)->raw_lock);	\
+	__release(lock);			\
+	local_irq_enable();			\
+} while (0)
 #endif
 
-#define spin_unlock_irqrestore(lock, flags) \
-					_spin_unlock_irqrestore(lock, flags)
+#define spin_unlock_irqrestore(lock, flags)		\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		_spin_unlock_irqrestore(lock, flags);	\
+	} while (0)
 #define spin_unlock_bh(lock)		_spin_unlock_bh(lock)
 
-#define read_unlock_irqrestore(lock, flags) \
-					_read_unlock_irqrestore(lock, flags)
+#define read_unlock_irqrestore(lock, flags)		\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		_read_unlock_irqrestore(lock, flags);	\
+	} while (0)
 #define read_unlock_bh(lock)		_read_unlock_bh(lock)
 
-#define write_unlock_irqrestore(lock, flags) \
-					_write_unlock_irqrestore(lock, flags)
+#define write_unlock_irqrestore(lock, flags)		\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		_write_unlock_irqrestore(lock, flags);	\
+	} while (0)
 #define write_unlock_bh(lock)		_write_unlock_bh(lock)
 
 #define spin_trylock_bh(lock)	__cond_lock(lock, _spin_trylock_bh(lock))
@@ -268,6 +340,13 @@ do {								\
 	1 : ({ local_irq_restore(flags); 0; }); \
 })
 
+#define write_trylock_irqsave(lock, flags) \
+({ \
+	local_irq_save(flags); \
+	write_trylock(lock) ? \
+	1 : ({ local_irq_restore(flags); 0; }); \
+})
+
 /*
  * Pull the atomic_t declaration:
  * (asm-mips/atomic.h needs above definitions)
@@ -277,6 +356,9 @@ do {								\
  * atomic_dec_and_lock - lock on reaching reference count zero
  * @atomic: the atomic counter
  * @lock: the spinlock in question
+ *
+ * Decrements @atomic by 1.  If the result is 0, returns true and locks
+ * @lock.  Returns false for all other cases.
  */
 extern int _atomic_dec_and_lock(atomic_t *atomic, spinlock_t *lock);
 #define atomic_dec_and_lock(atomic, lock) \
@@ -360,7 +442,9 @@ static int __lockfunc spin_trylock(spinlock_t *lock)
 	return ddekit_lock_try_lock(&lock->ddekit_lock) == 0;
 }
 
+#define _raw_spin_lock(l) spin_lock(l)
 #define _raw_spin_unlock(l) spin_unlock(l)
+#define _raw_spin_trylock(l) spin_trylock(l)
 
 #define spin_trylock_irqsave(lock, flags) \
 ({ \
@@ -373,7 +457,7 @@ static int __lockfunc spin_trylock(spinlock_t *lock)
 #define write_trylock(l) read_trylock(l)
 
 #define spin_is_locked(x) \
-		(ddekit_lock_owner(&(x)->ddekit_lock) != -1)
+		(ddekit_lock_owner(&(x)->ddekit_lock) != 0)
 
 #define assert_spin_locked(x)   BUG_ON(!spin_is_locked(x))
 

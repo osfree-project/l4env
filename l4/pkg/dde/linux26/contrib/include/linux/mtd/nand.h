@@ -1,11 +1,9 @@
 /*
  *  linux/include/linux/mtd/nand.h
  *
- *  Copyright (c) 2000 David Woodhouse <dwmw2@mvhi.com>
+ *  Copyright (c) 2000 David Woodhouse <dwmw2@infradead.org>
  *                     Steven J. Hill <sjhill@realitydiluted.com>
  *		       Thomas Gleixner <tglx@linutronix.de>
- *
- * $Id: nand.h,v 1.74 2005/09/15 13:58:50 vwool Exp $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -179,6 +177,9 @@ typedef enum {
 #define NAND_MUST_PAD(chip) (!(chip->options & NAND_NO_PADDING))
 #define NAND_HAS_CACHEPROG(chip) ((chip->options & NAND_CACHEPRG))
 #define NAND_HAS_COPYBACK(chip) ((chip->options & NAND_COPYBACK))
+/* Large page NAND with SOFT_ECC should support subpage reads */
+#define NAND_SUBPAGE_READ(chip) ((chip->ecc.mode == NAND_ECC_SOFT) \
+					&& (chip->page_shift > 9))
 
 /* Mask to zero out the chip options, which come from the id table */
 #define NAND_CHIPOPTIONS_MSK	(0x0000ffff & ~NAND_NO_AUTOINCR)
@@ -247,6 +248,7 @@ struct nand_hw_control {
  * @read_page_raw:	function to read a raw page without ECC
  * @write_page_raw:	function to write a raw page without ECC
  * @read_page:	function to read a page according to the ecc generator requirements
+ * @read_subpage:	function to read parts of the page covered by ECC.
  * @write_page:	function to write a page according to the ecc generator requirements
  * @read_oob:	function to read chip OOB data
  * @write_oob:	function to write chip OOB data
@@ -275,6 +277,10 @@ struct nand_ecc_ctrl {
 						  const uint8_t *buf);
 	int			(*read_page)(struct mtd_info *mtd,
 					     struct nand_chip *chip,
+					     uint8_t *buf);
+	int			(*read_subpage)(struct mtd_info *mtd,
+					     struct nand_chip *chip,
+					     uint32_t offs, uint32_t len,
 					     uint8_t *buf);
 	void			(*write_page)(struct mtd_info *mtd,
 					      struct nand_chip *chip,
@@ -329,20 +335,16 @@ struct nand_buffers {
  * @erase_cmd:		[INTERN] erase command write function, selectable due to AND support
  * @scan_bbt:		[REPLACEABLE] function to scan bad block table
  * @chip_delay:		[BOARDSPECIFIC] chip dependent delay for transfering data from array to read regs (tR)
- * @wq:			[INTERN] wait queue to sleep on if a NAND operation is in progress
  * @state:		[INTERN] the current state of the NAND device
  * @oob_poi:		poison value buffer
  * @page_shift:		[INTERN] number of address bits in a page (column address bits)
  * @phys_erase_shift:	[INTERN] number of address bits in a physical eraseblock
  * @bbt_erase_shift:	[INTERN] number of address bits in a bbt entry
  * @chip_shift:		[INTERN] number of address bits in one chip
- * @datbuf:		[INTERN] internal buffer for one page + oob
- * @oobbuf:		[INTERN] oob buffer for one eraseblock
- * @oobdirty:		[INTERN] indicates that oob_buf must be reinitialized
- * @data_poi:		[INTERN] pointer to a data buffer
  * @options:		[BOARDSPECIFIC] various chip options. They can partly be set to inform nand_scan about
  *			special functionality. See the defines for further explanation
  * @badblockpos:	[INTERN] position of the bad block marker in the oob area
+ * @cellinfo:		[INTERN] MLC/multichip data from chip ident
  * @numchips:		[INTERN] number of physical chips
  * @chipsize:		[INTERN] the size of one chip for multichip arrays
  * @pagemask:		[INTERN] page number mask = number of (pages / chip) - 1
@@ -392,7 +394,7 @@ struct nand_chip {
 	int		bbt_erase_shift;
 	int		chip_shift;
 	int		numchips;
-	unsigned long	chipsize;
+	uint64_t	chipsize;
 	int		pagemask;
 	int		pagebuf;
 	int		subpagesize;
@@ -430,6 +432,8 @@ struct nand_chip {
 #define NAND_MFR_RENESAS	0x07
 #define NAND_MFR_STMICRO	0x20
 #define NAND_MFR_HYNIX		0xad
+#define NAND_MFR_MICRON		0x2c
+#define NAND_MFR_AMD		0x01
 
 /**
  * struct nand_flash_dev - NAND Flash Device ID Structure
@@ -558,6 +562,7 @@ extern int nand_do_read(struct mtd_info *mtd, loff_t from, size_t len,
  * @chip_delay:		R/B delay value in us
  * @options:		Option flags, e.g. 16bit buswidth
  * @ecclayout:		ecc layout info structure
+ * @part_probe_types:	NULL-terminated array of probe types
  * @priv:		hardware controller specific settings
  */
 struct platform_nand_chip {
@@ -568,6 +573,7 @@ struct platform_nand_chip {
 	struct nand_ecclayout	*ecclayout;
 	int			chip_delay;
 	unsigned int		options;
+	const char		**part_probe_types;
 	void			*priv;
 };
 
@@ -576,6 +582,8 @@ struct platform_nand_chip {
  * @hwcontrol:		platform specific hardware control structure
  * @dev_ready:		platform specific function to read ready/busy pin
  * @select_chip:	platform specific chip select function
+ * @cmd_ctrl:		platform specific function for controlling
+ *			ALE/CLE/nCE. Also used to write command and address
  * @priv:		private data to transport driver specific settings
  *
  * All fields are optional and depend on the hardware driver requirements
@@ -584,7 +592,19 @@ struct platform_nand_ctrl {
 	void		(*hwcontrol)(struct mtd_info *mtd, int cmd);
 	int		(*dev_ready)(struct mtd_info *mtd);
 	void		(*select_chip)(struct mtd_info *mtd, int chip);
+	void		(*cmd_ctrl)(struct mtd_info *mtd, int dat,
+				    unsigned int ctrl);
 	void		*priv;
+};
+
+/**
+ * struct platform_nand_data - container structure for platform-specific data
+ * @chip:		chip level chip structure
+ * @ctrl:		controller level device structure
+ */
+struct platform_nand_data {
+	struct platform_nand_chip	chip;
+	struct platform_nand_ctrl	ctrl;
 };
 
 /* Some helpers to access the data structures */

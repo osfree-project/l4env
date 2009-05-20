@@ -25,13 +25,12 @@ static struct softirq_action softirq_vec[32];
 struct tasklet_head tasklet_vec;
 struct tasklet_head tasklet_hi_vec;
 
-void open_softirq(int nr, void (*action)(struct softirq_action*), void *data)
+void open_softirq(int nr, void (*action)(struct softirq_action*))
 {
 	softirq_vec[nr].action = action;
-	softirq_vec[nr].data   = data;
 }
 
-static void fastcall raise_softirq_irqoff_cpu(unsigned int nr, unsigned int cpu)
+static void raise_softirq_irqoff_cpu(unsigned int nr, unsigned int cpu)
 {
 	CHECK_INITVAR(dde26_softirq);
 
@@ -41,12 +40,12 @@ static void fastcall raise_softirq_irqoff_cpu(unsigned int nr, unsigned int cpu)
 	ddekit_sem_up(dde_softirq_sem);
 }
 
-void fastcall raise_softirq_irqoff(unsigned int nr)
+void raise_softirq_irqoff(unsigned int nr)
 {
 	raise_softirq_irqoff_cpu(nr, 0);
 }
 
-void fastcall raise_softirq(unsigned int nr)
+void raise_softirq(unsigned int nr)
 {
 	unsigned long flags;
 
@@ -78,7 +77,7 @@ static void __tasklet_enqueue(struct tasklet_struct *t,
 	ddekit_lock_unlock(&listhead->lock);
 }
 
-void fastcall __tasklet_schedule(struct tasklet_struct *t)
+void __tasklet_schedule(struct tasklet_struct *t)
 {
 	unsigned long flags;
 
@@ -93,7 +92,7 @@ void fastcall __tasklet_schedule(struct tasklet_struct *t)
 	local_irq_restore(flags);
 }
 
-void fastcall __tasklet_hi_schedule(struct tasklet_struct *t)
+void __tasklet_hi_schedule(struct tasklet_struct *t)
 {
 	unsigned long flags;
 
@@ -178,7 +177,7 @@ static void tasklet_hi_action(struct softirq_action *a)
 
 /** Run softirq handlers 
  */
-static void __do_softirq(void)
+void __do_softirq(void)
 {
 	int retries = MAX_SOFTIRQ_RETRIES;
 	do {
@@ -261,8 +260,8 @@ void l4dde26_softirq_init(void)
 	                           l4dde26_softirq_thread,
 	                           NULL, name);
 
-	open_softirq(TASKLET_SOFTIRQ, tasklet_action, NULL);
-	open_softirq(HI_SOFTIRQ, tasklet_hi_action, NULL);
+	open_softirq(TASKLET_SOFTIRQ, tasklet_action);
+	open_softirq(HI_SOFTIRQ, tasklet_hi_action);
 
 	INITIALIZE_INITVAR(dde26_softirq);
 }

@@ -7,8 +7,6 @@
  * Andy Adamson <andros@umich.edu>
  * Bruce Fields <bfields@umich.edu>
  * Copyright (c) 2000 The Regents of the University of Michigan
- *
- * $Id$
  */
 
 #ifndef _LINUX_SUNRPC_AUTH_GSS_H
@@ -75,6 +73,7 @@ struct gss_cl_ctx {
 	struct xdr_netobj	gc_wire_ctx;
 	u32			gc_win;
 	unsigned long		gc_expiry;
+	struct rcu_head		gc_rcu;
 };
 
 struct gss_upcall_msg;
@@ -83,12 +82,8 @@ struct gss_cred {
 	enum rpc_gss_svc	gc_service;
 	struct gss_cl_ctx	*gc_ctx;
 	struct gss_upcall_msg	*gc_upcall;
+	unsigned char		gc_machine_cred : 1;
 };
-
-#define gc_uid			gc_base.cr_uid
-#define gc_count		gc_base.cr_count
-#define gc_flags		gc_base.cr_flags
-#define gc_expire		gc_base.cr_expire
 
 #endif /* __KERNEL__ */
 #endif /* _LINUX_SUNRPC_AUTH_GSS_H */

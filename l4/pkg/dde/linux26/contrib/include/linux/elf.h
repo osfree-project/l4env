@@ -2,9 +2,10 @@
 #define _LINUX_ELF_H
 
 #include <linux/types.h>
-#include <linux/auxvec.h>
 #include <linux/elf-em.h>
+#ifdef __KERNEL__
 #include <asm/elf.h>
+#endif
 
 struct file;
 
@@ -83,6 +84,23 @@ typedef __s64	Elf64_Sxword;
 #define DT_DEBUG	21
 #define DT_TEXTREL	22
 #define DT_JMPREL	23
+#define DT_ENCODING	32
+#define OLD_DT_LOOS	0x60000000
+#define DT_LOOS		0x6000000d
+#define DT_HIOS		0x6ffff000
+#define DT_VALRNGLO	0x6ffffd00
+#define DT_VALRNGHI	0x6ffffdff
+#define DT_ADDRRNGLO	0x6ffffe00
+#define DT_ADDRRNGHI	0x6ffffeff
+#define DT_VERSYM	0x6ffffff0
+#define DT_RELACOUNT	0x6ffffff9
+#define DT_RELCOUNT	0x6ffffffa
+#define DT_FLAGS_1	0x6ffffffb
+#define DT_VERDEF	0x6ffffffc
+#define	DT_VERDEFNUM	0x6ffffffd
+#define DT_VERNEED	0x6ffffffe
+#define	DT_VERNEEDNUM	0x6fffffff
+#define OLD_DT_HIOS     0x6fffffff
 #define DT_LOPROC	0x70000000
 #define DT_HIPROC	0x7fffffff
 
@@ -190,7 +208,7 @@ typedef struct elf32_hdr{
 } Elf32_Ehdr;
 
 typedef struct elf64_hdr {
-  unsigned char	e_ident[16];		/* ELF "magic number" */
+  unsigned char	e_ident[EI_NIDENT];	/* ELF "magic number" */
   Elf64_Half e_type;
   Elf64_Half e_machine;
   Elf64_Word e_version;
@@ -338,6 +356,11 @@ typedef struct elf64_shdr {
 #define NT_TASKSTRUCT	4
 #define NT_AUXV		6
 #define NT_PRXFPREG     0x46e62b7f      /* copied from gdb5.1/include/elf/common.h */
+#define NT_PPC_VMX	0x100		/* PowerPC Altivec/VMX registers */
+#define NT_PPC_SPE	0x101		/* PowerPC SPE/EVR registers */
+#define NT_PPC_VSX	0x102		/* PowerPC VSX registers */
+#define NT_386_TLS	0x200		/* i386 TLS slots (struct user_desc) */
+#define NT_386_IOPERM	0x201		/* x86 io permission bitmap (1=deny) */
 
 
 /* Note header in a PT_NOTE section */
@@ -354,6 +377,7 @@ typedef struct elf64_note {
   Elf64_Word n_type;	/* Content type */
 } Elf64_Nhdr;
 
+#ifdef __KERNEL__
 #if ELF_CLASS == ELFCLASS32
 
 extern Elf32_Dyn _DYNAMIC [];
@@ -372,12 +396,14 @@ extern Elf64_Dyn _DYNAMIC [];
 
 #endif
 
+/* Optional callbacks to write extra ELF notes. */
 #ifndef ARCH_HAVE_EXTRA_ELF_NOTES
-static inline int arch_notes_size(void) { return 0; }
-static inline void arch_write_notes(struct file *file) { }
-
-#define ELF_CORE_EXTRA_NOTES_SIZE arch_notes_size()
-#define ELF_CORE_WRITE_EXTRA_NOTES arch_write_notes(file)
-#endif /* ARCH_HAVE_EXTRA_ELF_NOTES */
-
+static inline int elf_coredump_extra_notes_size(void) { return 0; }
+static inline int elf_coredump_extra_notes_write(struct file *file,
+			loff_t *foffset) { return 0; }
+#else
+extern int elf_coredump_extra_notes_size(void);
+extern int elf_coredump_extra_notes_write(struct file *file, loff_t *foffset);
+#endif
+#endif /* __KERNEL__ */
 #endif /* _LINUX_ELF_H */

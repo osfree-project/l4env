@@ -23,9 +23,9 @@
 #include <linux/coda_fs_i.h>
 
 /* operations */
-extern struct inode_operations coda_dir_inode_operations;
-extern struct inode_operations coda_file_inode_operations;
-extern struct inode_operations coda_ioctl_inode_operations;
+extern const struct inode_operations coda_dir_inode_operations;
+extern const struct inode_operations coda_file_inode_operations;
+extern const struct inode_operations coda_ioctl_inode_operations;
 
 extern const struct address_space_operations coda_file_aops;
 extern const struct address_space_operations coda_symlink_aops;
@@ -36,20 +36,13 @@ extern const struct file_operations coda_ioctl_operations;
 
 /* operations shared over more than one file */
 int coda_open(struct inode *i, struct file *f);
-int coda_flush(struct file *f, fl_owner_t id);
 int coda_release(struct inode *i, struct file *f);
-int coda_permission(struct inode *inode, int mask, struct nameidata *nd);
+int coda_permission(struct inode *inode, int mask);
 int coda_revalidate_inode(struct dentry *);
 int coda_getattr(struct vfsmount *, struct dentry *, struct kstat *);
 int coda_setattr(struct dentry *, struct iattr *);
 
-/* global variables */
-extern int coda_fake_statfs;
-
 /* this file:  heloers */
-static __inline__ struct CodaFid *coda_i2f(struct inode *);
-static __inline__ char *coda_i2s(struct inode *);
-static __inline__ void coda_flag_inode(struct inode *, int flag);
 char *coda_f2s(struct CodaFid *f);
 int coda_isroot(struct inode *i);
 int coda_iscontrol(const char *name, size_t length);

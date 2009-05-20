@@ -11,15 +11,17 @@ unsigned long __per_cpu_offset[NR_CPUS];
 extern void driver_init(void);
 extern int classes_init(void);
 
-/* XXX consider to remove this function to keep the advantage of fine-grained
- * module init/usage, e.g., in l4io and l4input */
-void l4dde26_init(void)
+void __init __attribute__((used)) l4dde26_init(void)
 {
 	/* first, initialize DDEKit */
 	ddekit_init();
 
+	l4dde26_kmalloc_init();
+
 	/* Init Linux driver framework before trying to add PCI devs to the bus */
 	driver_init();
+
+	printk("Initialized DDELinux 2.6\n");
 }
 
 void l4dde26_do_initcalls(void)
@@ -27,3 +29,5 @@ void l4dde26_do_initcalls(void)
 	/* finally, let DDEKit perform all the initcalls */
 	ddekit_do_initcalls();
 }
+
+dde_initcall(l4dde26_init);

@@ -52,8 +52,12 @@ static void irq_handler(void *arg)
 	DEBUG_MSG("irq 0x%x", irq->irq);
 #endif
 	/* interrupt occurred - call all handlers */
-	for (action = irq->action; action; action = action->next)
-		action->handler(action->irq, action->dev_id);
+	for (action = irq->action; action; action = action->next) {
+		irqreturn_t r = action->handler(action->irq, action->dev_id);
+#if 0
+		DEBUG_MSG("return: %s", r == IRQ_HANDLED ? "IRQ_HANDLED" : r == IRQ_NONE ? "IRQ_NONE" : "??");
+#endif
+	}
 
 	/* upon return we check for pending soft irqs */
 	if (local_softirq_pending())
@@ -75,7 +79,7 @@ static void irq_handler(void *arg)
  */
 static int claim_irq(struct irqaction *action)
 {
-	int shared = action->flags & SA_SHIRQ ? 1 : 0;
+	int shared = action->flags & IRQF_SHARED ? 1 : 0;
 	struct dde_irq *irq;
 
 	/* check if IRQ already used */
@@ -123,11 +127,46 @@ static int claim_irq(struct irqaction *action)
  *
  * \return usage counter or negative error code
  */
-static int release_irq(unsigned irq_num)
+static struct irqaction *release_irq(unsigned irq_num, void *dev_id)
 {
-	WARN_UNIMPL;
+	struct dde_irq *prev_irq, *irq;
 
-	return -EPERM;
+	/* check if IRQ already used */
+	for (prev_irq = 0, irq = used_irqs; irq;
+	     prev_irq = irq, irq = irq->next)
+		if (irq->irq == irq_num) break;
+
+	if (!irq) return 0;
+
+	struct irqaction *prev_action, *action;
+
+	for (prev_action = 0, action = irq->action; action;
+	     prev_action = action, action = action->next)
+		if (action->dev_id == dev_id) break;
+
+	if (!action) return 0;
+
+	/* dequeue action from irq */
+	if (prev_action)
+		prev_action->next = action->next;
+	else
+		irq->action = action->next;
+
+	/* dequeue irq from used_irqs list and free structure,
+	   if no more actions available */
+	if (!irq->action) {
+		if (prev_irq)
+			prev_irq->next = irq->next;
+		else
+			used_irqs = irq->next;
+
+		/* detach from interrupt */
+		ddekit_interrupt_detach(irq->irq);
+
+		ddekit_simple_free(irq);
+	}
+
+  return action;
 }
 
 
@@ -180,10 +219,10 @@ int request_irq(unsigned int irq, irq_handler_t handler,
  */
 void free_irq(unsigned int irq, void *dev_id)
 {
-	/* FIXME Release IRQ */
-	/* FIXME Maybe, stop IRQ thread */
+	struct irqaction *irq_action = release_irq(irq, dev_id);
 
-	WARN_UNIMPL;
+	if (irq_action)
+		ddekit_simple_free(irq_action);
 }
 
 void disable_irq(unsigned int irq)

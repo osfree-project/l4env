@@ -4,7 +4,7 @@
 /*
  *   ALSA driver for TEA5757/5759 Philips AM/FM tuner chips
  *
- *	Copyright (c) 2004 Jaroslav Kysela <perex@suse.cz>
+ *	Copyright (c) 2004 Jaroslav Kysela <perex@perex.cz>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -30,18 +30,20 @@ struct snd_tea575x;
 struct snd_tea575x_ops {
 	void (*write)(struct snd_tea575x *tea, unsigned int val);
 	unsigned int (*read)(struct snd_tea575x *tea);
+	void (*mute)(struct snd_tea575x *tea, unsigned int mute);
 };
 
 struct snd_tea575x {
 	struct snd_card *card;
 	struct video_device vd;		/* video device */
-	struct file_operations fops;
+	struct v4l2_file_operations fops;
 	int dev_nr;			/* requested device number + 1 */
 	int vd_registered;		/* video device is registered */
 	int tea5759;			/* 5759 chip is present */
 	unsigned int freq_fixup;	/* crystal onboard */
 	unsigned int val;		/* hw value */
 	unsigned long freq;		/* frequency */
+	unsigned long in_use;		/* set if the device is in use */
 	struct snd_tea575x_ops *ops;
 	void *private_data;
 };

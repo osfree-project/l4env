@@ -15,12 +15,23 @@
 #include <linux/module.h>
 
 /**
+ * kref_set - initialize object and set refcount to requested number.
+ * @kref: object in question.
+ * @num: initial reference counter
+ */
+void kref_set(struct kref *kref, int num)
+{
+	atomic_set(&kref->refcount, num);
+	smp_mb();
+}
+
+/**
  * kref_init - initialize object.
  * @kref: object in question.
  */
 void kref_init(struct kref *kref)
 {
-	atomic_set(&kref->refcount,1);
+	kref_set(kref, 1);
 }
 
 /**
@@ -31,6 +42,7 @@ void kref_get(struct kref *kref)
 {
 	WARN_ON(!atomic_read(&kref->refcount));
 	atomic_inc(&kref->refcount);
+	smp_mb__after_atomic_inc();
 }
 
 /**
@@ -59,6 +71,7 @@ int kref_put(struct kref *kref, void (*release)(struct kref *kref))
 	return 0;
 }
 
+EXPORT_SYMBOL(kref_set);
 EXPORT_SYMBOL(kref_init);
 EXPORT_SYMBOL(kref_get);
 EXPORT_SYMBOL(kref_put);

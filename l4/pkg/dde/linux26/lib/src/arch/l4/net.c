@@ -34,4 +34,3 @@ linux_rx_callback l4dde26_register_rx_callback(linux_rx_callback cb)
 
 	return old;
 }
-

@@ -19,86 +19,75 @@
 struct cache_sizes {
 	size_t		 	cs_size;
 	struct kmem_cache	*cs_cachep;
+#ifdef CONFIG_ZONE_DMA
 	struct kmem_cache	*cs_dmacachep;
+#endif
 };
 
 #ifndef DDE_LINUX
 extern struct cache_sizes malloc_sizes[];
 #endif
+void *kmem_cache_alloc(struct kmem_cache *, gfp_t);
+void *__kmalloc(size_t size, gfp_t flags);
 
 static inline void *kmalloc(size_t size, gfp_t flags)
 {
 #ifndef DDE_LINUX
 	if (__builtin_constant_p(size)) {
 		int i = 0;
+
+		if (!size)
+			return ZERO_SIZE_PTR;
+
 #define CACHE(x) \
 		if (size <= x) \
 			goto found; \
 		else \
 			i++;
-#include "kmalloc_sizes.h"
+#include <linux/kmalloc_sizes.h>
 #undef CACHE
-		{
-			extern void __you_cannot_kmalloc_that_much(void);
-			__you_cannot_kmalloc_that_much();
-		}
+		return NULL;
 found:
-		return kmem_cache_alloc((flags & GFP_DMA) ?
-			malloc_sizes[i].cs_dmacachep :
-			malloc_sizes[i].cs_cachep, flags);
+#ifdef CONFIG_ZONE_DMA
+		if (flags & GFP_DMA)
+			return kmem_cache_alloc(malloc_sizes[i].cs_dmacachep,
+						flags);
+#endif
+		return kmem_cache_alloc(malloc_sizes[i].cs_cachep, flags);
 	}
 #endif
 	return __kmalloc(size, flags);
 }
 
-static inline void *kzalloc(size_t size, gfp_t flags)
-{
-#ifndef DDE_LINUX
-	if (__builtin_constant_p(size)) {
-		int i = 0;
-#define CACHE(x) \
-		if (size <= x) \
-			goto found; \
-		else \
-			i++;
-#include "kmalloc_sizes.h"
-#undef CACHE
-		{
-			extern void __you_cannot_kzalloc_that_much(void);
-			__you_cannot_kzalloc_that_much();
-		}
-found:
-		return kmem_cache_zalloc((flags & GFP_DMA) ?
-			malloc_sizes[i].cs_dmacachep :
-			malloc_sizes[i].cs_cachep, flags);
-	}
-#endif
-	return __kzalloc(size, flags);
-}
-
 #ifdef CONFIG_NUMA
 extern void *__kmalloc_node(size_t size, gfp_t flags, int node);
+extern void *kmem_cache_alloc_node(struct kmem_cache *, gfp_t flags, int node);
 
 static inline void *kmalloc_node(size_t size, gfp_t flags, int node)
 {
 #ifndef DDE_LINUX
 	if (__builtin_constant_p(size)) {
 		int i = 0;
+
+		if (!size)
+			return ZERO_SIZE_PTR;
+
 #define CACHE(x) \
 		if (size <= x) \
 			goto found; \
 		else \
 			i++;
-#include "kmalloc_sizes.h"
+#include <linux/kmalloc_sizes.h>
 #undef CACHE
-		{
-			extern void __you_cannot_kmalloc_that_much(void);
-			__you_cannot_kmalloc_that_much();
-		}
+		return NULL;
 found:
-		return kmem_cache_alloc_node((flags & GFP_DMA) ?
-			malloc_sizes[i].cs_dmacachep :
-			malloc_sizes[i].cs_cachep, flags, node);
+#ifdef CONFIG_ZONE_DMA
+		if (flags & GFP_DMA)
+			return kmem_cache_alloc_node(malloc_sizes[i].cs_dmacachep,
+						flags, node);
+#endif
+		return kmem_cache_alloc_node(malloc_sizes[i].cs_cachep,
+						flags, node);
 	}
 #endif
 	return __kmalloc_node(size, flags, node);

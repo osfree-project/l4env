@@ -27,6 +27,9 @@ void ddekit_pci_init(void);
 
 int ddekit_pci_get_device(int nr, int *bus, int *slot, int *func);
 
+int ddekit_pci_read(int bus, int slot, int func, int pos, int len, ddekit_uint32_t *val);
+int ddekit_pci_write(int bus, int slot, int func, int pos, int len, ddekit_uint32_t val);
+
 /** Read byte from PCI config space.
  *
  * \ingroup DDEKit_pci
@@ -191,5 +194,6 @@ char          *ddekit_pci_get_slot_name(struct ddekit_pci_dev *dev);
  */
 ddekit_pci_res_t *ddekit_pci_get_resource(struct ddekit_pci_dev *dev, unsigned int idx);
 
+int ddekit_pci_irq_enable(int bus, int slot, int func, int pin, int *irq);
 
 #endif // _ddekit_pci_h

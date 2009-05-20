@@ -112,9 +112,6 @@ void dde_page_cache_remove(struct page *p)
 struct page* dde_page_lookup(unsigned long va)
 {
 	unsigned int hashval = VIRT_TO_PAGEHASH(va);
-#if DEBUG_PAGE_ALLOC
-	DEBUG_MSG("%p", (void*)va);
-#endif
 
 	struct hlist_node *hn = NULL;
 	struct hlist_head *h  = &dde_page_cache[hashval];
@@ -129,8 +126,8 @@ struct page* dde_page_lookup(unsigned long va)
 }
 
 
-struct page * fastcall __alloc_pages(gfp_t gfp_mask, unsigned int order,
-                                     struct zonelist *zonelist)
+struct page * __alloc_pages_internal(gfp_t gfp_mask, unsigned int order,
+                                     struct zonelist *zonelist, nodemask_t *nm)
 {
 	/* XXX: In fact, according to order, we should have one struct page
 	 *      for every page, not only for the first one.
@@ -144,7 +141,7 @@ struct page * fastcall __alloc_pages(gfp_t gfp_mask, unsigned int order,
 }
 
 
-fastcall unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
+unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 {
 	ddekit_log(DEBUG_PAGE_ALLOC, "gfp_mask=%x order=%d (%d bytes)",
 	           gfp_mask, order, PAGE_SIZE << order);
@@ -156,7 +153,7 @@ fastcall unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 }
 
 
-fastcall unsigned long get_zeroed_page(gfp_t gfp_mask)
+unsigned long get_zeroed_page(gfp_t gfp_mask)
 {
 	unsigned long p = __get_free_pages(gfp_mask, 0);
 
@@ -166,7 +163,7 @@ fastcall unsigned long get_zeroed_page(gfp_t gfp_mask)
 }
 
 
-void fastcall free_hot_page(struct page *page)
+void free_hot_page(struct page *page)
 {
 	WARN_UNIMPL;
 }
@@ -175,7 +172,7 @@ void fastcall free_hot_page(struct page *page)
  * XXX: If alloc_pages() gets fixed to allocate a page struct per page,
  *      this needs to be adapted, too.
  */
-fastcall void __free_pages(struct page *page, unsigned int order)
+void __free_pages(struct page *page, unsigned int order)
 {
 	free_pages((unsigned long)page->virtual, order);
 	dde_page_cache_remove(page);
@@ -200,7 +197,7 @@ int get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
  * XXX order may be larger than allocation at 'addr' - it may comprise several
  * allocation via __get_free_pages()!
  */
-fastcall void free_pages(unsigned long addr, unsigned int order)
+void free_pages(unsigned long addr, unsigned int order)
 {
 	ddekit_log(DEBUG_PAGE_ALLOC, "addr=%p order=%d", (void *)addr, order);
 
@@ -208,13 +205,7 @@ fastcall void free_pages(unsigned long addr, unsigned int order)
 }
 
 
-unsigned long page_to_phys(struct page *p)
-{
-	return __pa((unsigned long)p->virtual) & PAGE_MASK;
-}
-
-
-unsigned long __pa(volatile unsigned long addr)
+unsigned long __pa(volatile void *addr)
 {
 	return ddekit_pgtab_get_physaddr((void*)addr);
 }

@@ -13,13 +13,20 @@
 #include <linux/netdevice.h>
 #include <linux/if_ether.h>
 
+#include "arping.h"
+
 #define PROT_ICMP         1
 #define ICMP_REPLY        0
 #define ICMP_REQ          8
 #define ETH_ALEN          6
 
 /* configuration */
-static int arping_verbose = 1;  // verbose
+int arping_verbose = 0;  // verbose
+
+#define VERBOSE_LOG(fmt, ...) \
+	do { \
+		if (arping_verbose) printk(fmt, ##__VA_ARGS__); \
+	} while (0);
 
 char LOG_tag[9] = "arping";
 l4_ssize_t l4libc_heapsize = 32 * 1024;
@@ -75,46 +82,46 @@ static int handle_icmp_packet(struct sk_buff *skb)
 	struct sk_buff *snd_skb  = NULL;
 
 	eth = (struct ethernet_hdr *)data;
-	LOGd(arping_verbose, "dest mac = %02x:%02x:%02x:%02x:%02x:%02x",
-	     eth->dest[0], eth->dest[1], eth->dest[2],
-	     eth->dest[3], eth->dest[4], eth->dest[5]);
-	LOGd(arping_verbose, "src mac = %02x:%02x:%02x:%02x:%02x:%02x",
-	     eth->src[0], eth->src[1], eth->src[2],
-	     eth->src[3], eth->src[4], eth->src[5]);
-	LOGd(arping_verbose, "type field = %02x%02x", eth->type[0], eth->type[1]);
+	VERBOSE_LOG("dest mac = %02x:%02x:%02x:%02x:%02x:%02x\n",
+	            eth->dest[0], eth->dest[1], eth->dest[2],
+	            eth->dest[3], eth->dest[4], eth->dest[5]);
+	VERBOSE_LOG("src mac = %02x:%02x:%02x:%02x:%02x:%02x\n",
+	            eth->src[0], eth->src[1], eth->src[2],
+	            eth->src[3], eth->src[4], eth->src[5]);
+	VERBOSE_LOG("type field = %02x%02x\n", eth->type[0], eth->type[1]);
 	if (eth->type[0] != 0x08 || eth->type[1] != 0x00) {
-		LOG("unknown ethernet packet type!");
+		printk("unknown ethernet packet type!\n");
 		return -1;
 	}
 
 	ip = (struct ip_hdr *)(data + sizeof(struct ethernet_hdr));
-		LOGd(arping_verbose, "protocol = %02x (== %02x?)", ip->protocol, PROT_ICMP);
-		if (ip->protocol != PROT_ICMP)
+	VERBOSE_LOG("protocol = %02x (2x?)\n", ip->protocol, PROT_ICMP);
+	if (ip->protocol != PROT_ICMP)
 	{
-		LOG("Unknown packet type.");
+		printk("Unknown packet type.\n");
 		return -1;
 	}
 
-	LOGd(arping_verbose, "ICMP packet!");
+	VERBOSE_LOG("ICMP packet!\n");
 	ver = ip->version_length >> 4;
 	len = ip->version_length & 0x0F;
-	LOGd(arping_verbose, "IP version = %d, length = %d", ver, len);
+	VERBOSE_LOG("IP version = %d, length = %d\n", ver, len);
 
-	LOG("src IP: "NIPQUAD_FMT, NIPQUAD(ip->src_ip));
-	LOG("dest IP: "NIPQUAD_FMT, NIPQUAD(ip->dest_ip));
+	VERBOSE_LOG("src IP: "NIPQUAD_FMT"\n", NIPQUAD(ip->src_ip));
+	VERBOSE_LOG("dest IP: "NIPQUAD_FMT"\n", NIPQUAD(ip->dest_ip));
 
 	icmp = (struct icmp_hdr *)(data + sizeof(struct ethernet_hdr)
 	        + sizeof(struct ip_hdr));
 
 	if (icmp->type != ICMP_REQ)
 	{
-		LOG("This is no ICMP request.");
+		printk("This is no ICMP request.\n");
 		return -1;
 	}
-	LOGd(arping_verbose, "Hey this is an ICMP request just for me. :)");
-	LOGd(arping_verbose, "ICMP type : %d", icmp->type);
-	LOGd(arping_verbose, "ICMP code : %d", icmp->code);
-	LOGd(arping_verbose, "ICMP seq  : %d", ntohs(icmp->seq_num));
+	VERBOSE_LOG("Hey this is an ICMP request just for me. :)\n");
+	VERBOSE_LOG("ICMP type : %d\n", icmp->type);
+	VERBOSE_LOG("ICMP code : %d\n", icmp->code);
+	VERBOSE_LOG("ICMP seq  : %d\n", ntohs(icmp->seq_num));
 
 	snd_skb = alloc_skb(skb->len + skb->dev->hard_header_len, GFP_KERNEL);
 	memcpy(snd_skb->data, skb->data, skb->len);
@@ -122,12 +129,12 @@ static int handle_icmp_packet(struct sk_buff *skb)
 	e = (struct ethernet_hdr *)snd_skb->data;
 	memcpy(e->src, eth->dest, ETH_ALEN);
 	memcpy(e->dest, eth->src, ETH_ALEN);
-	LOGd(arping_verbose, "dest mac = %02x:%02x:%02x:%02x:%02x:%02x",
-	     e->dest[0], e->dest[1], e->dest[2],
-	     e->dest[3], e->dest[4], e->dest[5]);
-	LOGd(arping_verbose, "src mac = %02x:%02x:%02x:%02x:%02x:%02x",
-	     e->src[0], e->src[1], e->src[2],
-	     e->src[3], e->src[4], e->src[5]);
+	VERBOSE_LOG("dest mac = %02x:%02x:%02x:%02x:%02x:%02x\n",
+	            e->dest[0], e->dest[1], e->dest[2],
+	            e->dest[3], e->dest[4], e->dest[5]);
+	VERBOSE_LOG("src mac = %02x:%02x:%02x:%02x:%02x:%02x\n",
+	            e->src[0], e->src[1], e->src[2],
+	            e->src[3], e->src[4], e->src[5]);
 	e->type[0] = 0x08;
 	e->type[1] = 0x00;
 
@@ -136,8 +143,8 @@ static int handle_icmp_packet(struct sk_buff *skb)
 	// also switch src and dest
 	iphdr->src_ip  = ip->dest_ip;
 	iphdr->dest_ip = ip->src_ip;
-	LOG("src IP: "NIPQUAD_FMT, NIPQUAD(iphdr->src_ip));
-	LOG("dest IP: "NIPQUAD_FMT, NIPQUAD(iphdr->dest_ip));
+	VERBOSE_LOG("src IP: "NIPQUAD_FMT"\n", NIPQUAD(iphdr->src_ip));
+	VERBOSE_LOG("dest IP: "NIPQUAD_FMT"\n", NIPQUAD(iphdr->dest_ip));
 
 	icmp2 = (struct icmp_hdr *)(snd_skb->data + sizeof(struct ethernet_hdr)
 	                            + sizeof(struct ip_hdr));
@@ -147,40 +154,32 @@ static int handle_icmp_packet(struct sk_buff *skb)
 	snd_skb->dev = skb->dev;
 	snd_skb->len = skb->len;
 
-	LOG("sending reply");
+	VERBOSE_LOG("sending reply\n");
 	skb->dev->hard_start_xmit(snd_skb, skb->dev);
-	LOG("done");
+	VERBOSE_LOG("done\n");
 
 	return 0;
 }
 
+ddekit_sem_t *arping_semaphore  = NULL;
+struct arping_elem *arping_list = NULL;
 
 int arping(void)
 {
-	LOG("there we go...");
+	arping_semaphore = ddekit_sem_init(0);
+
 	while(1)
 	{
-		l4_threadid_t src;
-		l4_msgdope_t res;
-		l4_umword_t dw0, dw1;
-		struct sk_buff *skb;
-		int err;
-
-		/* await notification */
-		err = l4_ipc_wait(&src, L4_IPC_SHORT_MSG,
-		                  &dw0, &dw1, L4_IPC_NEVER, &res);
-		LOG("ipc_wait: %d", err);
-
-		skb = (struct sk_buff *)dw0;
-		skb_get(skb);
-
-		err = l4_ipc_send(src, L4_IPC_SHORT_MSG,
-		                  0, 0, L4_IPC_NEVER, &res);
-		LOG("ipc_send: %d", err);
+		ddekit_sem_down(arping_semaphore);
+		struct arping_elem *elem = arping_list;
+		arping_list = arping_list->next;
 
 		/* parse packet */
-		err = handle_icmp_packet(skb);
-		LOG("handle_icmp_packet: %d", err);
+		int err = handle_icmp_packet(elem->skb);
+		VERBOSE_LOG("handle_icmp_packet: %d\n", err);
+
+		kfree_skb(elem->skb);
+		kfree(elem);
 	}
 }
 

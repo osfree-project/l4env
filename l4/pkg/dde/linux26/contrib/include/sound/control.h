@@ -3,7 +3,7 @@
 
 /*
  *  Header file for control interface
- *  Copyright (c) by Jaroslav Kysela <perex@suse.cz>
+ *  Copyright (c) by Jaroslav Kysela <perex@perex.cz>
  *
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -49,7 +49,7 @@ struct snd_kcontrol_new {
 	snd_kcontrol_put_t *put;
 	union {
 		snd_kcontrol_tlv_rw_t *c;
-		unsigned int *p;
+		const unsigned int *p;
 	} tlv;
 	unsigned long private_value;
 };
@@ -69,7 +69,7 @@ struct snd_kcontrol {
 	snd_kcontrol_put_t *put;
 	union {
 		snd_kcontrol_tlv_rw_t *c;
-		unsigned int *p;
+		const unsigned int *p;
 	} tlv;
 	unsigned long private_value;
 	void *private_data;
@@ -108,7 +108,6 @@ typedef int (*snd_kctl_ioctl_func_t) (struct snd_card * card,
 
 void snd_ctl_notify(struct snd_card * card, unsigned int mask, struct snd_ctl_elem_id * id);
 
-struct snd_kcontrol *snd_ctl_new(struct snd_kcontrol * kcontrol, unsigned int access);
 struct snd_kcontrol *snd_ctl_new1(const struct snd_kcontrol_new * kcontrolnew, void * private_data);
 void snd_ctl_free_one(struct snd_kcontrol * kcontrol);
 int snd_ctl_add(struct snd_card * card, struct snd_kcontrol * kcontrol);
@@ -129,9 +128,6 @@ int snd_ctl_unregister_ioctl_compat(snd_kctl_ioctl_func_t fcn);
 #define snd_ctl_register_ioctl_compat(fcn)
 #define snd_ctl_unregister_ioctl_compat(fcn)
 #endif
-
-int snd_ctl_elem_read(struct snd_card *card, struct snd_ctl_elem_value *control);
-int snd_ctl_elem_write(struct snd_card *card, struct snd_ctl_file *file, struct snd_ctl_elem_value *control);
 
 static inline unsigned int snd_ctl_get_ioffnum(struct snd_kcontrol *kctl, struct snd_ctl_elem_id *id)
 {
@@ -162,4 +158,19 @@ static inline struct snd_ctl_elem_id *snd_ctl_build_ioff(struct snd_ctl_elem_id 
 	return dst_id;
 }
 
+/*
+ * Frequently used control callbacks
+ */
+int snd_ctl_boolean_mono_info(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_info *uinfo);
+int snd_ctl_boolean_stereo_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo);
+
+/*
+ * virtual master control
+ */
+struct snd_kcontrol *snd_ctl_make_virtual_master(char *name,
+						 const unsigned int *tlv);
+int snd_ctl_add_slave(struct snd_kcontrol *master, struct snd_kcontrol *slave);
+		      
 #endif	/* __SOUND_CONTROL_H */

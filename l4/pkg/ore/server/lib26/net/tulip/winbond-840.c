@@ -107,8 +107,6 @@ static int full_duplex[MAX_UNITS] = {-1, -1, -1, -1, -1, -1, -1, -1};
 /* Time in jiffies before concluding the transmitter is hung. */
 #define TX_TIMEOUT  (2*HZ)
 
-#define PKT_BUF_SZ		1536			/* Size of each temporary Rx buffer.*/
-
 /* Include files, designed to support most kernel versions 2.0.0 and later. */
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -136,6 +134,9 @@ static int full_duplex[MAX_UNITS] = {-1, -1, -1, -1, -1, -1, -1, -1};
 #include <asm/irq.h>
 
 #include "tulip.h"
+
+#undef PKT_BUF_SZ			/* tulip.h also defines this */
+#define PKT_BUF_SZ		1536	/* Size of each temporary Rx buffer.*/
 
 /* These identify the driver base version and may not be removed. */
 static char version[] =
@@ -342,7 +343,18 @@ static int netdev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
 static const struct ethtool_ops netdev_ethtool_ops;
 static int  netdev_close(struct net_device *dev);
 
-
+static const struct net_device_ops netdev_ops = {
+	.ndo_open		= netdev_open,
+	.ndo_stop		= netdev_close,
+	.ndo_start_xmit		= start_tx,
+	.ndo_get_stats		= get_stats,
+	.ndo_set_multicast_list = set_rx_mode,
+	.ndo_do_ioctl		= netdev_ioctl,
+	.ndo_tx_timeout		= tx_timeout,
+	.ndo_change_mtu		= eth_change_mtu,
+	.ndo_set_mac_address	= eth_mac_addr,
+	.ndo_validate_addr	= eth_validate_addr,
+};
 
 static int __devinit w840_probe1 (struct pci_dev *pdev,
 				  const struct pci_device_id *ent)
@@ -370,7 +382,6 @@ static int __devinit w840_probe1 (struct pci_dev *pdev,
 	dev = alloc_etherdev(sizeof(*np));
 	if (!dev)
 		return -ENOMEM;
-	SET_MODULE_OWNER(dev);
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
 	if (pci_request_regions(pdev, DRV_NAME))
@@ -381,7 +392,7 @@ static int __devinit w840_probe1 (struct pci_dev *pdev,
 		goto err_out_free_res;
 
 	for (i = 0; i < 3; i++)
-		((u16 *)dev->dev_addr)[i] = le16_to_cpu(eeprom_read(ioaddr, i));
+		((__le16 *)dev->dev_addr)[i] = cpu_to_le16(eeprom_read(ioaddr, i));
 
 	/* Reset the chip to erase previous misconfiguration.
 	   No hold time required! */
@@ -420,25 +431,17 @@ static int __devinit w840_probe1 (struct pci_dev *pdev,
 		np->mii_if.force_media = 1;
 
 	/* The chip-specific entries in the device structure. */
-	dev->open = &netdev_open;
-	dev->hard_start_xmit = &start_tx;
-	dev->stop = &netdev_close;
-	dev->get_stats = &get_stats;
-	dev->set_multicast_list = &set_rx_mode;
-	dev->do_ioctl = &netdev_ioctl;
+	dev->netdev_ops = &netdev_ops;
 	dev->ethtool_ops = &netdev_ethtool_ops;
-	dev->tx_timeout = &tx_timeout;
 	dev->watchdog_timeo = TX_TIMEOUT;
 
 	i = register_netdev(dev);
 	if (i)
 		goto err_out_cleardev;
 
-	printk(KERN_INFO "%s: %s at %p, ",
-		   dev->name, pci_id_tbl[chip_idx].name, ioaddr);
-	for (i = 0; i < 5; i++)
-			printk("%2.2x:", dev->dev_addr[i]);
-	printk("%2.2x, IRQ %d.\n", dev->dev_addr[i], irq);
+	printk(KERN_INFO "%s: %s at %p, %pM, IRQ %d.\n",
+	       dev->name, pci_id_tbl[chip_idx].name, ioaddr,
+	       dev->dev_addr, irq);
 
 	if (np->drv_flags & CanHaveMII) {
 		int phy, phy_idx = 0;
@@ -485,7 +488,7 @@ err_out_netdev:
    a delay.  Note that pre-2.0.34 kernels had a cache-alignment bug that
    made udelay() unreliable.
    The old method of using an ISA access as a delay, __SLOW_DOWN_IO__, is
-   depricated.
+   deprecated.
 */
 #define eeprom_delay(ee_addr)	ioread32(ee_addr)
 
@@ -813,7 +816,6 @@ static void init_rxtx_rings(struct net_device *dev)
 		np->rx_skbuff[i] = skb;
 		if (skb == NULL)
 			break;
-		skb->dev = dev;			/* Mark as being used by this device. */
 		np->rx_addr[i] = pci_map_single(np->pci_dev,skb->data,
 					np->rx_buf_sz,PCI_DMA_FROMDEVICE);
 
@@ -903,7 +905,7 @@ static void init_registers(struct net_device *dev)
 	}
 #elif defined(__powerpc__) || defined(__i386__) || defined(__alpha__) || defined(__ia64__) || defined(__x86_64__)
 	i |= 0xE000;
-#elif defined(__sparc__) || defined (CONFIG_PARISC)
+#elif defined(CONFIG_SPARC) || defined (CONFIG_PARISC)
 	i |= 0x4800;
 #else
 #warning Processor architecture undefined
@@ -1022,7 +1024,7 @@ static int start_tx(struct sk_buff *skb, struct net_device *dev)
 		np->tx_ring[entry].length |= DescEndRing;
 
 	/* Now acquire the irq spinlock.
-	 * The difficult race is the the ordering between
+	 * The difficult race is the ordering between
 	 * increasing np->cur_tx and setting DescOwned:
 	 * - if np->cur_tx is increased first the interrupt
 	 *   handler could consider the packet as transmitted
@@ -1148,7 +1150,7 @@ static irqreturn_t intr_handler(int irq, void *dev_instance)
 		}
 
 		/* Abnormal error summary/uncommon events handlers. */
-		if (intr_status & (AbnormalIntr | TxFIFOUnderflow | SytemError |
+		if (intr_status & (AbnormalIntr | TxFIFOUnderflow | SystemError |
 						   TimerInt | TxDied))
 			netdev_error(dev, intr_status);
 
@@ -1229,12 +1231,11 @@ static int netdev_rx(struct net_device *dev)
 			   to a minimally-sized skbuff. */
 			if (pkt_len < rx_copybreak
 				&& (skb = dev_alloc_skb(pkt_len + 2)) != NULL) {
-				skb->dev = dev;
 				skb_reserve(skb, 2);	/* 16 byte align the IP header */
 				pci_dma_sync_single_for_cpu(np->pci_dev,np->rx_addr[entry],
 							    np->rx_skbuff[entry]->len,
 							    PCI_DMA_FROMDEVICE);
-				eth_copy_and_sum(skb, np->rx_skbuff[entry]->data, pkt_len, 0);
+				skb_copy_to_linear_data(skb, np->rx_skbuff[entry]->data, pkt_len);
 				skb_put(skb, pkt_len);
 				pci_dma_sync_single_for_device(np->pci_dev,np->rx_addr[entry],
 							       np->rx_skbuff[entry]->len,
@@ -1249,19 +1250,14 @@ static int netdev_rx(struct net_device *dev)
 #ifndef final_version				/* Remove after testing. */
 			/* You will want this info for the initial debug. */
 			if (debug > 5)
-				printk(KERN_DEBUG "  Rx data %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:"
-					   "%2.2x %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x %2.2x%2.2x "
-					   "%d.%d.%d.%d.\n",
-					   skb->data[0], skb->data[1], skb->data[2], skb->data[3],
-					   skb->data[4], skb->data[5], skb->data[6], skb->data[7],
-					   skb->data[8], skb->data[9], skb->data[10],
-					   skb->data[11], skb->data[12], skb->data[13],
-					   skb->data[14], skb->data[15], skb->data[16],
-					   skb->data[17]);
+				printk(KERN_DEBUG "  Rx data %pM %pM"
+				       " %2.2x%2.2x %d.%d.%d.%d.\n",
+				       &skb->data[0], &skb->data[6],
+				       skb->data[12], skb->data[13],
+				       skb->data[14], skb->data[15], skb->data[16], skb->data[17]);
 #endif
 			skb->protocol = eth_type_trans(skb, dev);
 			netif_rx(skb);
-			dev->last_rx = jiffies;
 			np->stats.rx_packets++;
 			np->stats.rx_bytes += pkt_len;
 		}
@@ -1278,7 +1274,6 @@ static int netdev_rx(struct net_device *dev)
 			np->rx_skbuff[entry] = skb;
 			if (skb == NULL)
 				break;			/* Better luck next round. */
-			skb->dev = dev;			/* Mark as being used by this device. */
 			np->rx_addr[entry] = pci_map_single(np->pci_dev,
 							skb->data,
 							np->rx_buf_sz, PCI_DMA_FROMDEVICE);
@@ -1455,8 +1450,6 @@ static const struct ethtool_ops netdev_ethtool_ops = {
 	.get_link		= netdev_get_link,
 	.get_msglevel		= netdev_get_msglevel,
 	.set_msglevel		= netdev_set_msglevel,
-	.get_sg			= ethtool_op_get_sg,
-	.get_tx_csum		= ethtool_op_get_tx_csum,
 };
 
 static int netdev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
@@ -1567,7 +1560,7 @@ static void __devexit w840_remove1 (struct pci_dev *pdev)
  * 	rtnl_lock, & netif_device_detach after the rtnl_unlock.
  * - get_stats:
  * 	spin_lock_irq(np->lock), doesn't touch hw if not present
- * - hard_start_xmit:
+ * - start_xmit:
  * 	synchronize_irq + netif_tx_disable;
  * - tx_timeout:
  * 	netif_device_detach + netif_tx_disable;

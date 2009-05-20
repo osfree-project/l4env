@@ -1,10 +1,10 @@
 /*
  * This file define the new driver API for Wireless Extensions
  *
- * Version :	7	18.3.05
+ * Version :	8	16.3.07
  *
  * Authors :	Jean Tourrilhes - HPL - <jt@hpl.hp.com>
- * Copyright (c) 2001-2006 Jean Tourrilhes, All Rights Reserved.
+ * Copyright (c) 2001-2007 Jean Tourrilhes, All Rights Reserved.
  */
 
 #ifndef _IW_HANDLER_H
@@ -207,7 +207,7 @@
  * will be needed...
  * I just plan to increment with each new version.
  */
-#define IW_HANDLER_VERSION	7
+#define IW_HANDLER_VERSION	8
 
 /*
  * Changes :
@@ -239,6 +239,10 @@
  *	- Remove (struct iw_point *)->pointer from events and streams
  *	- Remove spy_offset from struct iw_handler_def
  *	- Add "check" version of event macros for ieee802.11 stack
+ *
+ * V7 to V8
+ * ----------
+ *	- Prevent leaking of kernel space in stream on 64 bits.
  */
 
 /**************************** CONSTANTS ****************************/
@@ -252,7 +256,7 @@
 #define EIWCOMMIT	EINPROGRESS
 
 /* Flags available in struct iw_request_info */
-#define IW_REQUEST_FLAG_NONE	0x0000	/* No flag so far */
+#define IW_REQUEST_FLAG_COMPAT	0x0001	/* Compat ioctl call */
 
 /* Type of headers we know about (basically union iwreq_data) */
 #define IW_HEADER_TYPE_NULL	0	/* Not available */
@@ -433,19 +437,6 @@ struct iw_public_data {
 extern int dev_get_wireless_info(char * buffer, char **start, off_t offset,
 				 int length);
 
-/* Handle IOCTLs, called in net/core/dev.c */
-extern int wireless_process_ioctl(struct ifreq *ifr, unsigned int cmd);
-
-/* Handle RtNetlink requests, called in net/core/rtnetlink.c */
-extern int wireless_rtnetlink_set(struct net_device *	dev,
-				  char *		data,
-				  int			len);
-extern int wireless_rtnetlink_get(struct net_device *	dev,
-				  char *		data,
-				  int			len,
-				  char **		p_buf,
-				  int *			p_len);
-
 /* Second : functions that may be called by driver modules */
 
 /* Send a single event to user space */
@@ -487,20 +478,56 @@ extern void wireless_spy_update(struct net_device *	dev,
  * Function that are so simple that it's more efficient inlining them
  */
 
+static inline int iwe_stream_lcp_len(struct iw_request_info *info)
+{
+#ifdef CONFIG_COMPAT
+	if (info->flags & IW_REQUEST_FLAG_COMPAT)
+		return IW_EV_COMPAT_LCP_LEN;
+#endif
+	return IW_EV_LCP_LEN;
+}
+
+static inline int iwe_stream_point_len(struct iw_request_info *info)
+{
+#ifdef CONFIG_COMPAT
+	if (info->flags & IW_REQUEST_FLAG_COMPAT)
+		return IW_EV_COMPAT_POINT_LEN;
+#endif
+	return IW_EV_POINT_LEN;
+}
+
+static inline int iwe_stream_event_len_adjust(struct iw_request_info *info,
+					      int event_len)
+{
+#ifdef CONFIG_COMPAT
+	if (info->flags & IW_REQUEST_FLAG_COMPAT) {
+		event_len -= IW_EV_LCP_LEN;
+		event_len += IW_EV_COMPAT_LCP_LEN;
+	}
+#endif
+
+	return event_len;
+}
+
 /*------------------------------------------------------------------*/
 /*
  * Wrapper to add an Wireless Event to a stream of events.
  */
 static inline char *
-iwe_stream_add_event(char *	stream,		/* Stream of events */
-		     char *	ends,		/* End of stream */
-		     struct iw_event *iwe,	/* Payload */
-		     int	event_len)	/* Real size of payload */
+iwe_stream_add_event(struct iw_request_info *info, char *stream, char *ends,
+		     struct iw_event *iwe, int event_len)
 {
+	int lcp_len = iwe_stream_lcp_len(info);
+
+	event_len = iwe_stream_event_len_adjust(info, event_len);
+
 	/* Check if it's possible */
 	if(likely((stream + event_len) < ends)) {
 		iwe->len = event_len;
-		memcpy(stream, (char *) iwe, event_len);
+		/* Beware of alignement issues on 64 bits */
+		memcpy(stream, (char *) iwe, IW_EV_LCP_PK_LEN);
+		memcpy(stream + lcp_len, &iwe->u,
+		       event_len - lcp_len);
 		stream += event_len;
 	}
 	return stream;
@@ -512,20 +539,21 @@ iwe_stream_add_event(char *	stream,		/* Stream of events */
  * stream of events.
  */
 static inline char *
-iwe_stream_add_point(char *	stream,		/* Stream of events */
-		     char *	ends,		/* End of stream */
-		     struct iw_event *iwe,	/* Payload length + flags */
-		     char *	extra)		/* More payload */
+iwe_stream_add_point(struct iw_request_info *info, char *stream, char *ends,
+		     struct iw_event *iwe, char *extra)
 {
-	int	event_len = IW_EV_POINT_LEN + iwe->u.data.length;
+	int event_len = iwe_stream_point_len(info) + iwe->u.data.length;
+	int point_len = iwe_stream_point_len(info);
+	int lcp_len   = iwe_stream_lcp_len(info);
+
 	/* Check if it's possible */
 	if(likely((stream + event_len) < ends)) {
 		iwe->len = event_len;
-		memcpy(stream, (char *) iwe, IW_EV_LCP_LEN);
-		memcpy(stream + IW_EV_LCP_LEN,
-		       ((char *) iwe) + IW_EV_LCP_LEN + IW_EV_POINT_OFF,
-		       IW_EV_POINT_LEN - IW_EV_LCP_LEN);
-		memcpy(stream + IW_EV_POINT_LEN, extra, iwe->u.data.length);
+		memcpy(stream, (char *) iwe, IW_EV_LCP_PK_LEN);
+		memcpy(stream + lcp_len,
+		       ((char *) &iwe->u) + IW_EV_POINT_OFF,
+		       IW_EV_POINT_PK_LEN - IW_EV_LCP_PK_LEN);
+		memcpy(stream + point_len, extra, iwe->u.data.length);
 		stream += event_len;
 	}
 	return stream;
@@ -538,105 +566,23 @@ iwe_stream_add_point(char *	stream,		/* Stream of events */
  * At the first run, you need to have (value = event + IW_EV_LCP_LEN).
  */
 static inline char *
-iwe_stream_add_value(char *	event,		/* Event in the stream */
-		     char *	value,		/* Value in event */
-		     char *	ends,		/* End of stream */
-		     struct iw_event *iwe,	/* Payload */
-		     int	event_len)	/* Real size of payload */
+iwe_stream_add_value(struct iw_request_info *info, char *event, char *value,
+		     char *ends, struct iw_event *iwe, int event_len)
 {
+	int lcp_len = iwe_stream_lcp_len(info);
+
 	/* Don't duplicate LCP */
 	event_len -= IW_EV_LCP_LEN;
 
 	/* Check if it's possible */
 	if(likely((value + event_len) < ends)) {
 		/* Add new value */
-		memcpy(value, (char *) iwe + IW_EV_LCP_LEN, event_len);
+		memcpy(value, &iwe->u, event_len);
 		value += event_len;
 		/* Patch LCP */
 		iwe->len = value - event;
-		memcpy(event, (char *) iwe, IW_EV_LCP_LEN);
+		memcpy(event, (char *) iwe, lcp_len);
 	}
-	return value;
-}
-
-/*------------------------------------------------------------------*/
-/*
- * Wrapper to add an Wireless Event to a stream of events.
- * Same as above, with explicit error check...
- */
-static inline char *
-iwe_stream_check_add_event(char *	stream,		/* Stream of events */
-			   char *	ends,		/* End of stream */
-			   struct iw_event *iwe,	/* Payload */
-			   int		event_len,	/* Size of payload */
-			   int *	perr)		/* Error report */
-{
-	/* Check if it's possible, set error if not */
-	if(likely((stream + event_len) < ends)) {
-		iwe->len = event_len;
-		memcpy(stream, (char *) iwe, event_len);
-		stream += event_len;
-	} else
-		*perr = -E2BIG;
-	return stream;
-}
-
-/*------------------------------------------------------------------*/
-/*
- * Wrapper to add an short Wireless Event containing a pointer to a
- * stream of events.
- * Same as above, with explicit error check...
- */
-static inline char *
-iwe_stream_check_add_point(char *	stream,		/* Stream of events */
-			   char *	ends,		/* End of stream */
-			   struct iw_event *iwe,	/* Payload length + flags */
-			   char *	extra,		/* More payload */
-			   int *	perr)		/* Error report */
-{
-	int	event_len = IW_EV_POINT_LEN + iwe->u.data.length;
-	/* Check if it's possible */
-	if(likely((stream + event_len) < ends)) {
-		iwe->len = event_len;
-		memcpy(stream, (char *) iwe, IW_EV_LCP_LEN);
-		memcpy(stream + IW_EV_LCP_LEN,
-		       ((char *) iwe) + IW_EV_LCP_LEN + IW_EV_POINT_OFF,
-		       IW_EV_POINT_LEN - IW_EV_LCP_LEN);
-		memcpy(stream + IW_EV_POINT_LEN, extra, iwe->u.data.length);
-		stream += event_len;
-	} else
-		*perr = -E2BIG;
-	return stream;
-}
-
-/*------------------------------------------------------------------*/
-/*
- * Wrapper to add a value to a Wireless Event in a stream of events.
- * Be careful, this one is tricky to use properly :
- * At the first run, you need to have (value = event + IW_EV_LCP_LEN).
- * Same as above, with explicit error check...
- */
-static inline char *
-iwe_stream_check_add_value(char *	event,		/* Event in the stream */
-			   char *	value,		/* Value in event */
-			   char *	ends,		/* End of stream */
-			   struct iw_event *iwe,	/* Payload */
-			   int		event_len,	/* Size of payload */
-			   int *	perr)		/* Error report */
-{
-	/* Don't duplicate LCP */
-	event_len -= IW_EV_LCP_LEN;
-
-	/* Check if it's possible */
-	if(likely((value + event_len) < ends)) {
-		/* Add new value */
-		memcpy(value, (char *) iwe + IW_EV_LCP_LEN, event_len);
-		value += event_len;
-		/* Patch LCP */
-		iwe->len = value - event;
-		memcpy(event, (char *) iwe, IW_EV_LCP_LEN);
-	} else
-		*perr = -E2BIG;
 	return value;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Definitions for the new Marvell Yukon / SysKonenct driver.
+ * Definitions for the new Marvell Yukon / SysKonnect driver.
  */
 #ifndef _SKGE_H
 #define _SKGE_H
@@ -8,8 +8,10 @@
 #define PCI_DEV_REG1	0x40
 #define  PCI_PHY_COMA	0x8000000
 #define  PCI_VIO	0x2000000
+
 #define PCI_DEV_REG2	0x44
-#define  PCI_REV_DESC	 0x4
+#define  PCI_VPD_ROM_SZ	7L<<14	/* VPD ROM size 0=256, 1=512, ... */
+#define  PCI_REV_DESC	1<<2	/* Reverse Descriptor bytes */
 
 #define PCI_STATUS_ERROR_BITS (PCI_STATUS_DETECTED_PARITY | \
 			       PCI_STATUS_SIG_SYSTEM_ERROR | \
@@ -232,7 +234,6 @@ enum {
 	IS_R2_PAR_ERR	= 1<<0,	/* Queue R2 Parity Error */
 
 	IS_ERR_MSK	= IS_IRQ_MST_ERR | IS_IRQ_STAT
-			| IS_NO_STAT_M1 | IS_NO_STAT_M2
 			| IS_RAM_RD_PAR | IS_RAM_WR_PAR
 			| IS_M1_PAR_ERR | IS_M2_PAR_ERR
 			| IS_R1_PAR_ERR | IS_R2_PAR_ERR,
@@ -876,11 +877,13 @@ enum {
 	WOL_PATT_CNT_0	= 0x0f38,/* 32 bit	WOL Pattern Counter 3..0 */
 	WOL_PATT_CNT_4	= 0x0f3c,/* 24 bit	WOL Pattern Counter 6..4 */
 };
+#define WOL_REGS(port, x)	(x + (port)*0x80)
 
 enum {
 	WOL_PATT_RAM_1	= 0x1000,/*  WOL Pattern RAM Link 1 */
 	WOL_PATT_RAM_2	= 0x1400,/*  WOL Pattern RAM Link 2 */
 };
+#define WOL_PATT_RAM_BASE(port)	(WOL_PATT_RAM_1 + (port)*0x400)
 
 enum {
 	BASE_XMAC_1	= 0x2000,/* XMAC 1 registers */
@@ -1349,8 +1352,6 @@ enum {
 	PHY_M_PC_EN_DET		= 2<<8,	/* Energy Detect (Mode 1) */
 	PHY_M_PC_EN_DET_PLUS	= 3<<8, /* Energy Detect Plus (Mode 2) */
 };
-
-#define PHY_M_PC_MDI_XMODE(x)	((((u16)(x)<<5) & PHY_M_PC_MDIX_MSK)
 
 enum {
 	PHY_M_PC_MAN_MDI	= 0, /* 00 = Manual MDI configuration */
@@ -1847,8 +1848,7 @@ enum {
 			  GMR_FS_JABBER,
 /* Rx GMAC FIFO Flush Mask (default) */
 	RX_FF_FL_DEF_MSK = GMR_FS_CRC_ERR | GMR_FS_RX_FF_OV |GMR_FS_MII_ERR |
-			   GMR_FS_BAD_FC | GMR_FS_GOOD_FC | GMR_FS_UN_SIZE |
-			   GMR_FS_JABBER,
+			   GMR_FS_BAD_FC |  GMR_FS_UN_SIZE | GMR_FS_JABBER,
 };
 
 /*	RX_GMF_CTRL_T	32 bit	Rx GMAC FIFO Control/Test */
@@ -2193,11 +2193,9 @@ enum {
 	XM_IS_TXF_UR	= 1<<2,	/* Bit  2:	Transmit FIFO Underrun */
 	XM_IS_TX_COMP	= 1<<1,	/* Bit  1:	Frame Tx Complete */
 	XM_IS_RX_COMP	= 1<<0,	/* Bit  0:	Frame Rx Complete */
+
+	XM_IMSK_DISABLE	= 0xffff,
 };
-
-#define XM_DEF_MSK	(~(XM_IS_INP_ASS | XM_IS_LIPA_RC | \
-			   XM_IS_RXF_OV | XM_IS_TXF_UR))
-
 
 /*	XM_HW_CFG	16 bit r/w	Hardware Config Register */
 enum {
@@ -2423,8 +2421,8 @@ struct skge_hw {
 	u32	     	     ram_size;
 	u32	     	     ram_offset;
 	u16		     phy_addr;
-	struct work_struct   phy_work;
-	struct mutex	     phy_mutex;
+	spinlock_t	     phy_lock;
+	struct tasklet_struct phy_task;
 };
 
 enum pause_control {
@@ -2446,17 +2444,18 @@ enum pause_status {
 
 
 struct skge_port {
-	u32		     msg_enable;
 	struct skge_hw	     *hw;
 	struct net_device    *netdev;
+	struct napi_struct   napi;
 	int		     port;
+	u32		     msg_enable;
 
 	struct skge_ring     tx_ring;
-	struct skge_ring     rx_ring;
 
-	struct net_device_stats net_stats;
+	struct skge_ring     rx_ring ____cacheline_aligned_in_smp;
+	unsigned int	     rx_buf_size;
 
-	struct delayed_work  link_thread;
+	struct timer_list    link_timer;
 	enum pause_control   flow_control;
 	enum pause_status    flow_status;
 	u8		     rx_csum;
@@ -2470,7 +2469,9 @@ struct skge_port {
 	void		     *mem;	/* PCI memory for rings */
 	dma_addr_t	     dma;
 	unsigned long	     mem_size;
-	unsigned int	     rx_buf_size;
+#ifdef CONFIG_SKGE_DEBUG
+	struct dentry	     *debugfs;
+#endif
 };
 
 

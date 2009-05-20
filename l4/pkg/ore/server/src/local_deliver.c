@@ -17,10 +17,12 @@ int local_deliver(rxtx_entry_t *ent, int channel)
   // use find_channel_for_skb() here.
   int i = find_channel_for_mac(ent->skb->data, 0);
 
-  LOGd(ORE_DEBUG_PACKET, "Trying local delivery...");
+  LOGd(ORE_DEBUG_PACKET, "Trying local delivery..., channel %d", i);
 
-  if (i < 0)
+  if (i < 0) {
+	LOGd(ORE_DEBUG_PACKET, "  --> No local clients for this packet.");
     return -1;
+  }
 
   LOGd(ORE_DEBUG_PACKET, "Local delivery necessary.");
   new_buf = skb_clone(ent->skb, GFP_KERNEL);

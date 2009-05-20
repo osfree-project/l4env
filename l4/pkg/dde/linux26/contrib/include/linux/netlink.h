@@ -23,14 +23,17 @@
 #define NETLINK_GENERIC		16
 /* leave room for NETLINK_DM (DM Events) */
 #define NETLINK_SCSITRANSPORT	18	/* SCSI Transports */
+#define NETLINK_ECRYPTFS	19
 
 #define MAX_LINKS 32		
+
+struct net;
 
 struct sockaddr_nl
 {
 	sa_family_t	nl_family;	/* AF_NETLINK	*/
 	unsigned short	nl_pad;		/* zero		*/
-	__u32		nl_pid;		/* process pid	*/
+	__u32		nl_pid;		/* port ID	*/
        	__u32		nl_groups;	/* multicast groups mask */
 };
 
@@ -40,7 +43,7 @@ struct nlmsghdr
 	__u16		nlmsg_type;	/* Message content */
 	__u16		nlmsg_flags;	/* Additional flags */
 	__u32		nlmsg_seq;	/* Sequence number */
-	__u32		nlmsg_pid;	/* Sending process PID */
+	__u32		nlmsg_pid;	/* Sending process port ID */
 };
 
 /* Flags values */
@@ -128,6 +131,20 @@ struct nlattr
 	__u16           nla_type;
 };
 
+/*
+ * nla_type (16 bits)
+ * +---+---+-------------------------------+
+ * | N | O | Attribute Type                |
+ * +---+---+-------------------------------+
+ * N := Carries nested attributes
+ * O := Payload stored in network byte order
+ *
+ * Note: The N and O flag are mutually exclusive.
+ */
+#define NLA_F_NESTED		(1 << 15)
+#define NLA_F_NET_BYTEORDER	(1 << 14)
+#define NLA_TYPE_MASK		~(NLA_F_NESTED | NLA_F_NET_BYTEORDER)
+
 #define NLA_ALIGNTO		4
 #define NLA_ALIGN(len)		(((len) + NLA_ALIGNTO - 1) & ~(NLA_ALIGNTO - 1))
 #define NLA_HDRLEN		((int) NLA_ALIGN(sizeof(struct nlattr)))
@@ -137,6 +154,11 @@ struct nlattr
 #include <linux/capability.h>
 #include <linux/skbuff.h>
 
+static inline struct nlmsghdr *nlmsg_hdr(const struct sk_buff *skb)
+{
+	return (struct nlmsghdr *)skb->data;
+}
+
 struct netlink_skb_parms
 {
 	struct ucred		creds;		/* Skb credentials	*/
@@ -144,6 +166,7 @@ struct netlink_skb_parms
 	__u32			dst_group;
 	kernel_cap_t		eff_cap;
 	__u32			loginuid;	/* Login (audit) uid */
+	__u32			sessionid;	/* Session id (audit) */
 	__u32			sid;		/* SELinux security id */
 };
 
@@ -151,7 +174,14 @@ struct netlink_skb_parms
 #define NETLINK_CREDS(skb)	(&NETLINK_CB((skb)).creds)
 
 
-extern struct sock *netlink_kernel_create(int unit, unsigned int groups, void (*input)(struct sock *sk, int len), struct module *module);
+extern struct sock *netlink_kernel_create(struct net *net,
+					  int unit,unsigned int groups,
+					  void (*input)(struct sk_buff *skb),
+					  struct mutex *cb_mutex,
+					  struct module *module);
+extern void netlink_kernel_release(struct sock *sk);
+extern int netlink_change_ngroups(struct sock *sk, unsigned int groups);
+extern void netlink_clear_multicast_users(struct sock *sk, unsigned int group);
 extern void netlink_ack(struct sk_buff *in_skb, struct nlmsghdr *nlh, int err);
 extern int netlink_has_listeners(struct sock *sk, unsigned int group);
 extern int netlink_unicast(struct sock *ssk, struct sk_buff *skb, __u32 pid, int nonblock);
@@ -163,16 +193,23 @@ extern int netlink_unregister_notifier(struct notifier_block *nb);
 
 /* finegrained unicast helpers: */
 struct sock *netlink_getsockbyfilp(struct file *filp);
-int netlink_attachskb(struct sock *sk, struct sk_buff *skb, int nonblock,
-		long timeo, struct sock *ssk);
+int netlink_attachskb(struct sock *sk, struct sk_buff *skb,
+		      long *timeo, struct sock *ssk);
 void netlink_detachskb(struct sock *sk, struct sk_buff *skb);
-int netlink_sendskb(struct sock *sk, struct sk_buff *skb, int protocol);
+int netlink_sendskb(struct sock *sk, struct sk_buff *skb);
 
 /*
  *	skb should fit one page. This choice is good for headerless malloc.
+ *	But we should limit to 8K so that userspace does not have to
+ *	use enormous buffer sizes on recvmsg() calls just to avoid
+ *	MSG_TRUNC when PAGE_SIZE is very large.
  */
-#define NLMSG_GOODORDER 0
-#define NLMSG_GOODSIZE (SKB_MAX_ORDER(0, NLMSG_GOODORDER))
+#if PAGE_SIZE < 8192UL
+#define NLMSG_GOODSIZE	SKB_WITH_OVERHEAD(PAGE_SIZE)
+#else
+#define NLMSG_GOODSIZE	SKB_WITH_OVERHEAD(8192UL)
+#endif
+
 #define NLMSG_DEFAULT_SIZE (NLMSG_GOODSIZE - NLMSG_HDRLEN)
 
 
@@ -183,11 +220,12 @@ struct netlink_callback
 	int		(*dump)(struct sk_buff * skb, struct netlink_callback *cb);
 	int		(*done)(struct netlink_callback *cb);
 	int		family;
-	long		args[5];
+	long		args[6];
 };
 
 struct netlink_notify
 {
+	struct net *net;
 	int pid;
 	int protocol;
 };
@@ -204,29 +242,18 @@ __nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int len, int flags)
 	nlh->nlmsg_flags = flags;
 	nlh->nlmsg_pid = pid;
 	nlh->nlmsg_seq = seq;
-	memset(NLMSG_DATA(nlh) + len, 0, NLMSG_ALIGN(size) - size);
+	if (!__builtin_constant_p(size) || NLMSG_ALIGN(size) - size != 0)
+		memset(NLMSG_DATA(nlh) + len, 0, NLMSG_ALIGN(size) - size);
 	return nlh;
 }
 
 #define NLMSG_NEW(skb, pid, seq, type, len, flags) \
-({	if (skb_tailroom(skb) < (int)NLMSG_SPACE(len)) \
+({	if (unlikely(skb_tailroom(skb) < (int)NLMSG_SPACE(len))) \
 		goto nlmsg_failure; \
 	__nlmsg_put(skb, pid, seq, type, len, flags); })
 
 #define NLMSG_PUT(skb, pid, seq, type, len) \
 	NLMSG_NEW(skb, pid, seq, type, len, 0)
-
-#define NLMSG_NEW_ANSWER(skb, cb, type, len, flags) \
-	NLMSG_NEW(skb, NETLINK_CB((cb)->skb).pid, \
-		  (cb)->nlh->nlmsg_seq, type, len, flags)
-
-#define NLMSG_END(skb, nlh) \
-({	(nlh)->nlmsg_len = (skb)->tail - (unsigned char *) (nlh); \
-	(skb)->len; })
-
-#define NLMSG_CANCEL(skb, nlh) \
-({	skb_trim(skb, (unsigned char *) (nlh) - (skb)->data); \
-	-1; })
 
 extern int netlink_dump_start(struct sock *ssk, struct sk_buff *skb,
 			      struct nlmsghdr *nlh,

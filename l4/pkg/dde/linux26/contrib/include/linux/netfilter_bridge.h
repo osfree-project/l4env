@@ -7,6 +7,7 @@
 #include <linux/netfilter.h>
 #include <linux/if_ether.h>
 #include <linux/if_vlan.h>
+#include <linux/if_pppox.h>
 
 /* Bridge Hooks */
 /* After promisc drops, checksum checks. */
@@ -49,17 +50,31 @@ enum nf_br_hook_priorities {
 extern int nf_bridge_copy_header(struct sk_buff *skb);
 static inline int nf_bridge_maybe_copy_header(struct sk_buff *skb)
 {
-	if (skb->nf_bridge)
+	if (skb->nf_bridge &&
+	    skb->nf_bridge->mask & (BRNF_BRIDGED | BRNF_BRIDGED_DNAT))
 		return nf_bridge_copy_header(skb);
   	return 0;
 }
 
+static inline unsigned int nf_bridge_encap_header_len(const struct sk_buff *skb)
+{
+	switch (skb->protocol) {
+	case __constant_htons(ETH_P_8021Q):
+		return VLAN_HLEN;
+	case __constant_htons(ETH_P_PPP_SES):
+		return PPPOE_SES_HLEN;
+	default:
+		return 0;
+	}
+}
+
 /* This is called by the IP fragmenting code and it ensures there is
  * enough room for the encapsulating header (if there is one). */
-static inline int nf_bridge_pad(const struct sk_buff *skb)
+static inline unsigned int nf_bridge_pad(const struct sk_buff *skb)
 {
- 	return (skb->nf_bridge && skb->protocol == htons(ETH_P_8021Q))
-		? VLAN_HLEN : 0;
+	if (skb->nf_bridge)
+		return nf_bridge_encap_header_len(skb);
+	return 0;
 }
 
 struct bridge_skb_cb {

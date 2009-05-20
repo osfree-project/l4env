@@ -2,6 +2,7 @@
 
 #include <linux/timer.h>
 #include <linux/fs.h>
+#include <asm/delay.h>
 
 DECLARE_INITVAR(dde26_timer);
 
@@ -25,7 +26,7 @@ typedef struct tvec_root_s {
 	struct list_head vec[TVR_SIZE];
 } tvec_root_t;
 
-struct tvec_t_base_s {
+struct tvec_base {
 	spinlock_t lock;
 	struct timer_list *running_timer;
 	unsigned long timer_jiffies;
@@ -38,11 +39,11 @@ struct tvec_t_base_s {
 
 typedef struct tvec_t_base_s tvec_base_t;
 
-tvec_base_t boot_tvec_bases __attribute__((unused));
+struct tvec_base boot_tvec_bases __attribute__((unused));
 
-static DEFINE_PER_CPU(tvec_base_t *, tvec_bases) __attribute__((unused)) = &boot_tvec_bases;
+static DEFINE_PER_CPU(struct tvec_base *, tvec_bases) __attribute__((unused)) = &boot_tvec_bases;
 
-void fastcall init_timer(struct timer_list *timer) { }
+void init_timer(struct timer_list *timer) { }
 
 void add_timer(struct timer_list *timer)
 {
@@ -50,8 +51,8 @@ void add_timer(struct timer_list *timer)
 	/* DDE2.6 uses jiffies and HZ as exported from L4IO. Therefore
 	 * we just need to hand over the timeout to DDEKit. */
 	timer->ddekit_timer_id = ddekit_add_timer((void *)timer->function,
-			                                  (void *)timer->data,
-											  timer->expires);
+	                                          (void *)timer->data,
+	                                          timer->expires);
 }
 
 
@@ -105,7 +106,7 @@ int timer_pending(const struct timer_list *timer)
 	 * *AND* it must be pending in the DDEKit.
 	 */
 	return ((timer->ddekit_timer_id >= 0) 
-		    && ddekit_timer_pending(timer->ddekit_timer_id));
+	        && ddekit_timer_pending(timer->ddekit_timer_id));
 }
 
 
@@ -118,16 +119,10 @@ void msleep(unsigned int msecs)
 	ddekit_thread_msleep(msecs);
 }
 
-void msleep_interruptible(unsigned int msecs)
-{
-	CHECK_INITVAR(dde26_timer);
-	current->state = TASK_INTERRUPTIBLE;
-	schedule_timeout(msecs);
-}
 
 void __const_udelay(unsigned long xloops)
 {
-	WARN_UNIMPL;
+	ddekit_thread_usleep(xloops);
 }
 
 
@@ -143,7 +138,7 @@ void __ndelay(unsigned long nsecs)
 }
 
 
-void l4dde26_init_timers(void)
+void __init l4dde26_init_timers(void)
 {
 	ddekit_init_timers();
 
@@ -152,6 +147,9 @@ void l4dde26_init_timers(void)
 	INITIALIZE_INITVAR(dde26_timer);
 }
 
+core_initcall(l4dde26_init_timers);
+
+extern unsigned long volatile __jiffy_data jiffies;
 
 __attribute__((weak)) void do_gettimeofday (struct timeval *tv)
 {
@@ -163,4 +161,17 @@ struct timespec current_fs_time(struct super_block *sb)
 	struct timespec now = {0,0};
 	WARN_UNIMPL;
 	return now;
+}
+
+ktime_t ktime_get_real(void)
+{
+	struct timespec now = {0,0};
+	WARN_UNIMPL;
+	return timespec_to_ktime(now);
+}
+
+
+void native_io_delay(void)
+{
+	udelay(2);
 }

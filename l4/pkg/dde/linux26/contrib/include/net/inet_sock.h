@@ -19,10 +19,12 @@
 
 #include <linux/string.h>
 #include <linux/types.h>
+#include <linux/jhash.h>
 
 #include <net/flow.h>
 #include <net/sock.h>
 #include <net/request_sock.h>
+#include <net/netns/hash.h>
 
 /** struct ip_options - IP Options
  *
@@ -41,8 +43,7 @@ struct ip_options {
 	unsigned char	srr;
 	unsigned char	rr;
 	unsigned char	ts;
-	unsigned char	is_data:1,
-			is_strictroute:1,
+	unsigned char	is_strictroute:1,
 			srr_is_hit:1,
 			is_changed:1,
 			rr_needaddr:1,
@@ -60,8 +61,8 @@ struct inet_request_sock {
 	struct request_sock	req;
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
 	u16			inet6_rsk_offset;
-	/* 2 bytes hole, try to pack */
 #endif
+	__be16			loc_port;
 	__be32			loc_addr;
 	__be32			rmt_addr;
 	__be16			rmt_port;
@@ -71,7 +72,8 @@ struct inet_request_sock {
 				sack_ok	   : 1,
 				wscale_ok  : 1,
 				ecn_ok	   : 1,
-				acked	   : 1;
+				acked	   : 1,
+				no_srccheck: 1;
 	struct ip_options	*opt;
 };
 
@@ -127,7 +129,8 @@ struct inet_sock {
 				is_icsk:1,
 				freebind:1,
 				hdrincl:1,
-				mc_loop:1;
+				mc_loop:1,
+				transparent:1;
 	int			mc_index;
 	__be32			mc_addr;
 	struct ip_mc_socklist	*mc_list;
@@ -135,7 +138,7 @@ struct inet_sock {
 		unsigned int		flags;
 		unsigned int		fragsize;
 		struct ip_options	*opt;
-		struct rtable		*rt;
+		struct dst_entry	*dst;
 		int			length; /* Total length of all frames */
 		__be32			addr;
 		struct flowi		fl;
@@ -167,13 +170,17 @@ static inline void inet_sk_copy_descendant(struct sock *sk_to,
 
 extern int inet_sk_rebuild_header(struct sock *sk);
 
-static inline unsigned int inet_ehashfn(const __be32 laddr, const __u16 lport,
+extern u32 inet_ehash_secret;
+extern void build_ehash_secret(void);
+
+static inline unsigned int inet_ehashfn(struct net *net,
+					const __be32 laddr, const __u16 lport,
 					const __be32 faddr, const __be16 fport)
 {
-	unsigned int h = ((__force __u32)laddr ^ lport) ^ ((__force __u32)faddr ^ (__force __u32)fport);
-	h ^= h >> 16;
-	h ^= h >> 8;
-	return h;
+	return jhash_3words((__force __u32) laddr,
+			    (__force __u32) faddr,
+			    ((__u32) lport) << 16 | (__force __u32)fport,
+			    inet_ehash_secret + net_hash_mix(net));
 }
 
 static inline int inet_sk_ehashfn(const struct sock *sk)
@@ -183,8 +190,24 @@ static inline int inet_sk_ehashfn(const struct sock *sk)
 	const __u16 lport = inet->num;
 	const __be32 faddr = inet->daddr;
 	const __be16 fport = inet->dport;
+	struct net *net = sock_net(sk);
 
-	return inet_ehashfn(laddr, lport, faddr, fport);
+	return inet_ehashfn(net, laddr, lport, faddr, fport);
+}
+
+static inline struct request_sock *inet_reqsk_alloc(struct request_sock_ops *ops)
+{
+	struct request_sock *req = reqsk_alloc(ops);
+
+	if (req != NULL)
+		inet_rsk(req)->opt = NULL;
+
+	return req;
+}
+
+static inline __u8 inet_sk_flowi_flags(const struct sock *sk)
+{
+	return inet_sk(sk)->transparent ? FLOWI_FLAG_ANYSRC : 0;
 }
 
 #endif	/* _INET_SOCK_H */

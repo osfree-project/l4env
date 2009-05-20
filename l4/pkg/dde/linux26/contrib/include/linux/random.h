@@ -7,7 +7,9 @@
 #ifndef _LINUX_RANDOM_H
 #define _LINUX_RANDOM_H
 
+#include <linux/types.h>
 #include <linux/ioctl.h>
+#include <linux/irqnr.h>
 
 /* ioctl()'s for the random number generator */
 
@@ -63,7 +65,7 @@ extern u64 secure_dccp_sequence_number(__be32 saddr, __be32 daddr,
 				       __be16 sport, __be16 dport);
 
 #ifndef MODULE
-extern struct file_operations random_fops, urandom_fops;
+extern const struct file_operations random_fops, urandom_fops;
 #endif
 
 unsigned int get_random_int(void);

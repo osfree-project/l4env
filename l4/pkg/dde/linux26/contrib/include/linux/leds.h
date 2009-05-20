@@ -14,9 +14,9 @@
 
 #include <linux/list.h>
 #include <linux/spinlock.h>
+#include <linux/rwsem.h>
 
 struct device;
-struct class_device;
 /*
  * LED Core
  */
@@ -32,19 +32,30 @@ struct led_classdev {
 	int			 brightness;
 	int			 flags;
 
+	/* Lower 16 bits reflect status */
 #define LED_SUSPENDED		(1 << 0)
+	/* Upper 16 bits reflect control information */
+#define LED_CORE_SUSPENDRESUME	(1 << 16)
 
 	/* Set LED brightness level */
+	/* Must not sleep, use a workqueue if needed */
 	void		(*brightness_set)(struct led_classdev *led_cdev,
 					  enum led_brightness brightness);
+	/* Get LED brightness level */
+	enum led_brightness (*brightness_get)(struct led_classdev *led_cdev);
 
-	struct class_device	*class_dev;
+	/* Activate hardware accelerated blink */
+	int		(*blink_set)(struct led_classdev *led_cdev,
+				     unsigned long *delay_on,
+				     unsigned long *delay_off);
+
+	struct device		*dev;
 	struct list_head	 node;			/* LED Device list */
-	char			*default_trigger;	/* Trigger to use */
+	const char		*default_trigger;	/* Trigger to use */
 
 #ifdef CONFIG_LEDS_TRIGGERS
 	/* Protects the trigger data below */
-	rwlock_t		 trigger_lock;
+	struct rw_semaphore	 trigger_lock;
 
 	struct led_trigger	*trigger;
 	struct list_head	 trig_list;
@@ -109,5 +120,36 @@ extern void ledtrig_ide_activity(void);
 #else
 #define ledtrig_ide_activity() do {} while(0)
 #endif
+
+/*
+ * Generic LED platform data for describing LED names and default triggers.
+ */
+struct led_info {
+	const char	*name;
+	const char	*default_trigger;
+	int		flags;
+};
+
+struct led_platform_data {
+	int		num_leds;
+	struct led_info	*leds;
+};
+
+/* For the leds-gpio driver */
+struct gpio_led {
+	const char *name;
+	const char *default_trigger;
+	unsigned 	gpio;
+	u8 		active_low;
+};
+
+struct gpio_led_platform_data {
+	int 		num_leds;
+	struct gpio_led *leds;
+	int		(*gpio_blink_set)(unsigned gpio,
+					unsigned long *delay_on,
+					unsigned long *delay_off);
+};
+
 
 #endif		/* __LINUX_LEDS_H_INCLUDED */

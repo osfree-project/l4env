@@ -13,8 +13,10 @@
 
 /* Linux */
 #include <linux/slab.h>
+#include <linux/types.h>
 #include <linux/bootmem.h>
 #include <linux/module.h>
+#include <linux/pci.h>
 #include <linux/mm.h>
 #include <asm/io.h>
 
@@ -23,6 +25,9 @@
 #include <l4/dde/ddekit/memory.h>
 
 #include <l4/dde/linux26/dde26.h>
+
+/* dummy */
+int forbid_dac;
 
 /* This stuff is needed by some drivers, e.g. for ethtool.
  * XXX: This is a fake, implement it if you really need ethtool stuff.
@@ -147,6 +152,15 @@ void *__kmalloc(size_t size, gfp_t flags)
 }
 
 
+size_t ksize(const void *p)
+{
+	struct kmem_cache *cache = (struct kmem_cache *)*((void**)p - 1);
+	if (cache)
+		return kmem_cache_size(cache);
+	return -1;
+}
+
+
 void *dma_alloc_coherent(struct device *dev, size_t size, 
                          dma_addr_t *dma_handle, gfp_t flag)
 {
@@ -181,5 +195,5 @@ void l4dde26_kmalloc_init(void)
 
 	/* init malloc sizes array */
 	for (; sizes->cs_size != ULONG_MAX; ++sizes, ++names)
-		sizes->cs_cachep = kmem_cache_create(*names, sizes->cs_size, 0, 0, 0, 0);
+		sizes->cs_cachep = kmem_cache_create(*names, sizes->cs_size, 0, 0, 0);
 }

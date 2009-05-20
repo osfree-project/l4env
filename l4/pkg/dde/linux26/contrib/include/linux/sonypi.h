@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2005 Narayanan R S <nars@kadamba.org>
 
- * Copyright (C) 2001-2002 Alcôve <www.alcove.com>
+ * Copyright (C) 2001-2002 AlcÃ´ve <www.alcove.com>
  *
  * Copyright (C) 2001 Michael Ashley <m.ashley@unsw.edu.au>
  *
@@ -101,6 +101,8 @@
 #define SONYPI_EVENT_FNKEY_RELEASED		59
 #define SONYPI_EVENT_WIRELESS_ON		60
 #define SONYPI_EVENT_WIRELESS_OFF		61
+#define SONYPI_EVENT_ZOOM_IN_PRESSED		62
+#define SONYPI_EVENT_ZOOM_OUT_PRESSED		63
 
 /* get/set brightness */
 #define SONYPI_IOCGBRT		_IOR('v', 0, __u8)
@@ -152,8 +154,6 @@
 #define SONYPI_COMMAND_GETCAMERADIRECTION	17	/* obsolete */
 #define SONYPI_COMMAND_GETCAMERAROMVERSION	18	/* obsolete */
 #define SONYPI_COMMAND_GETCAMERAREVISION	19	/* obsolete */
-
-int sonypi_camera_command(int command, u8 value);
 
 #endif				/* __KERNEL__ */
 

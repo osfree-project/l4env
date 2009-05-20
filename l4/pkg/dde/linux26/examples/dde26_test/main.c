@@ -22,15 +22,16 @@
 #include <l4/dde/linux26/dde26.h>
 
 #include <l4/util/parse_cmd.h>
+#include <l4/util/util.h>
 #include <l4/log/l4log.h>
 
 /* We define 4 initcalls and see if these are executed
  * in the beginning.
  */
-static void foo(void) { printk("foo  module_init\n"); }
-static void bar(void) { printk("bar  device_initcall\n"); }
-static void bla(void) { printk("bla  arch_initcall\n"); }
-static void blub(void) { printk("blub subsys_initcall\n"); }
+static __init void foo(void) { printk("foo  module_init\n"); }
+static __init void bar(void) { printk("bar  device_initcall\n"); }
+static __init void bla(void) { printk("bla  arch_initcall\n"); }
+static __init void blub(void) { printk("blub subsys_initcall\n"); }
 module_init(foo);
 device_initcall(bar);
 arch_initcall(bla);
@@ -179,9 +180,11 @@ static void tasklet_test(void)
 	tasklet_enable(&hi2);
 
 	msleep(1000);
-	printk("Scheduling tasklet 3 twice - should only run once.\n");
+	printk("Scheduling (disabled) tasklet 3 twice - should only run once after enabling.\n");
+	tasklet_disable(&low3);
 	tasklet_schedule(&low3);
 	tasklet_schedule(&low3);
+	tasklet_enable(&low3);
 
 	msleep(1000);
 
@@ -257,6 +260,8 @@ static void timer_test(void)
 	add_timer(&_timer25);
 
 	msleep(30000);
+
+	del_timer(&_timer);
 	printk("END TIMER TEST\n");
 }
 
@@ -283,8 +288,9 @@ static void memory_kmem_cache_test(void)
 	};
 	static struct obj1 *p1[256];
 
-	cache0 = kmem_cache_create("obj0", sizeof(*p0[0]), 0, 0, 0, 0);
-	cache1 = kmem_cache_create("obj1", sizeof(*p1[0]), 0, 0, 0, 0);
+	cache0 = kmem_cache_create("obj0", sizeof(*p0[0]), 0, 0, 0);
+	cache1 = kmem_cache_create("obj1", sizeof(*p1[0]), 0, 0, 0);
+	printk("kmem caches: %p %p\n", cache0, cache1);
 
 	unsigned i;
 	for (i = 0; i < 1024; ++i)
@@ -301,6 +307,7 @@ static void memory_kmem_cache_test(void)
 
 	kmem_cache_destroy(cache1);
 	kmem_cache_destroy(cache0);
+	printk("Done testing kmem_cache_alloc() & co.\n");
 }
 
 
@@ -311,17 +318,20 @@ static void memory_page_alloc_test(void)
 	p[1] = __get_free_pages(GFP_KERNEL, 1);
 	p[2] = __get_free_pages(GFP_KERNEL, 2);
 	p[3] = __get_free_pages(GFP_KERNEL, 3);
+	printk("pages: %p %p %p %p\n", p[0], p[1], p[2], p[3]);
 
 	free_pages(p[0], 0);
 	free_pages(p[1], 1);
 	free_pages(p[2], 2);
 	free_pages(p[3], 3);
+	printk("Freed pages\n");
 }
 
 
 static void memory_kmalloc_test(void)
 {
-	l4dde26_kmalloc_init();
+	// XXX initialized by dde26_init()!
+//	l4dde26_kmalloc_init();
 
 	const unsigned count = 33;
 	char *p[count];
@@ -350,9 +360,11 @@ static void memory_kmalloc_test(void)
 
 static void memory_test(void)
 {
+	printk("memory test\n");
 	if (1) memory_kmem_cache_test();
 	if (1) memory_page_alloc_test();
 	if (1) memory_kmalloc_test();
+	printk("End of memory test\n");
 }
 
 
@@ -376,7 +388,7 @@ static int wq_cnt = 0;
 
 static void work_queue_func(struct work_struct *data)
 {
-	printk("Work queue function... Do some work here...\n");
+	printk("(1) Work queue function... Do some work here...\n");
 	if (++wq_cnt < 5)
 		queue_work(_wq, &_wobj);
 }
@@ -384,8 +396,8 @@ static void work_queue_func(struct work_struct *data)
 
 static void work_queue_func2(struct work_struct *data)
 {
-	printk("Work queue function 2... Do some work here...\n");
-	if (++wq_cnt < 5)
+	printk("(2) Work queue function 2... Do some work here...\n");
+	if (++wq_cnt < 10)
 		schedule_work(&_wobj2);
 }
 
@@ -418,15 +430,17 @@ void pci_test(void)
 
 int main(int argc, const char **argv)
 {
-	int test_current = 0;
-	int test_kernel_thread = 0;
-	int test_wait = 0;
-	int test_tasklet = 0;
-	int test_timer = 0;
-	int test_memory = 0;
-	int test_kthread = 0;
-	int test_work = 0;
-	int test_pci = 0;
+	int test_current = 1;
+	int test_kernel_thread = 1;
+	int test_wait = 1;
+	int test_tasklet = 1;
+	int test_timer = 1;
+	int test_memory = 1;
+	int test_kthread = 1;
+	int test_work = 1;
+	int test_pci = 1;
+
+	msleep(1000);
 
 	if (parse_cmdline(&argc, &argv,
                 'c', "current", "test current() function",
@@ -450,30 +464,39 @@ int main(int argc, const char **argv)
                 0, 0))
 		return 1;
 
-	LOG("DDEKit test. Carrying out tests:");
-	LOGd(test_current, "\t* current()");
-	LOGd(test_kernel_thread, "\t* kernel_thread()");
-	LOGd(test_wait, "\t* wait queues");
-	LOGd(test_tasklet, "\t* tasklets");
-	LOGd(test_timer, "\t* timers");
-	LOGd(test_memory, "\t* memory management");
-	LOGd(test_kthread, "\t* kthreads");
-	LOGd(test_work, "\t* work queues");
-	LOGd(test_pci, "\t* PCI subsystem");
+	printk("DDEKit test. Carrying out tests:\n");
+	printk("\t* current()\n");
+	printk("\t* kernel_thread()\n");
+	printk("\t* wait queues\n");
+	printk("\t* tasklets\n");
+	printk("\t* timers\n");
+	printk("\t* memory management\n");
+	printk("\t* kthreads\n");
+	printk("\t* work queues\n");
+	printk("\t* PCI subsystem\n");
 
+#if 0
+	printk("l4dde26_init()\n");
 	l4dde26_init();
+	printk("l4dde26_process_init()\n");
 	l4dde26_process_init();
+	printk("l4dde26_do_initcalls()\n");
 	l4dde26_do_initcalls();
+#endif
 
+	printk("Init done. Running tests.\n");
 	if (test_current) current_test();
 	if (test_kernel_thread) kernel_thread_test();
 	if (test_wait) wq_test();
 	if (test_tasklet) tasklet_test();
 	if (test_timer) timer_test();
 	if (test_memory) memory_test();
-/*	if (1) kthread_test(); */
+	if (1) kthread_test();
 	if (test_work) work_queue_test();
-	if (test_pci) pci_test();
+//	if (test_pci) pci_test();
+	printk("Test done.\n");
+
+	l4_sleep_forever();
 
 	return 0;
 }

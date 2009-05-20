@@ -27,9 +27,12 @@
 #include <l4/ore/packet_debug.h>
 #endif
 
-#define RX_REPLY_SUCCESS    0
-#define RX_REPLY_FAIL       1
-#define RX_REPLY_NO_DATA    2
+enum
+{
+	RX_REPLY_SUCCESS = 0,
+	RX_REPLY_FAIL    = 1,
+	RX_REPLY_NO_DATA = 2,
+};
 
 static int rx_reply_string(int h, rxtx_entry_t *entry);
 
@@ -239,13 +242,13 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
   ent->skb = skb;
   ent->in_dataspace = 0;
 
-  LOGd(ORE_DEBUG_PACKET, "skb = %p", skb);
-  LOG_MAC_s(ORE_DEBUG_PACKET_SEND, "packet for:", skb->data);
-
   // fill the skb with all data necessary for sending,
   memcpy(skb->data, buf, size);
   skb->len  = size;
   skb->dev  = ore_connection_table[channel].dev;
+  LOGd(ORE_DEBUG_PACKET, "skb = %p", skb);
+  LOG_MAC_s(ORE_DEBUG_PACKET_SEND, "packet for:", skb->data);
+
 
 #ifdef CONFIG_ORE_PACKET_TRACE
   packet_debug((unsigned char *)skb->data);
@@ -259,6 +262,7 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
       dev = ore_connection_table[channel].dev;
       do
       {
+		LOGd(ORE_DEBUG_PACKET_SEND, "%s", netif_queue_stopped(dev) ? "Queue stopped" : "Queue ready");
         while (netif_queue_stopped(dev))
           {
             /* Wait some time (1ms) until the drivers calls netif_wake_
@@ -274,7 +278,16 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
 		 * 		queueing discipline beforehand, which is quite complex,
 		 * 		therefore we just use hard_start_xmit. */
         xmit_lock(dev->name);
-        xmit = dev->hard_start_xmit(ent->skb, dev);
+
+		/*
+		 * Compatibility stuff. Linux 2.6.29 introduced the netdev_ops structure,
+		 * but there are still drivers using the old-style netdevice operations,
+		 * so we need to determine which one to use at runtime.
+		 */
+		if (dev->netdev_ops)
+			xmit = dev->netdev_ops->ndo_start_xmit(ent->skb, dev);
+		else
+			xmit = dev->hard_start_xmit(ent->skb, dev);
         xmit_unlock(dev->name);
         if (xmit)
             LOG_Error("Error sending packet: %d", xmit);
@@ -334,12 +347,7 @@ int netif_rx_string(int h, struct sk_buff *skb)
   ent->skb = skb_get(skb);
 
   if (ORE_DEBUG_IRQ)
-  {
-      if (ent->skb->mac.raw)
-        LOG_MAC(ORE_DEBUG_IRQ, ent->skb->mac.raw);
-      else
-        LOG_MAC(ORE_DEBUG_IRQ, ent->skb->data);
-  }
+      LOG_MAC(ORE_DEBUG_IRQ, ent->skb->data);
 
   Assert(ent);
   Assert(ent->skb);

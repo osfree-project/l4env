@@ -48,7 +48,7 @@ struct page * find_get_page(struct address_space *mapping, unsigned long offset)
 	return NULL;
 }
 
-void fastcall unlock_page(struct page *page)
+void unlock_page(struct page *page)
 {
 	WARN_UNIMPL;
 }
@@ -105,7 +105,7 @@ static struct vfsmount *dde_kern_mount(struct file_system_type *type,
 	return m;
 }
 
-struct vfsmount *kern_mount(struct file_system_type *type)
+struct vfsmount *kern_mount_data(struct file_system_type *type, void *data)
 {
 	return dde_kern_mount(type, 0, type->name, NULL);
 }

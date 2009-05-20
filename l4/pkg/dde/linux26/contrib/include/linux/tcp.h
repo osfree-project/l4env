@@ -178,6 +178,21 @@ struct tcp_md5sig {
 #include <net/inet_connection_sock.h>
 #include <net/inet_timewait_sock.h>
 
+static inline struct tcphdr *tcp_hdr(const struct sk_buff *skb)
+{
+	return (struct tcphdr *)skb_transport_header(skb);
+}
+
+static inline unsigned int tcp_hdrlen(const struct sk_buff *skb)
+{
+	return tcp_hdr(skb)->doff * 4;
+}
+
+static inline unsigned int tcp_optlen(const struct sk_buff *skb)
+{
+	return (tcp_hdr(skb)->doff - 5) * 4;
+}
+
 /* This defines a selective acknowledgement block. */
 struct tcp_sack_block_wire {
 	__be32	start_seq;
@@ -208,6 +223,12 @@ struct tcp_options_received {
 	u16	user_mss;  	/* mss requested by user in ioctl */
 	u16	mss_clamp;	/* Maximal mss, negotiated at connection setup */
 };
+
+/* This is the max number of SACKS that we'll generate and process. It's safe
+ * to increse this, although since:
+ *   size = TCPOLEN_SACK_BASE_ALIGNED (4) + n * TCPOLEN_SACK_PERBLOCK (8)
+ * only four options will fit in a standard TCP header */
+#define TCP_NUM_SACKS 4
 
 struct tcp_request_sock {
 	struct inet_request_sock 	req;
@@ -242,6 +263,8 @@ struct tcp_sock {
  *	See RFC793 and RFC1122. The RFC writes these in capitals.
  */
  	u32	rcv_nxt;	/* What we want to receive next 	*/
+	u32	copied_seq;	/* Head of yet unread data		*/
+	u32	rcv_wup;	/* rcv_nxt on last window update sent	*/
  	u32	snd_nxt;	/* Next sequence we send		*/
 
  	u32	snd_una;	/* First byte we want an ack for	*/
@@ -274,10 +297,9 @@ struct tcp_sock {
 	u32	rcv_ssthresh;	/* Current window clamp			*/
 
 	u32	frto_highmark;	/* snd_nxt when RTO occurred */
-	u8	reordering;	/* Packet reordering metric.		*/
+	u16	advmss;		/* Advertised MSS			*/
 	u8	frto_counter;	/* Number of new acks after RTO */
 	u8	nonagle;	/* Disable Nagle algorithm?             */
-	u8	keepalive_probes; /* num of allowed keep alive probes	*/
 
 /* RTT measurement */
 	u32	srtt;		/* smoothed round trip time << 3	*/
@@ -287,8 +309,14 @@ struct tcp_sock {
 	u32	rtt_seq;	/* sequence number to update rttvar	*/
 
 	u32	packets_out;	/* Packets which are "in flight"	*/
-	u32	left_out;	/* Packets which leaved network	*/
 	u32	retrans_out;	/* Retransmitted packets out		*/
+
+	u16	urg_data;	/* Saved octet of OOB data and control flags */
+	u8	ecn_flags;	/* ECN status bits.			*/
+	u8	reordering;	/* Packet reordering metric.		*/
+	u32	snd_up;		/* Urgent pointer		*/
+
+	u8	keepalive_probes; /* num of allowed keep alive probes	*/
 /*
  *      Options received (usually on last packet, some only on SYN packets).
  */
@@ -299,43 +327,44 @@ struct tcp_sock {
  */
  	u32	snd_ssthresh;	/* Slow start size threshold		*/
  	u32	snd_cwnd;	/* Sending congestion window		*/
- 	u16	snd_cwnd_cnt;	/* Linear increase counter		*/
-	u16	snd_cwnd_clamp; /* Do not allow snd_cwnd to grow above this */
+	u32	snd_cwnd_cnt;	/* Linear increase counter		*/
+	u32	snd_cwnd_clamp; /* Do not allow snd_cwnd to grow above this */
 	u32	snd_cwnd_used;
 	u32	snd_cwnd_stamp;
 
-	struct sk_buff_head	out_of_order_queue; /* Out of order segments go here */
-
  	u32	rcv_wnd;	/* Current receiver window		*/
-	u32	rcv_wup;	/* rcv_nxt on last window update sent	*/
 	u32	write_seq;	/* Tail(+1) of data held in tcp send buffer */
 	u32	pushed_seq;	/* Last pushed seq, required to talk to windows */
-	u32	copied_seq;	/* Head of yet unread data		*/
+	u32	lost_out;	/* Lost packets			*/
+	u32	sacked_out;	/* SACK'd packets			*/
+	u32	fackets_out;	/* FACK'd packets			*/
+	u32	tso_deferred;
+	u32	bytes_acked;	/* Appropriate Byte Counting - RFC3465 */
 
-/*	SACKs data	*/
+	/* from STCP, retrans queue hinting */
+	struct sk_buff* lost_skb_hint;
+	struct sk_buff *scoreboard_skb_hint;
+	struct sk_buff *retransmit_skb_hint;
+
+	struct sk_buff_head	out_of_order_queue; /* Out of order segments go here */
+
+	/* SACKs data, these 2 need to be together (see tcp_build_and_update_options) */
 	struct tcp_sack_block duplicate_sack[1]; /* D-SACK block */
 	struct tcp_sack_block selective_acks[4]; /* The SACKS themselves*/
 
 	struct tcp_sack_block recv_sack_cache[4];
 
-	/* from STCP, retrans queue hinting */
-	struct sk_buff* lost_skb_hint;
+	struct sk_buff *highest_sack;   /* highest skb with SACK received
+					 * (validity guaranteed only if
+					 * sacked_out > 0)
+					 */
 
-	struct sk_buff *scoreboard_skb_hint;
-	struct sk_buff *retransmit_skb_hint;
-	struct sk_buff *forward_skb_hint;
-	struct sk_buff *fastpath_skb_hint;
-
-	int     fastpath_cnt_hint;
 	int     lost_cnt_hint;
-	int     retransmit_cnt_hint;
-	int     forward_cnt_hint;
+	u32     retransmit_high;	/* L-bits may be on up to this seqno */
 
-	u16	advmss;		/* Advertised MSS			*/
-	u16	prior_ssthresh; /* ssthresh saved at recovery start	*/
-	u32	lost_out;	/* Lost packets			*/
-	u32	sacked_out;	/* SACK'd packets			*/
-	u32	fackets_out;	/* FACK'd packets			*/
+	u32	lost_retrans_low;	/* Sent seq after any rxmit (lowest) */
+
+	u32	prior_ssthresh; /* ssthresh saved at recovery start	*/
 	u32	high_seq;	/* snd_nxt at onset of congestion	*/
 
 	u32	retrans_stamp;	/* Timestamp of the last retransmit,
@@ -343,22 +372,13 @@ struct tcp_sock {
 				 * the first SYN. */
 	u32	undo_marker;	/* tracking retrans started here. */
 	int	undo_retrans;	/* number of undoable retransmissions. */
-	u32	urg_seq;	/* Seq of received urgent pointer */
-	u16	urg_data;	/* Saved octet of OOB data and control flags */
-	u8	urg_mode;	/* In urgent mode		*/
-	u8	ecn_flags;	/* ECN status bits.			*/
-	u32	snd_up;		/* Urgent pointer		*/
-
 	u32	total_retrans;	/* Total retransmits for entire connection */
-	u32	bytes_acked;	/* Appropriate Byte Counting - RFC3465 */
 
+	u32	urg_seq;	/* Seq of received urgent pointer */
 	unsigned int		keepalive_time;	  /* time before keep alive takes place */
 	unsigned int		keepalive_intvl;  /* time interval between keep alive probes */
-	int			linger2;
 
 	unsigned long last_synq_overflow; 
-
-	u32	tso_deferred;
 
 /* Receiver side RTT estimation */
 	struct {
@@ -387,6 +407,8 @@ struct tcp_sock {
 /* TCP MD5 Signagure Option information */
 	struct tcp_md5sig_info	*md5sig_info;
 #endif
+
+	int			linger2;
 };
 
 static inline struct tcp_sock *tcp_sk(const struct sock *sk)

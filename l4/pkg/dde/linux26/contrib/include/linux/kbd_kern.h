@@ -75,7 +75,7 @@ extern int do_poke_blanked_console;
 
 extern void (*kbd_ledfunc)(unsigned int led);
 
-extern void set_console(int nr);
+extern int set_console(int nr);
 extern void schedule_console_callback(void);
 
 static inline void set_leds(void)
@@ -160,5 +160,8 @@ static inline void con_schedule_flip(struct tty_struct *t)
 	spin_unlock_irqrestore(&t->buf.lock, flags);
 	schedule_delayed_work(&t->buf.work, 0);
 }
+
+/* mac_hid.c */
+extern int mac_hid_mouse_emulate_buttons(int, unsigned int, int);
 
 #endif

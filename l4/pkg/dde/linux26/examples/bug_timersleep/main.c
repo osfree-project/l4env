@@ -109,16 +109,10 @@ int main(void)
 	ferret_list_post_1t1wc(1, sensor, 42, 1, 0, l4_myself(),DDE_INIT);
 #endif
 	printk("Initializing DDE base system.\n");
-	l4dde26_init();
-	l4dde26_process_init();
-	l4dde26_init_timers();
 
 #if 0
 	ferret_list_post_1t1wc(1, sensor, 42, 1, 0, l4_myself(),DDE_INITCALLS);
 #endif
-	printk("Doing initcalls\n");
-	l4dde26_do_initcalls();
-	printk("initialized DDE.\n");
 
 #if 0
 	ferret_list_post_1t1wc(1, sensor, 42, 1, 0, l4_myself(),INIT_MODULE);

@@ -7,7 +7,6 @@
 #include <l4/dde/ddekit/condvar.h>
 #include <l4/dde/ddekit/debug.h>
 #include <l4/dde/ddekit/initcall.h>
-#include <l4/dde/ddekit/inline.h>
 #include <l4/dde/ddekit/interrupt.h>
 #include <l4/dde/ddekit/lock.h>
 #include <l4/dde/ddekit/memory.h>
@@ -38,18 +37,24 @@
 extern ferret_list_local_t *ferret_ore_sensor;
 #endif
 
+/***
+ * Internal representation of a Linux kernel thread. This struct
+ * contains Linux' data as well as some additional data used by DDE.
+ */
 typedef struct dde26_thread_data
 {
 	/* NOTE: _threadinfo needs to be first in this struct! */
-	struct thread_info  _thread_info;
-	ddekit_thread_t    *_ddekit_thread;
-	ddekit_sem_t       *_sleep_lock;
+	struct thread_info  _thread_info;   ///< Linux thread info (see current())
+	ddekit_thread_t    *_ddekit_thread; ///< underlying DDEKit thread
+	ddekit_sem_t       *_sleep_lock;    ///< lock used for sleep_interruptible()
+	struct pid          _vpid;          ///< virtual PID
 } dde26_thread_data;
 
 #define LX_THREAD(thread_data)     ((thread_data)->_thread_info)
 #define LX_TASK(thread_data)       ((thread_data)->_thread_info.task)
 #define DDEKIT_THREAD(thread_data) ((thread_data)->_ddekit_thread)
 #define SLEEP_LOCK(thread_data)    ((thread_data)->_sleep_lock)
+#define VPID_P(thread_data)        (&(thread_data)->_vpid)
 
 #if DDE_DEBUG
 #define WARN_UNIMPL         printk("unimplemented: %s\n", __FUNCTION__)
@@ -83,9 +88,9 @@ typedef struct dde26_thread_data
  * we can derive the dde26_thread_data from a task struct by simply
  * dereferencing its thread_info pointer
  */
-static INLINE dde26_thread_data *lxtask_to_ddethread(struct task_struct *t)
+static dde26_thread_data *lxtask_to_ddethread(struct task_struct *t)
 {
-	return (dde26_thread_data *)(t->thread_info);
+	return (dde26_thread_data *)(task_thread_info(t));
 }
 
 extern struct thread_info init_thread;

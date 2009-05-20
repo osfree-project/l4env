@@ -53,7 +53,7 @@
 #define STL_SIOMEMMAJOR		28
 #define ACSI_MAJOR		28
 #define AZTECH_CDROM_MAJOR	29
-#define GRAPHDEV_MAJOR		29   /* SparcLinux & Linux/68k /dev/fb */
+#define FB_MAJOR		29   /* /dev/fb* framebuffers */
 #define CM206_CDROM_MAJOR	32
 #define IDE2_MAJOR		33
 #define IDE3_MAJOR		34
@@ -152,9 +152,13 @@
 #define USB_ACM_AUX_MAJOR	167
 #define USB_CHAR_MAJOR		180
 
+#define MMC_BLOCK_MAJOR		179
+
 #define VXVM_MAJOR		199	/* VERITAS volume i/o driver    */
 #define VXSPEC_MAJOR		200	/* VERITAS volume config driver */
 #define VXDMP_MAJOR		201	/* VERITAS volume multipath driver */
+
+#define XENVBD_MAJOR		202	/* Xen virtual block device */
 
 #define MSR_MAJOR		202
 #define CPUID_MAJOR		203
@@ -165,5 +169,7 @@
 #define IBM_FS3270_MAJOR	228
 
 #define VIOTAPE_MAJOR		230
+
+#define BLOCK_EXT_MAJOR		259
 
 #endif

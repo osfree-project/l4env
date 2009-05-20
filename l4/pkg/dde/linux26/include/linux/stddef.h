@@ -11,12 +11,11 @@
 #endif
 
 #ifdef __KERNEL__
-#ifndef DDE_LINUX
+
 enum {
 	false	= 0,
 	true	= 1
 };
-#endif
 
 #undef offsetof
 #ifdef __compiler_offsetof

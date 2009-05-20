@@ -63,8 +63,7 @@ static int options[MAX_UNITS];
 
 /* These identify the driver base version and may not be removed. */
 static char version[] __devinitdata =
-KERN_INFO DRV_NAME ".c:v" DRV_VERSION " " DRV_RELDATE " D. Becker/P. Gortmaker\n"
-KERN_INFO "  http://www.scyld.com/network/ne2k-pci.html\n";
+KERN_INFO DRV_NAME ".c:v" DRV_VERSION " " DRV_RELDATE " D. Becker/P. Gortmaker\n";
 
 #if defined(__powerpc__)
 #define inl_le(addr)  le32_to_cpu(inl(addr))
@@ -201,6 +200,20 @@ struct ne2k_pci_card {
   in the 'dev' and 'ei_status' structures.
 */
 
+static const struct net_device_ops ne2k_netdev_ops = {
+	.ndo_open		= ne2k_pci_open,
+	.ndo_stop		= ne2k_pci_close,
+	.ndo_start_xmit		= ei_start_xmit,
+	.ndo_tx_timeout		= ei_tx_timeout,
+	.ndo_get_stats		= ei_get_stats,
+	.ndo_set_multicast_list = ei_set_multicast_list,
+	.ndo_validate_addr	= eth_validate_addr,
+	.ndo_set_mac_address 	= eth_mac_addr,
+	.ndo_change_mtu		= eth_change_mtu,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_poll_controller = ei_poll,
+#endif
+};
 
 static int __devinit ne2k_pci_init_one (struct pci_dev *pdev,
 				     const struct pci_device_id *ent)
@@ -266,7 +279,8 @@ static int __devinit ne2k_pci_init_one (struct pci_dev *pdev,
 		dev_err(&pdev->dev, "cannot allocate ethernet device\n");
 		goto err_out_free_res;
 	}
-	SET_MODULE_OWNER(dev);
+	dev->netdev_ops = &ne2k_netdev_ops;
+
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
 	/* Reset card. Who knows what dain-bramaged state it was left in. */
@@ -309,7 +323,7 @@ static int __devinit ne2k_pci_init_one (struct pci_dev *pdev,
 			{0x00,	EN0_RSARHI},
 			{E8390_RREAD+E8390_START, E8390_CMD},
 		};
-		for (i = 0; i < sizeof(program_seq)/sizeof(program_seq[0]); i++)
+		for (i = 0; i < ARRAY_SIZE(program_seq); i++)
 			outb(program_seq[i].value, ioaddr + program_seq[i].offset);
 
 	}
@@ -355,24 +369,20 @@ static int __devinit ne2k_pci_init_one (struct pci_dev *pdev,
 	ei_status.block_output = &ne2k_pci_block_output;
 	ei_status.get_8390_hdr = &ne2k_pci_get_8390_hdr;
 	ei_status.priv = (unsigned long) pdev;
-	dev->open = &ne2k_pci_open;
-	dev->stop = &ne2k_pci_close;
+
 	dev->ethtool_ops = &ne2k_pci_ethtool_ops;
-#ifdef CONFIG_NET_POLL_CONTROLLER
-	dev->poll_controller = ei_poll;
-#endif
 	NS8390_init(dev, 0);
 
 	i = register_netdev(dev);
 	if (i)
 		goto err_out_free_netdev;
 
-	printk("%s: %s found at %#lx, IRQ %d, ",
-		   dev->name, pci_clone_list[chip_idx].name, ioaddr, dev->irq);
-	for(i = 0; i < 6; i++) {
-		printk("%2.2X%s", SA_prom[i], i == 5 ? ".\n": ":");
+	for(i = 0; i < 6; i++)
 		dev->dev_addr[i] = SA_prom[i];
-	}
+	printk("%s: %s found at %#lx, IRQ %d, %pM.\n",
+	       dev->name, pci_clone_list[chip_idx].name, ioaddr, dev->irq,
+	       dev->dev_addr);
+
 	memcpy(dev->perm_addr, dev->dev_addr, dev->addr_len);
 
 	return 0;
@@ -536,9 +546,9 @@ static void ne2k_pci_block_input(struct net_device *dev, int count,
 		if (count & 3) {
 			buf += count & ~3;
 			if (count & 2) {
-				u16 *b = (u16 *)buf;
+				__le16 *b = (__le16 *)buf;
 
-				*b++ = le16_to_cpu(inw(NE_BASE + NE_DATAPORT));
+				*b++ = cpu_to_le16(inw(NE_BASE + NE_DATAPORT));
 				buf = (char *)b;
 			}
 			if (count & 1)
@@ -601,9 +611,9 @@ static void ne2k_pci_block_output(struct net_device *dev, int count,
 		if (count & 3) {
 			buf += count & ~3;
 			if (count & 2) {
-				u16 *b = (u16 *)buf;
+				__le16 *b = (__le16 *)buf;
 
-				outw(cpu_to_le16(*b++), NE_BASE + NE_DATAPORT);
+				outw(le16_to_cpu(*b++), NE_BASE + NE_DATAPORT);
 				buf = (char *)b;
 			}
 		}
@@ -627,7 +637,7 @@ static void ne2k_pci_block_output(struct net_device *dev, int count,
 static void ne2k_pci_get_drvinfo(struct net_device *dev,
 				 struct ethtool_drvinfo *info)
 {
-	struct ei_device *ei = dev->priv;
+	struct ei_device *ei = netdev_priv(dev);
 	struct pci_dev *pci_dev = (struct pci_dev *) ei->priv;
 
 	strcpy(info->driver, DRV_NAME);
@@ -637,9 +647,6 @@ static void ne2k_pci_get_drvinfo(struct net_device *dev,
 
 static const struct ethtool_ops ne2k_pci_ethtool_ops = {
 	.get_drvinfo		= ne2k_pci_get_drvinfo,
-	.get_tx_csum		= ethtool_op_get_tx_csum,
-	.get_sg			= ethtool_op_get_sg,
-	.get_perm_addr		= ethtool_op_get_perm_addr,
 };
 
 static void __devexit ne2k_pci_remove_one (struct pci_dev *pdev)
@@ -670,10 +677,15 @@ static int ne2k_pci_suspend (struct pci_dev *pdev, pm_message_t state)
 static int ne2k_pci_resume (struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata (pdev);
+	int rc;
 
 	pci_set_power_state(pdev, 0);
 	pci_restore_state(pdev);
-	pci_enable_device(pdev);
+
+	rc = pci_enable_device(pdev);
+	if (rc)
+		return rc;
+
 	NS8390_init(dev, 1);
 	netif_device_attach(dev);
 
@@ -682,9 +694,7 @@ static int ne2k_pci_resume (struct pci_dev *pdev)
 
 #endif /* CONFIG_PM */
 
-#ifndef DDE_LINUX
-static 
-#endif
+
 struct pci_driver ne2k_driver = {
 	.name		= DRV_NAME,
 	.probe		= ne2k_pci_init_one,
@@ -698,7 +708,7 @@ struct pci_driver ne2k_driver = {
 };
 
 
-static int __init ne2k_pci_init(void)
+int __init ne2k_pci_init(void)
 {
 /* when a module, this is printed whether or not devices are found in probe */
 #ifdef MODULE

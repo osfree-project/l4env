@@ -1,17 +1,15 @@
 #ifndef _LINUX_STRING_H_
 #define _LINUX_STRING_H_
 
-/* We don't want strings.h stuff being user by user stuff by accident */
+/* We don't want strings.h stuff being used by user stuff by accident */
 
-#ifdef __KERNEL__
+#ifndef __KERNEL__
+#include <string.h>
+#else
 
 #include <linux/compiler.h>	/* for inline */
 #include <linux/types.h>	/* for size_t */
 #include <linux/stddef.h>	/* for NULL */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 extern char *strndup_user(const char __user *, long);
 
@@ -46,6 +44,12 @@ extern int strncmp(const char *,const char *,__kernel_size_t);
 #endif
 #ifndef __HAVE_ARCH_STRNICMP
 extern int strnicmp(const char *, const char *, __kernel_size_t);
+#endif
+#ifndef __HAVE_ARCH_STRCASECMP
+extern int strcasecmp(const char *s1, const char *s2);
+#endif
+#ifndef __HAVE_ARCH_STRNCASECMP
+extern int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 #ifndef __HAVE_ARCH_STRCHR
 extern char * strchr(const char *,int);
@@ -99,11 +103,16 @@ extern void * memchr(const void *,int,__kernel_size_t);
 #endif
 
 extern char *kstrdup(const char *s, gfp_t gfp);
+extern char *kstrndup(const char *s, size_t len, gfp_t gfp);
 extern void *kmemdup(const void *src, size_t len, gfp_t gfp);
 
-#ifdef __cplusplus
-}
-#endif
+extern char **argv_split(gfp_t gfp, const char *str, int *argcp);
+extern void argv_free(char **argv);
+
+extern bool sysfs_streq(const char *s1, const char *s2);
+
+extern ssize_t memory_read_from_buffer(void *to, size_t count, loff_t *ppos,
+			const void *from, size_t available);
 
 #endif
 #endif /* _LINUX_STRING_H_ */

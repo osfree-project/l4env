@@ -42,6 +42,14 @@ static inline pgoff_t swp_offset(swp_entry_t entry)
 	return entry.val & SWP_OFFSET_MASK(entry);
 }
 
+#ifdef CONFIG_MMU
+/* check whether a pte points to a swap entry */
+static inline int is_swap_pte(pte_t pte)
+{
+	return !pte_none(pte) && !pte_present(pte) && !pte_file(pte);
+}
+#endif
+
 /*
  * Convert the arch-dependent pte representation of a swp_entry_t into an
  * arch-independent swp_entry_t.
@@ -108,7 +116,10 @@ extern void migration_entry_wait(struct mm_struct *mm, pmd_t *pmd,
 #else
 
 #define make_migration_entry(page, write) swp_entry(0, 0)
-#define is_migration_entry(swp) 0
+static inline int is_migration_entry(swp_entry_t swp)
+{
+	return 0;
+}
 #define migration_entry_to_page(swp) NULL
 static inline void make_migration_entry_read(swp_entry_t *entryp) { }
 static inline void migration_entry_wait(struct mm_struct *mm, pmd_t *pmd,

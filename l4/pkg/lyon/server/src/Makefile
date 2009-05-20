@@ -23,7 +23,7 @@ SERVERIDL	= lyon.idl
 LIBS		= -ltcg -ltcg_crypt -ltcg -lcrypto_sha1_openssl -lcrypto_rsaref2 \
 		  -lcrypto_pad -lcrypto_aes_linux_586.o -lcrypto_modes
 LIBS_lyon-tis	= -lstpm-l4-tis.o -lio
-LIBS_lyon-legacy= -lstpm-l4.o -ldde_linux26 -lddekit -lio -llist_alloc
+LIBS_lyon-legacy= -lstpm-l4.o -ldde_linux26.o -lddekit -lio -llist_alloc
 LIBS_lyon-ux    = -lstpm-ux -lclxfux.o
 LIBS_lyon-emu   = -lstpm-emu -lclxfux.o
 

@@ -16,7 +16,7 @@
  *     published by the Free Software Foundation; either version 2 of 
  *     the License, or (at your option) any later version.
  *  
- *     Neither Dag Brattli nor University of Tromsø admit liability nor
+ *     Neither Dag Brattli nor University of TromsÃ¸ admit liability nor
  *     provide warranty for any of this software. This material is 
  *     provided "AS-IS" and at no charge.
  *     
@@ -29,5 +29,4 @@ struct net_device *alloc_irlandev(const char *name);
 int  irlan_eth_receive(void *instance, void *sap, struct sk_buff *skb);
 
 void irlan_eth_flow_indication( void *instance, void *sap, LOCAL_FLOW flow);
-void irlan_eth_send_gratuitous_arp(struct net_device *dev);
 #endif

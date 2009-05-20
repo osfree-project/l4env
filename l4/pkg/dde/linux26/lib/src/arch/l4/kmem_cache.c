@@ -25,8 +25,8 @@
 
 #define DEBUG_SLAB 0
 
-#ifdef DEBUG_SLAB
-# define DEBUG_SLAB_ALLOC 0
+#if DEBUG_SLAB
+# define DEBUG_SLAB_ALLOC 1
 #else
 # define DEBUG_SLAB_ALLOC 0
 #endif
@@ -41,8 +41,7 @@ struct kmem_cache
 
 	struct ddekit_slab *ddekit_slab_cache;    /**< backing DDEKit cache */
 	ddekit_lock_t      cache_lock;            /**< lock */
-	void (*ctor)(void*, struct kmem_cache *, unsigned long); /**< object constructor */
-	void (*dtor)(void*, struct kmem_cache *, unsigned long); /**< object destructor */
+	void (*ctor)(void *);                     /**< object constructor */
 };
 
 
@@ -90,9 +89,6 @@ void kmem_cache_free(struct kmem_cache *cache, void *objp)
 {
 	ddekit_log(DEBUG_SLAB_ALLOC, "\"%s\" (%p)", cache->name, objp);
 
-	if (cache->dtor)
-		cache->dtor(objp, cache, 0);
-
 	ddekit_lock_lock(&cache->cache_lock);
 	ddekit_slab_free(cache->ddekit_slab_cache, objp);
 	ddekit_lock_unlock(&cache->cache_lock);
@@ -117,8 +113,11 @@ void *kmem_cache_alloc(struct kmem_cache *cache, gfp_t flags)
 	ret = ddekit_slab_alloc(cache->ddekit_slab_cache);
 	ddekit_lock_unlock(&cache->cache_lock);
 
-	if (cache->ctor)
-		cache->ctor(ret, cache, SLAB_CTOR_CONSTRUCTOR);
+	// XXX: is it valid to run ctor AND memset to zero?
+	if (flags & __GFP_ZERO)
+		memset(ret, 0, cache->size);
+	else if (cache->ctor)
+		cache->ctor(ret);
 
 	return ret;
 }
@@ -157,7 +156,6 @@ void kmem_cache_destroy(struct kmem_cache *cache)
  * @align: The required alignment for the objects.
  * @flags: SLAB flags
  * @ctor: A constructor for the objects.
- * @dtor: A destructor for the objects.
  *
  * Returns a ptr to the cache on success, NULL on failure.
  * Cannot be called within a int, but can be interrupted.
@@ -181,8 +179,7 @@ void kmem_cache_destroy(struct kmem_cache *cache)
  */
 struct kmem_cache * kmem_cache_create(const char *name, size_t size, size_t align,
                                       unsigned long flags,
-                                      void (*ctor)(void *, struct kmem_cache *, unsigned long),
-                                      void (*dtor)(void *, struct kmem_cache *, unsigned long))
+                                      void (*ctor)(void *))
 {
 	ddekit_log(DEBUG_SLAB, "\"%s\" obj_size=%d", name, size);
 
@@ -209,7 +206,6 @@ struct kmem_cache * kmem_cache_create(const char *name, size_t size, size_t alig
 	cache->name = name;
 	cache->size = size;
 	cache->ctor = ctor;
-	cache->dtor = dtor;
 
 	ddekit_lock_init_unlocked(&cache->cache_lock);
 

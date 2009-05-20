@@ -83,8 +83,8 @@ static int bufferoffsets[NUMDESCRIPTORS] = {128,2048,4096,6144};
 struct xircom_private {
 	/* Send and receive buffers, kernel-addressable and dma addressable forms */
 
-	unsigned int *rx_buffer;
-	unsigned int *tx_buffer;
+	__le32 *rx_buffer;
+	__le32 *tx_buffer;
 
 	dma_addr_t rx_dma_handle;
 	dma_addr_t tx_dma_handle;
@@ -104,10 +104,8 @@ struct xircom_private {
 	 */
 	spinlock_t lock;
 
-
 	struct pci_dev *pdev;
 	struct net_device *dev;
-	struct net_device_stats stats;
 };
 
 
@@ -119,7 +117,6 @@ static int xircom_start_xmit(struct sk_buff *skb, struct net_device *dev);
 static int xircom_open(struct net_device *dev);
 static int xircom_close(struct net_device *dev);
 static void xircom_up(struct xircom_private *card);
-static struct net_device_stats *xircom_get_stats(struct net_device *dev);
 #ifdef CONFIG_NET_POLL_CONTROLLER
 static void xircom_poll_controller(struct net_device *dev);
 #endif
@@ -194,6 +191,18 @@ static const struct ethtool_ops netdev_ethtool_ops = {
 	.get_drvinfo		= netdev_get_drvinfo,
 };
 
+static const struct net_device_ops netdev_ops = {
+	.ndo_open		= xircom_open,
+	.ndo_stop		= xircom_close,
+	.ndo_start_xmit		= xircom_start_xmit,
+	.ndo_change_mtu		= eth_change_mtu,
+	.ndo_set_mac_address	= eth_mac_addr,
+	.ndo_validate_addr	= eth_validate_addr,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_poll_controller	= xircom_poll_controller,
+#endif
+};
+
 /* xircom_probe is the code that gets called on device insertion.
    it sets up the hardware and registers the device to the networklayer.
 
@@ -205,7 +214,6 @@ static int __devinit xircom_probe(struct pci_dev *pdev, const struct pci_device_
 {
 	struct net_device *dev = NULL;
 	struct xircom_private *private;
-	unsigned char chip_rev;
 	unsigned long flags;
 	unsigned short tmp16;
 	enter("xircom_probe");
@@ -223,8 +231,6 @@ static int __devinit xircom_probe(struct pci_dev *pdev, const struct pci_device_
 	/* clear PCI status, if any */
 	pci_read_config_word (pdev,PCI_STATUS, &tmp16);
 	pci_write_config_word (pdev, PCI_STATUS,tmp16);
-
-	pci_read_config_byte(pdev, PCI_REVISION_ID, &chip_rev);
 
 	if (!request_region(pci_resource_start(pdev, 0), 128, "xircom_cb")) {
 		printk(KERN_ERR "xircom_probe: failed to allocate io-region\n");
@@ -255,7 +261,6 @@ static int __devinit xircom_probe(struct pci_dev *pdev, const struct pci_device_
 		goto tx_buf_fail;
 	}
 
-	SET_MODULE_OWNER(dev);
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
 
@@ -270,14 +275,7 @@ static int __devinit xircom_probe(struct pci_dev *pdev, const struct pci_device_
 	read_mac_address(private);
 	setup_descriptors(private);
 
-	dev->open = &xircom_open;
-	dev->hard_start_xmit = &xircom_start_xmit;
-	dev->stop = &xircom_close;
-	dev->get_stats = &xircom_get_stats;
-	dev->priv = private;
-#ifdef CONFIG_NET_POLL_CONTROLLER
-	dev->poll_controller = &xircom_poll_controller;
-#endif
+	dev->netdev_ops = &netdev_ops;
 	SET_ETHTOOL_OPS(dev, &netdev_ethtool_ops);
 	pci_set_drvdata(pdev, dev);
 
@@ -286,7 +284,7 @@ static int __devinit xircom_probe(struct pci_dev *pdev, const struct pci_device_
 		goto reg_fail;
 	}
 
-	printk(KERN_INFO "%s: Xircom cardbus revision %i at irq %i \n", dev->name, chip_rev, pdev->irq);
+	printk(KERN_INFO "%s: Xircom cardbus revision %i at irq %i \n", dev->name, pdev->revision, pdev->irq);
 	/* start the transmitter to get a heartbeat */
 	/* TODO: send 2 dummy packets here */
 	transceiver_voodoo(private);
@@ -411,25 +409,26 @@ static int xircom_start_xmit(struct sk_buff *skb, struct net_device *dev)
 			   sometimes sends more than you ask it to. */
 
 			memset(&card->tx_buffer[bufferoffsets[desc]/4],0,1536);
-			memcpy(&(card->tx_buffer[bufferoffsets[desc]/4]),skb->data,skb->len);
-
-
+			skb_copy_from_linear_data(skb,
+				  &(card->tx_buffer[bufferoffsets[desc] / 4]),
+						  skb->len);
 			/* FIXME: The specification tells us that the length we send HAS to be a multiple of
 			   4 bytes. */
 
-			card->tx_buffer[4*desc+1] = skb->len;
-			if (desc == NUMDESCRIPTORS-1)
-				card->tx_buffer[4*desc+1] |= (1<<25);  /* bit 25: last descriptor of the ring */
+			card->tx_buffer[4*desc+1] = cpu_to_le32(skb->len);
+			if (desc == NUMDESCRIPTORS - 1) /* bit 25: last descriptor of the ring */
+				card->tx_buffer[4*desc+1] |= cpu_to_le32(1<<25);  
 
-			card->tx_buffer[4*desc+1] |= 0xF0000000;
+			card->tx_buffer[4*desc+1] |= cpu_to_le32(0xF0000000);
 						 /* 0xF0... means want interrupts*/
 			card->tx_skb[desc] = skb;
 
 			wmb();
 			/* This gives the descriptor to the card */
-			card->tx_buffer[4*desc] = 0x80000000;
+			card->tx_buffer[4*desc] = cpu_to_le32(0x80000000);
 			trigger_transmit(card);
-			if (((int)card->tx_buffer[nextdescriptor*4])<0) {	/* next descriptor is occupied... */
+			if (card->tx_buffer[nextdescriptor*4] & cpu_to_le32(0x8000000)) {
+				/* next descriptor is occupied... */
 				netif_stop_queue(dev);
 			}
 			card->transmit_used = nextdescriptor;
@@ -445,7 +444,7 @@ static int xircom_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	spin_unlock_irqrestore(&card->lock,flags);
 	trigger_transmit(card);
 
-	return -EIO;
+	return NETDEV_TX_BUSY;
 }
 
 
@@ -498,14 +497,6 @@ static int xircom_close(struct net_device *dev)
 
 	return 0;
 
-}
-
-
-
-static struct net_device_stats *xircom_get_stats(struct net_device *dev)
-{
-        struct xircom_private *card = netdev_priv(dev);
-        return &card->stats;
 }
 
 
@@ -595,8 +586,7 @@ descriptors and programs the addresses into the card.
 */
 static void setup_descriptors(struct xircom_private *card)
 {
-	unsigned int val;
-	unsigned int address;
+	u32 address;
 	int i;
 	enter("setup_descriptors");
 
@@ -609,16 +599,16 @@ static void setup_descriptors(struct xircom_private *card)
 	for (i=0;i<NUMDESCRIPTORS;i++ ) {
 
 		/* Rx Descr0: It's empty, let the card own it, no errors -> 0x80000000 */
-		card->rx_buffer[i*4 + 0] = 0x80000000;
+		card->rx_buffer[i*4 + 0] = cpu_to_le32(0x80000000);
 		/* Rx Descr1: buffer 1 is 1536 bytes, buffer 2 is 0 bytes */
-		card->rx_buffer[i*4 + 1] = 1536;
-		if (i==NUMDESCRIPTORS-1)
-			card->rx_buffer[i*4 + 1] |= (1 << 25); /* bit 25 is "last descriptor" */
+		card->rx_buffer[i*4 + 1] = cpu_to_le32(1536);
+		if (i == NUMDESCRIPTORS - 1) /* bit 25 is "last descriptor" */
+			card->rx_buffer[i*4 + 1] |= cpu_to_le32(1 << 25);
 
 		/* Rx Descr2: address of the buffer
 		   we store the buffer at the 2nd half of the page */
 
-		address = (unsigned long) card->rx_dma_handle;
+		address = card->rx_dma_handle;
 		card->rx_buffer[i*4 + 2] = cpu_to_le32(address + bufferoffsets[i]);
 		/* Rx Desc3: address of 2nd buffer -> 0 */
 		card->rx_buffer[i*4 + 3] = 0;
@@ -626,9 +616,8 @@ static void setup_descriptors(struct xircom_private *card)
 
 	wmb();
 	/* Write the receive descriptor ring address to the card */
-	address = (unsigned long) card->rx_dma_handle;
-	val = cpu_to_le32(address);
-	outl(val, card->io_port + CSR3);	/* Receive descr list address */
+	address = card->rx_dma_handle;
+	outl(address, card->io_port + CSR3);	/* Receive descr list address */
 
 
 	/* transmit descriptors */
@@ -638,13 +627,13 @@ static void setup_descriptors(struct xircom_private *card)
 		/* Tx Descr0: Empty, we own it, no errors -> 0x00000000 */
 		card->tx_buffer[i*4 + 0] = 0x00000000;
 		/* Tx Descr1: buffer 1 is 1536 bytes, buffer 2 is 0 bytes */
-		card->tx_buffer[i*4 + 1] = 1536;
-		if (i==NUMDESCRIPTORS-1)
-			card->tx_buffer[i*4 + 1] |= (1 << 25); /* bit 25 is "last descriptor" */
+		card->tx_buffer[i*4 + 1] = cpu_to_le32(1536);
+		if (i == NUMDESCRIPTORS - 1) /* bit 25 is "last descriptor" */
+			card->tx_buffer[i*4 + 1] |= cpu_to_le32(1 << 25);
 
 		/* Tx Descr2: address of the buffer
 		   we store the buffer at the 2nd half of the page */
-		address = (unsigned long) card->tx_dma_handle;
+		address = card->tx_dma_handle;
 		card->tx_buffer[i*4 + 2] = cpu_to_le32(address + bufferoffsets[i]);
 		/* Tx Desc3: address of 2nd buffer -> 0 */
 		card->tx_buffer[i*4 + 3] = 0;
@@ -652,9 +641,8 @@ static void setup_descriptors(struct xircom_private *card)
 
 	wmb();
 	/* wite the transmit descriptor ring to the card */
-	address = (unsigned long) card->tx_dma_handle;
-	val =cpu_to_le32(address);
-	outl(val, card->io_port + CSR4);	/* xmit descr list address */
+	address = card->tx_dma_handle;
+	outl(address, card->io_port + CSR4);	/* xmit descr list address */
 
 	leave("setup_descriptors");
 }
@@ -1043,7 +1031,7 @@ static int enable_promisc(struct xircom_private *card)
 
 
 /*
-link_status() checks the the links status and will return 0 for no link, 10 for 10mbit link and 100 for.. guess what.
+link_status() checks the links status and will return 0 for no link, 10 for 10mbit link and 100 for.. guess what.
 
 Must be called in locked state with interrupts disabled
 */
@@ -1108,11 +1096,7 @@ static void read_mac_address(struct xircom_private *card)
 		}
 	}
 	spin_unlock_irqrestore(&card->lock, flags);
-#ifdef DEBUG
-	for (i = 0; i < 6; i++)
-		printk("%c%2.2X", i ? ':' : ' ', card->dev->dev_addr[i]);
-	printk("\n");
-#endif
+	pr_debug(" %pM\n", card->dev->dev_addr);
 	leave("read_mac_address");
 }
 
@@ -1188,7 +1172,7 @@ static void investigate_read_descriptor(struct net_device *dev,struct xircom_pri
 		int status;
 
 		enter("investigate_read_descriptor");
-		status = card->rx_buffer[4*descnr];
+		status = le32_to_cpu(card->rx_buffer[4*descnr]);
 
 		if ((status > 0)) {	/* packet received */
 
@@ -1204,22 +1188,20 @@ static void investigate_read_descriptor(struct net_device *dev,struct xircom_pri
 
 			skb = dev_alloc_skb(pkt_len + 2);
 			if (skb == NULL) {
-				card->stats.rx_dropped++;
+				dev->stats.rx_dropped++;
 				goto out;
 			}
-			skb->dev = dev;
 			skb_reserve(skb, 2);
-			eth_copy_and_sum(skb, (unsigned char*)&card->rx_buffer[bufferoffset / 4], pkt_len, 0);
+			skb_copy_to_linear_data(skb, (unsigned char*)&card->rx_buffer[bufferoffset / 4], pkt_len);
 			skb_put(skb, pkt_len);
 			skb->protocol = eth_type_trans(skb, dev);
 			netif_rx(skb);
-			dev->last_rx = jiffies;
-			card->stats.rx_packets++;
-			card->stats.rx_bytes += pkt_len;
+			dev->stats.rx_packets++;
+			dev->stats.rx_bytes += pkt_len;
 
 		      out:
 			/* give the buffer back to the card */
-			card->rx_buffer[4*descnr] =  0x80000000;
+			card->rx_buffer[4*descnr] =  cpu_to_le32(0x80000000);
 			trigger_receive(card);
 		}
 
@@ -1235,7 +1217,7 @@ static void investigate_write_descriptor(struct net_device *dev, struct xircom_p
 
 		enter("investigate_write_descriptor");
 
-		status = card->tx_buffer[4*descnr];
+		status = le32_to_cpu(card->tx_buffer[4*descnr]);
 #if 0
 		if (status & 0x8000) {	/* Major error */
 			printk(KERN_ERR "Major transmit error status %x \n", status);
@@ -1245,16 +1227,16 @@ static void investigate_write_descriptor(struct net_device *dev, struct xircom_p
 #endif
 		if (status > 0) {	/* bit 31 is 0 when done */
 			if (card->tx_skb[descnr]!=NULL) {
-				card->stats.tx_bytes += card->tx_skb[descnr]->len;
+				dev->stats.tx_bytes += card->tx_skb[descnr]->len;
 				dev_kfree_skb_irq(card->tx_skb[descnr]);
 			}
 			card->tx_skb[descnr] = NULL;
 			/* Bit 8 in the status field is 1 if there was a collision */
 			if (status&(1<<8))
-				card->stats.collisions++;
+				dev->stats.collisions++;
 			card->tx_buffer[4*descnr] = 0; /* descriptor is free again */
 			netif_wake_queue (dev);
-			card->stats.tx_packets++;
+			dev->stats.tx_packets++;
 		}
 
 		leave("investigate_write_descriptor");

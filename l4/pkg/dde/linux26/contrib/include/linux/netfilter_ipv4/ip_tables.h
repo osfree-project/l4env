@@ -17,11 +17,11 @@
 
 #ifdef __KERNEL__
 #include <linux/if.h>
-#include <linux/types.h>
 #include <linux/in.h>
 #include <linux/ip.h>
 #include <linux/skbuff.h>
 #endif
+#include <linux/types.h>
 #include <linux/compiler.h>
 #include <linux/netfilter_ipv4.h>
 
@@ -156,10 +156,10 @@ struct ipt_getinfo
 	unsigned int valid_hooks;
 
 	/* Hook entry points: one per netfilter hook. */
-	unsigned int hook_entry[NF_IP_NUMHOOKS];
+	unsigned int hook_entry[NF_INET_NUMHOOKS];
 
 	/* Underflow points. */
-	unsigned int underflow[NF_IP_NUMHOOKS];
+	unsigned int underflow[NF_INET_NUMHOOKS];
 
 	/* Number of entries */
 	unsigned int num_entries;
@@ -185,10 +185,10 @@ struct ipt_replace
 	unsigned int size;
 
 	/* Hook entry points. */
-	unsigned int hook_entry[NF_IP_NUMHOOKS];
+	unsigned int hook_entry[NF_INET_NUMHOOKS];
 
 	/* Underflow points. */
-	unsigned int underflow[NF_IP_NUMHOOKS];
+	unsigned int underflow[NF_INET_NUMHOOKS];
 
 	/* Information about old entries: */
 	/* Number of counters (must be equal to current number of entries). */
@@ -229,40 +229,12 @@ ipt_get_target(struct ipt_entry *e)
 }
 
 /* fn returns 0 to continue iteration */
-#define IPT_MATCH_ITERATE(e, fn, args...)	\
-({						\
-	unsigned int __i;			\
-	int __ret = 0;				\
-	struct ipt_entry_match *__match;	\
-						\
-	for (__i = sizeof(struct ipt_entry);	\
-	     __i < (e)->target_offset;		\
-	     __i += __match->u.match_size) {	\
-		__match = (void *)(e) + __i;	\
-						\
-		__ret = fn(__match , ## args);	\
-		if (__ret != 0)			\
-			break;			\
-	}					\
-	__ret;					\
-})
+#define IPT_MATCH_ITERATE(e, fn, args...) \
+	XT_MATCH_ITERATE(struct ipt_entry, e, fn, ## args)
 
 /* fn returns 0 to continue iteration */
-#define IPT_ENTRY_ITERATE(entries, size, fn, args...)		\
-({								\
-	unsigned int __i;					\
-	int __ret = 0;						\
-	struct ipt_entry *__entry;				\
-								\
-	for (__i = 0; __i < (size); __i += __entry->next_offset) { \
-		__entry = (void *)(entries) + __i;		\
-								\
-		__ret = fn(__entry , ## args);			\
-		if (__ret != 0)					\
-			break;					\
-	}							\
-	__ret;							\
-})
+#define IPT_ENTRY_ITERATE(entries, size, fn, args...) \
+	XT_ENTRY_ITERATE(struct ipt_entry, entries, size, fn, ## args)
 
 /*
  *	Main firewall chains definitions and global var's definitions.
@@ -272,25 +244,10 @@ ipt_get_target(struct ipt_entry *e)
 #include <linux/init.h>
 extern void ipt_init(void) __init;
 
-#define ipt_register_target(tgt) 	\
-({	(tgt)->family = AF_INET;	\
- 	xt_register_target(tgt); })
-#define ipt_unregister_target(tgt) xt_unregister_target(tgt)
-
-#define ipt_register_match(mtch) 	\
-({	(mtch)->family = AF_INET;	\
-	xt_register_match(mtch); })
-#define ipt_unregister_match(mtch) xt_unregister_match(mtch)
-
-//#define ipt_register_table(tbl, repl) xt_register_table(AF_INET, tbl, repl)
-//#define ipt_unregister_table(tbl) xt_unregister_table(AF_INET, tbl)
-
-extern int ipt_register_table(struct ipt_table *table,
-			      const struct ipt_replace *repl);
-extern void ipt_unregister_table(struct ipt_table *table);
-
-/* net/sched/ipt.c: Gimme access to your targets!  Gets target->me. */
-extern struct ipt_target *ipt_find_target(const char *name, u8 revision);
+extern struct xt_table *ipt_register_table(struct net *net,
+					   struct xt_table *table,
+					   const struct ipt_replace *repl);
+extern void ipt_unregister_table(struct xt_table *table);
 
 /* Standard entry. */
 struct ipt_standard
@@ -311,11 +268,33 @@ struct ipt_error
 	struct ipt_error_target target;
 };
 
-extern unsigned int ipt_do_table(struct sk_buff **pskb,
+#define IPT_ENTRY_INIT(__size)						       \
+{									       \
+	.target_offset	= sizeof(struct ipt_entry),			       \
+	.next_offset	= (__size),					       \
+}
+
+#define IPT_STANDARD_INIT(__verdict)					       \
+{									       \
+	.entry		= IPT_ENTRY_INIT(sizeof(struct ipt_standard)),	       \
+	.target		= XT_TARGET_INIT(IPT_STANDARD_TARGET,		       \
+					 sizeof(struct xt_standard_target)),   \
+	.target.verdict	= -(__verdict) - 1,				       \
+}
+
+#define IPT_ERROR_INIT							       \
+{									       \
+	.entry		= IPT_ENTRY_INIT(sizeof(struct ipt_error)),	       \
+	.target		= XT_TARGET_INIT(IPT_ERROR_TARGET,		       \
+					 sizeof(struct ipt_error_target)),     \
+	.target.errorname = "ERROR",					       \
+}
+
+extern unsigned int ipt_do_table(struct sk_buff *skb,
 				 unsigned int hook,
 				 const struct net_device *in,
 				 const struct net_device *out,
-				 struct ipt_table *table);
+				 struct xt_table *table);
 
 #define IPT_ALIGN(s) XT_ALIGN(s)
 
@@ -333,7 +312,27 @@ struct compat_ipt_entry
 	unsigned char elems[0];
 };
 
+/* Helper functions */
+static inline struct ipt_entry_target *
+compat_ipt_get_target(struct compat_ipt_entry *e)
+{
+	return (void *)e + e->target_offset;
+}
+
 #define COMPAT_IPT_ALIGN(s) 	COMPAT_XT_ALIGN(s)
+
+/* fn returns 0 to continue iteration */
+#define COMPAT_IPT_MATCH_ITERATE(e, fn, args...) \
+	XT_MATCH_ITERATE(struct compat_ipt_entry, e, fn, ## args)
+
+/* fn returns 0 to continue iteration */
+#define COMPAT_IPT_ENTRY_ITERATE(entries, size, fn, args...) \
+	XT_ENTRY_ITERATE(struct compat_ipt_entry, entries, size, fn, ## args)
+
+/* fn returns 0 to continue iteration */
+#define COMPAT_IPT_ENTRY_ITERATE_CONTINUE(entries, size, n, fn, args...) \
+	XT_ENTRY_ITERATE_CONTINUE(struct compat_ipt_entry, entries, size, n, \
+				  fn, ## args)
 
 #endif /* CONFIG_COMPAT */
 #endif /*__KERNEL__*/

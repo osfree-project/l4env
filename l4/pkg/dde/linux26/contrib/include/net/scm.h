@@ -4,16 +4,19 @@
 #include <linux/limits.h>
 #include <linux/net.h>
 #include <linux/security.h>
+#include <linux/pid.h>
+#include <linux/nsproxy.h>
 
 /* Well, we should have at least one descriptor open
  * to accept passed FDs 8)
  */
-#define SCM_MAX_FD	(OPEN_MAX-1)
+#define SCM_MAX_FD	255
 
 struct scm_fp_list
 {
-	int		count;
-	struct file	*fp[SCM_MAX_FD];
+	struct list_head	list;
+	int			count;
+	struct file		*fp[SCM_MAX_FD];
 };
 
 struct scm_cookie
@@ -52,9 +55,9 @@ static __inline__ int scm_send(struct socket *sock, struct msghdr *msg,
 			       struct scm_cookie *scm)
 {
 	struct task_struct *p = current;
-	scm->creds.uid = p->uid;
-	scm->creds.gid = p->gid;
-	scm->creds.pid = p->tgid;
+	scm->creds.uid = current_uid();
+	scm->creds.gid = current_gid();
+	scm->creds.pid = task_tgid_vnr(p);
 	scm->fp = NULL;
 	scm->seq = 0;
 	unix_get_peersec_dgram(sock, scm);

@@ -4,7 +4,7 @@
  * Bjoern Doebel <doebel@os.inf.tu-dresden.de>                  *
  * 2005-08-10                                                   *
  *                                                              *
- * (c) 2005 - 2007 Technische Universitaet Dresden				*
+ * (c) 2005 - 2009 Technische Universitaet Dresden              *
  * This file is part of DROPS, which is distributed under the   *
  * terms of the GNU General Public License 2. Please see the    *
  * COPYING file for details.                                    *
@@ -60,7 +60,7 @@ int getUnusedConnection(void)
  * Generate/setup MAC address.
  ******************************************************************************/ 
 static void __init_mac(int channel, l4ore_config *conf, ore_mac mac, 
-					   unsigned char mac_address_head[4])
+                       unsigned char mac_address_head[4])
 {
     unsigned char data[10];
     static unsigned char zero_head[4] = {0,0,0,0};
@@ -71,15 +71,15 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
      */
     if (conf->ro_keep_device_mac && device_mac_available)
     {
-		LOG("Allocating physical MAC address to client.");
-		memcpy(mac, ore_connection_table[channel].dev->dev_addr, 6);
-		device_mac_available = 0;
-		/* Done here. no more processing. */
-		goto out;
-	}
+        LOG("Allocating physical MAC address to client.");
+        memcpy(mac, ore_connection_table[channel].dev->dev_addr, 6);
+        device_mac_available = 0;
+        /* Done here. no more processing. */
+        goto out;
+    }
 
-	if (conf->ro_keep_device_mac)  /* && !device_mac_available */
-	{
+    if (conf->ro_keep_device_mac)  /* && !device_mac_available */
+    {
             LOG("Physical MAC address not available!");
             conf->ro_keep_device_mac = 0;
     }
@@ -109,7 +109,7 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
 
 out:
     memcpy(ore_connection_table[channel].mac, mac, 6);
-	LOG_MAC(1, ore_connection_table[channel].mac);
+    LOG_MAC(1, ore_connection_table[channel].mac);
 }
 
 /******************************************************************************
@@ -167,14 +167,14 @@ static int __init_workers(int channel, l4ore_config *conf)
     {
         INIT_LIST_HEAD(&ore_connection_table[channel].tx_list);
         ore_connection_table[channel].tx_component_func = tx_component_string;
-    }   
-    
+    }
+
     if(!l4dm_is_invalid_ds(conf->ro_recv_ds))
     {
         ore_connection_table[channel].rx_component_func = NULL;
         ore_connection_table[channel].rx_reply_func     = NULL;
         ore_connection_table[channel].netif_rx_func     = netif_rx_dsi;
-        ret = init_dsi_receivingclient(channel, conf);    
+        ret = init_dsi_receivingclient(channel, conf);
         if (ret)
         {
             // kill worker threads on error
@@ -205,11 +205,11 @@ int setup_connection(char *device_name, ore_mac mac,
 {
     LOGd_Enter(ORE_DEBUG);
     LOGd(ORE_DEBUG, "setting up connection for "l4util_idfmt, l4util_idstr(*owner));
-	LOGd(ORE_DEBUG, "device name: %s", device_name);
-	LOGd(ORE_DEBUG, "channel: %d", channel);
+    LOGd(ORE_DEBUG, "device name: %s", device_name);
+    LOGd(ORE_DEBUG, "channel: %d", channel);
 
     // check if we have this device name
-    ore_connection_table[channel].dev               = dev_get_by_name(device_name);
+    ore_connection_table[channel].dev               = dev_get_by_name(&init_net, device_name);
     if (ore_connection_table[channel].dev == NULL)
     {
         LOG_Error("no device found.");
@@ -251,7 +251,7 @@ int setup_connection(char *device_name, ore_mac mac,
 
     // startup sync with the dsi worker
     l4lock_unlock(&ore_connection_table[channel].tx_startlock);
-    
+
     return 0;
 }
 
@@ -260,10 +260,10 @@ int setup_connection(char *device_name, ore_mac mac,
  ******************************************************************************/
 int free_connection(int handle)
 {
-	// Grab the channel lock here so that no one is able to modify the lists
-	// while we are cleaning them up. (The lock is freed down there in a rather
-	// unconventional way.
-	l4lock_lock(&ore_connection_table[handle].channel_lock);
+    // Grab the channel lock here so that no one is able to modify the lists
+    // while we are cleaning them up. (The lock is freed down there in a rather
+    // unconventional way.
+    l4lock_lock(&ore_connection_table[handle].channel_lock);
 
     ore_connection_table[handle].in_use         = 0;
 

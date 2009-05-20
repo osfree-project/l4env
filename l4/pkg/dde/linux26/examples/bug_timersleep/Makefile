@@ -11,7 +11,7 @@ TARGET         = dde26_bug_timersleep
 
 SRC_C			= main.c
 
-LIBS			+= -ldde_linux26 -lddekit -lio -lomega0 -llist_alloc
+LIBS			+= -ldde_linux26.o -lddekit -lio -lomega0 -llist_alloc
 
 PRIVATE_INCDIR 	= $(PKGDIR_ABS)/linux26/include $(MY_DDE_INCDIR) $(MY_LINUX26_INCDIR)  \
 				  $(OBJ_BASE)/include/uclibc

@@ -127,9 +127,12 @@ static void intloop(void *arg)
 		/* only call registered handler function, if IRQ is not disabled */
 		ddekit_sem_down(ddekit_irq_ctrl[my_index].irqsem);
 		if (ddekit_irq_ctrl[my_index].handle_irq > 0) {
-			LOGd(DEBUG_INTERRUPTS, "not handling IRQ %x, because it is disabled.", my_index);
+			LOGd(DEBUG_INTERRUPTS, "IRQ %x, handler %p", my_index,params->handler);
 			params->handler(params->priv);
 		}
+		else
+			LOGd(DEBUG_INTERRUPTS, "not handling IRQ %x, because it is disabled.", my_index);
+
 		ddekit_sem_up(ddekit_irq_ctrl[my_index].irqsem);
 		LOGd(DEBUG_INTERRUPTS, "after irq handler");
 	}
@@ -208,15 +211,19 @@ void ddekit_interrupt_detach(int irq)
 
 void ddekit_interrupt_disable(int irq)
 {
-	ddekit_sem_down(ddekit_irq_ctrl[irq].irqsem);
-	--ddekit_irq_ctrl[irq].handle_irq;
-	ddekit_sem_up(ddekit_irq_ctrl[irq].irqsem);
+	if (ddekit_irq_ctrl[irq].irqsem) {
+		ddekit_sem_down(ddekit_irq_ctrl[irq].irqsem);
+		--ddekit_irq_ctrl[irq].handle_irq;
+		ddekit_sem_up(ddekit_irq_ctrl[irq].irqsem);
+	}
 }
 
 
 void ddekit_interrupt_enable(int irq)
 {
-	ddekit_sem_down(ddekit_irq_ctrl[irq].irqsem);
-	++ddekit_irq_ctrl[irq].handle_irq;
-	ddekit_sem_up(ddekit_irq_ctrl[irq].irqsem);
+	if (ddekit_irq_ctrl[irq].irqsem) {
+		ddekit_sem_down(ddekit_irq_ctrl[irq].irqsem);
+		++ddekit_irq_ctrl[irq].handle_irq;
+		ddekit_sem_up(ddekit_irq_ctrl[irq].irqsem);
+	}
 }

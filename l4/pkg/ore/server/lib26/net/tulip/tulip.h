@@ -8,9 +8,9 @@
 	of the GNU General Public License, incorporated herein by reference.
 
 	Please refer to Documentation/DocBook/tulip-user.{pdf,ps,html}
-	for more information on this driver, or visit the project
-	Web page at http://sourceforge.net/projects/tulip/
+	for more information on this driver.
 
+	Please submit bugs to http://bugzilla.kernel.org/ .
 */
 
 #ifndef __NET_TULIP_H__
@@ -22,8 +22,10 @@
 #include <linux/netdevice.h>
 #include <linux/timer.h>
 #include <linux/delay.h>
+#include <linux/pci.h>
 #include <asm/io.h>
 #include <asm/irq.h>
+#include <asm/unaligned.h>
 
 
 
@@ -132,7 +134,7 @@ enum pci_cfg_driver_reg {
 /* The bits in the CSR5 status registers, mostly interrupt sources. */
 enum status_bits {
 	TimerInt = 0x800,
-	SytemError = 0x2000,
+	SystemError = 0x2000,
 	TPLnkFail = 0x1000,
 	TPLnkPass = 0x10,
 	NormalIntr = 0x10000,
@@ -177,18 +179,18 @@ enum tulip_busconfig_bits {
 
 /* The Tulip Rx and Tx buffer descriptors. */
 struct tulip_rx_desc {
-	s32 status;
-	s32 length;
-	u32 buffer1;
-	u32 buffer2;
+	__le32 status;
+	__le32 length;
+	__le32 buffer1;
+	__le32 buffer2;
 };
 
 
 struct tulip_tx_desc {
-	s32 status;
-	s32 length;
-	u32 buffer1;
-	u32 buffer2;		/* We use only buffer 1.  */
+	__le32 status;
+	__le32 length;
+	__le32 buffer1;
+	__le32 buffer2;		/* We use only buffer 1.  */
 };
 
 
@@ -267,7 +269,12 @@ enum t21143_csr6_bits {
 #define RX_RING_SIZE	128
 #define MEDIA_MASK     31
 
-#define PKT_BUF_SZ		1536	/* Size of each temporary Rx buffer. */
+/* The receiver on the DC21143 rev 65 can fail to close the last
+ * receive descriptor in certain circumstances (see errata) when
+ * using MWI. This can only occur if the receive buffer ends on
+ * a cache line boundary, so the "+ 4" below ensures it doesn't.
+ */
+#define PKT_BUF_SZ	(1536 + 4)	/* Size of each temporary Rx buffer. */
 
 #define TULIP_MIN_CACHE_LINE	8	/* in units of 32-bit words */
 
@@ -298,11 +305,7 @@ enum t21143_csr6_bits {
 
 #define RUN_AT(x) (jiffies + (x))
 
-#if defined(__i386__)			/* AKA get_unaligned() */
-#define get_u16(ptr) (*(u16 *)(ptr))
-#else
-#define get_u16(ptr) (((u8*)(ptr))[0] + (((u8*)(ptr))[1]<<8))
-#endif
+#define get_u16(ptr) get_unaligned_le16((ptr))
 
 struct medialeaf {
 	u8 type;
@@ -352,6 +355,7 @@ struct tulip_private {
 	int chip_id;
 	int revision;
 	int flags;
+	struct napi_struct napi;
 	struct net_device_stats stats;
 	struct timer_list timer;	/* Media selection timer. */
 	struct timer_list oom_timer;    /* Out of memory timer. */
@@ -428,7 +432,7 @@ extern int tulip_rx_copybreak;
 irqreturn_t tulip_interrupt(int irq, void *dev_instance);
 int tulip_refill_rx(struct net_device *dev);
 #ifdef CONFIG_TULIP_NAPI
-int tulip_poll(struct net_device *dev, int *budget);
+int tulip_poll(struct napi_struct *napi, int budget);
 #endif
 
 
@@ -482,8 +486,11 @@ static inline void tulip_stop_rxtx(struct tulip_private *tp)
 			udelay(10);
 
 		if (!i)
-			printk(KERN_DEBUG "%s: tulip_stop_rxtx() failed\n",
-					pci_name(tp->pdev));
+			printk(KERN_DEBUG "%s: tulip_stop_rxtx() failed"
+					" (CSR5 0x%x CSR6 0x%x)\n",
+					pci_name(tp->pdev),
+					ioread32(ioaddr + CSR5),
+					ioread32(ioaddr + CSR6));
 	}
 }
 

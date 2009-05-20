@@ -27,3 +27,8 @@ void __get_zone_counts(unsigned long *active, unsigned long *inactive,
 {
 	WARN_UNIMPL;
 }
+
+void __dec_zone_state(struct zone *zone, enum zone_stat_item item)
+{
+	WARN_UNIMPL;
+}

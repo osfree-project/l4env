@@ -1,10 +1,10 @@
 /*
  * This file define a set of standard wireless extensions
  *
- * Version :	21	14.3.06
+ * Version :	22	16.3.07
  *
  * Authors :	Jean Tourrilhes - HPL - <jt@hpl.hp.com>
- * Copyright (c) 1997-2006 Jean Tourrilhes, All Rights Reserved.
+ * Copyright (c) 1997-2007 Jean Tourrilhes, All Rights Reserved.
  */
 
 #ifndef _LINUX_WIRELESS_H
@@ -69,14 +69,9 @@
 
 /***************************** INCLUDES *****************************/
 
-/* This header is used in user-space, therefore need to be sanitised
- * for that purpose. Those includes are usually not compatible with glibc.
- * To know which includes to use in user-space, check iwlib.h. */
-#ifdef __KERNEL__
-#include <linux/types.h>		/* for "caddr_t" et al		*/
+#include <linux/types.h>		/* for __u* and __s* typedefs */
 #include <linux/socket.h>		/* for "struct sockaddr" et al	*/
 #include <linux/if.h>			/* for IFNAMSIZ and co... */
-#endif	/* __KERNEL__ */
 
 /***************************** VERSION *****************************/
 /*
@@ -85,7 +80,7 @@
  * (there is some stuff that will be added in the future...)
  * I just plan to increment with each new version.
  */
-#define WIRELESS_EXT	21
+#define WIRELESS_EXT	22
 
 /*
  * Changes :
@@ -186,7 +181,7 @@
  *	- Wireless Event capability in struct iw_range
  *	- Add support for relative TxPower (yick !)
  *
- * V17 to V18 (From Jouni Malinen <jkmaline@cc.hut.fi>)
+ * V17 to V18 (From Jouni Malinen <j@w1.fi>)
  * ----------
  *	- Add support for WPA/WPA2
  *	- Add extended encoding configuration (SIOCSIWENCODEEXT and
@@ -221,6 +216,10 @@
  *	- Add IW_RETRY_SHORT/IW_RETRY_LONG retry modifiers
  *	- Power/Retry relative values no longer * 100000
  *	- Add explicit flag to tell stats are in 802.11k RCPI : IW_QUAL_RCPI
+ *
+ * V21 to V22
+ * ----------
+ *	- Prevent leaking of kernel space in stream on 64 bits.
  */
 
 /**************************** CONSTANTS ****************************/
@@ -334,7 +333,7 @@
  * separate range because of collisions with other tools such as
  * 'mii-tool'.
  * We now have 32 commands, so a bit more space ;-).
- * Also, all 'odd' commands are only usable by root and don't return the
+ * Also, all 'even' commands are only usable by root and don't return the
  * content of ifr/iwr to user (but you are not obliged to use the set/get
  * convention, just use every other two command). More details in iwpriv.c.
  * And I repeat : you are not forced to use them with iwpriv, but you
@@ -348,7 +347,7 @@
 #define SIOCIWLAST	SIOCIWLASTPRIV		/* 0x8BFF */
 #define IW_IOCTL_IDX(cmd)	((cmd) - SIOCIWFIRST)
 
-/* Even : get (world access), odd : set (root access) */
+/* Odd : get (world access), even : set (root access) */
 #define IW_IS_SET(cmd)	(!((cmd) & 0x1))
 #define IW_IS_GET(cmd)	((cmd) & 0x1)
 
@@ -451,6 +450,7 @@
 #define IW_MODE_REPEAT	4	/* Wireless Repeater (forwarder) */
 #define IW_MODE_SECOND	5	/* Secondary master/repeater (backup) */
 #define IW_MODE_MONITOR	6	/* Passive monitor (listen only) */
+#define IW_MODE_MESH	7	/* Mesh (IEEE 802.11s) network */
 
 /* Statistics flags (bitmask in updated) */
 #define IW_QUAL_QUAL_UPDATED	0x01	/* Value was updated since last read */
@@ -537,6 +537,16 @@
 /* Maximum size of returned data */
 #define IW_SCAN_MAX_DATA	4096	/* In bytes */
 
+/* Scan capability flags - in (struct iw_range *)->scan_capa */
+#define IW_SCAN_CAPA_NONE		0x00
+#define IW_SCAN_CAPA_ESSID		0x01
+#define IW_SCAN_CAPA_BSSID		0x02
+#define IW_SCAN_CAPA_CHANNEL	0x04
+#define IW_SCAN_CAPA_MODE		0x08
+#define IW_SCAN_CAPA_RATE		0x10
+#define IW_SCAN_CAPA_TYPE		0x20
+#define IW_SCAN_CAPA_TIME		0x40
+
 /* Max number of char in custom event - use multiple of them if needed */
 #define IW_CUSTOM_MAX		256	/* In bytes */
 
@@ -601,6 +611,7 @@
 #define IW_ENCODE_ALG_WEP	1
 #define IW_ENCODE_ALG_TKIP	2
 #define IW_ENCODE_ALG_CCMP	3
+#define IW_ENCODE_ALG_PMK	4
 /* struct iw_encode_ext ->ext_flags */
 #define IW_ENCODE_EXT_TX_SEQ_VALID	0x00000001
 #define IW_ENCODE_EXT_RX_SEQ_VALID	0x00000002
@@ -620,6 +631,7 @@
 #define IW_ENC_CAPA_WPA2	0x00000002
 #define IW_ENC_CAPA_CIPHER_TKIP	0x00000004
 #define IW_ENC_CAPA_CIPHER_CCMP	0x00000008
+#define IW_ENC_CAPA_4WAY_HANDSHAKE	0x00000010
 
 /* Event capability macros - in (struct iw_range *)->event_capa
  * Because we have more than 32 possible events, we use an array of
@@ -664,6 +676,19 @@ struct	iw_point
   __u16		length;		/* number of fields or size in bytes */
   __u16		flags;		/* Optional params */
 };
+
+#ifdef __KERNEL__
+#ifdef CONFIG_COMPAT
+
+#include <linux/compat.h>
+
+struct compat_iw_point {
+	compat_caddr_t pointer;
+	__u16 length;
+	__u16 flags;
+};
+#endif
+#endif
 
 /*
  *	A frequency
@@ -959,6 +984,9 @@ struct	iw_range
 	__u16		old_num_channels;
 	__u8		old_num_frequency;
 
+	/* Scan capabilities */
+	__u8		scan_capa; 	/* IW_SCAN_CAPA_* bit field */
+
 	/* Wireless event capability bitmasks */
 	__u32		event_capa[6];
 
@@ -1062,7 +1090,7 @@ struct	iw_priv_args
  */
 struct iw_event
 {
-	__u16		len;			/* Real lenght of this stuff */
+	__u16		len;			/* Real length of this stuff */
 	__u16		cmd;			/* Wireless IOCTL */
 	union iwreq_data	u;		/* IOCTL fixed payload */
 };
@@ -1084,5 +1112,31 @@ struct iw_event
 			  (char *) NULL)
 #define IW_EV_POINT_LEN	(IW_EV_LCP_LEN + sizeof(struct iw_point) - \
 			 IW_EV_POINT_OFF)
+
+#ifdef __KERNEL__
+#ifdef CONFIG_COMPAT
+struct __compat_iw_event {
+	__u16		len;			/* Real length of this stuff */
+	__u16		cmd;			/* Wireless IOCTL */
+	compat_caddr_t	pointer;
+};
+#define IW_EV_COMPAT_LCP_LEN offsetof(struct __compat_iw_event, pointer)
+#define IW_EV_COMPAT_POINT_OFF offsetof(struct compat_iw_point, length)
+#define IW_EV_COMPAT_POINT_LEN	\
+	(IW_EV_COMPAT_LCP_LEN + sizeof(struct compat_iw_point) - \
+	 IW_EV_COMPAT_POINT_OFF)
+#endif
+#endif
+
+/* Size of the Event prefix when packed in stream */
+#define IW_EV_LCP_PK_LEN	(4)
+/* Size of the various events when packed in stream */
+#define IW_EV_CHAR_PK_LEN	(IW_EV_LCP_PK_LEN + IFNAMSIZ)
+#define IW_EV_UINT_PK_LEN	(IW_EV_LCP_PK_LEN + sizeof(__u32))
+#define IW_EV_FREQ_PK_LEN	(IW_EV_LCP_PK_LEN + sizeof(struct iw_freq))
+#define IW_EV_PARAM_PK_LEN	(IW_EV_LCP_PK_LEN + sizeof(struct iw_param))
+#define IW_EV_ADDR_PK_LEN	(IW_EV_LCP_PK_LEN + sizeof(struct sockaddr))
+#define IW_EV_QUAL_PK_LEN	(IW_EV_LCP_PK_LEN + sizeof(struct iw_quality))
+#define IW_EV_POINT_PK_LEN	(IW_EV_LCP_LEN + 4)
 
 #endif	/* _LINUX_WIRELESS_H */

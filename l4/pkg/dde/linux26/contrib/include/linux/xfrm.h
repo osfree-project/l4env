@@ -91,9 +91,16 @@ struct xfrm_replay_state
 };
 
 struct xfrm_algo {
-	char	alg_name[64];
-	int	alg_key_len;    /* in bits */
-	char	alg_key[0];
+	char		alg_name[64];
+	unsigned int	alg_key_len;    /* in bits */
+	char		alg_key[0];
+};
+
+struct xfrm_algo_aead {
+	char		alg_name[64];
+	unsigned int	alg_key_len;	/* in bits */
+	unsigned int	alg_icv_len;	/* in bits */
+	char		alg_key[0];
 };
 
 struct xfrm_stats {
@@ -106,7 +113,8 @@ enum
 {
 	XFRM_POLICY_TYPE_MAIN	= 0,
 	XFRM_POLICY_TYPE_SUB	= 1,
-	XFRM_POLICY_TYPE_MAX	= 2
+	XFRM_POLICY_TYPE_MAX	= 2,
+	XFRM_POLICY_TYPE_ANY	= 255
 };
 
 enum
@@ -114,6 +122,7 @@ enum
 	XFRM_POLICY_IN	= 0,
 	XFRM_POLICY_OUT	= 1,
 	XFRM_POLICY_FWD	= 2,
+	XFRM_POLICY_MASK = 3,
 	XFRM_POLICY_MAX	= 3
 };
 
@@ -178,6 +187,21 @@ enum {
 	XFRM_MSG_REPORT,
 #define XFRM_MSG_REPORT XFRM_MSG_REPORT
 
+	XFRM_MSG_MIGRATE,
+#define XFRM_MSG_MIGRATE XFRM_MSG_MIGRATE
+
+	XFRM_MSG_NEWSADINFO,
+#define XFRM_MSG_NEWSADINFO XFRM_MSG_NEWSADINFO
+	XFRM_MSG_GETSADINFO,
+#define XFRM_MSG_GETSADINFO XFRM_MSG_GETSADINFO
+
+	XFRM_MSG_NEWSPDINFO,
+#define XFRM_MSG_NEWSPDINFO XFRM_MSG_NEWSPDINFO
+	XFRM_MSG_GETSPDINFO,
+#define XFRM_MSG_GETSPDINFO XFRM_MSG_GETSPDINFO
+
+	XFRM_MSG_MAPPING,
+#define XFRM_MSG_MAPPING XFRM_MSG_MAPPING
 	__XFRM_MSG_MAX
 };
 #define XFRM_MSG_MAX (__XFRM_MSG_MAX - 1)
@@ -256,9 +280,49 @@ enum xfrm_attr_type_t {
 	XFRMA_COADDR,		/* xfrm_address_t */
 	XFRMA_LASTUSED,
 	XFRMA_POLICY_TYPE,	/* struct xfrm_userpolicy_type */
+	XFRMA_MIGRATE,
+	XFRMA_ALG_AEAD,		/* struct xfrm_algo_aead */
+	XFRMA_KMADDRESS,        /* struct xfrm_user_kmaddress */
 	__XFRMA_MAX
 
 #define XFRMA_MAX (__XFRMA_MAX - 1)
+};
+
+enum xfrm_sadattr_type_t {
+	XFRMA_SAD_UNSPEC,
+	XFRMA_SAD_CNT,
+	XFRMA_SAD_HINFO,
+	__XFRMA_SAD_MAX
+
+#define XFRMA_SAD_MAX (__XFRMA_SAD_MAX - 1)
+};
+
+struct xfrmu_sadhinfo {
+	__u32 sadhcnt; /* current hash bkts */
+	__u32 sadhmcnt; /* max allowed hash bkts */
+};
+
+enum xfrm_spdattr_type_t {
+	XFRMA_SPD_UNSPEC,
+	XFRMA_SPD_INFO,
+	XFRMA_SPD_HINFO,
+	__XFRMA_SPD_MAX
+
+#define XFRMA_SPD_MAX (__XFRMA_SPD_MAX - 1)
+};
+
+struct xfrmu_spdinfo {
+	__u32 incnt;
+	__u32 outcnt;
+	__u32 fwdcnt;
+	__u32 inscnt;
+	__u32 outscnt;
+	__u32 fwdscnt;
+};
+
+struct xfrmu_spdhinfo {
+	__u32 spdhcnt;
+	__u32 spdhmcnt;
 };
 
 struct xfrm_usersa_info {
@@ -278,6 +342,8 @@ struct xfrm_usersa_info {
 #define XFRM_STATE_DECAP_DSCP	2
 #define XFRM_STATE_NOPMTUDISC	4
 #define XFRM_STATE_WILDRECV	8
+#define XFRM_STATE_ICMP		16
+#define XFRM_STATE_AF_UNSPEC	32
 };
 
 struct xfrm_usersa_id {
@@ -312,6 +378,8 @@ struct xfrm_userpolicy_info {
 #define XFRM_POLICY_BLOCK	1
 	__u8				flags;
 #define XFRM_POLICY_LOCALOK	1	/* Allow user to override global policy */
+	/* Automatically expand selector to include matching ICMP payloads. */
+#define XFRM_POLICY_ICMP	2
 	__u8				share;
 };
 
@@ -351,6 +419,37 @@ struct xfrm_user_report {
 	struct xfrm_selector		sel;
 };
 
+/* Used by MIGRATE to pass addresses IKE should use to perform
+ * SA negotiation with the peer */
+struct xfrm_user_kmaddress {
+	xfrm_address_t                  local;
+	xfrm_address_t                  remote;
+	__u32				reserved;
+	__u16				family;
+};
+
+struct xfrm_user_migrate {
+	xfrm_address_t			old_daddr;
+	xfrm_address_t			old_saddr;
+	xfrm_address_t			new_daddr;
+	xfrm_address_t			new_saddr;
+	__u8				proto;
+	__u8				mode;
+	__u16				reserved;
+	__u32				reqid;
+	__u16				old_family;
+	__u16				new_family;
+};
+
+struct xfrm_user_mapping {
+	struct xfrm_usersa_id		id;
+	__u32				reqid;
+	xfrm_address_t			old_saddr;
+	xfrm_address_t			new_saddr;
+	__be16				old_sport;
+	__be16				new_sport;
+};
+
 #ifndef __KERNEL__
 /* backwards compatibility for userspace */
 #define XFRMGRP_ACQUIRE		1
@@ -375,6 +474,10 @@ enum xfrm_nlgroups {
 #define XFRMNLGRP_AEVENTS	XFRMNLGRP_AEVENTS
 	XFRMNLGRP_REPORT,
 #define XFRMNLGRP_REPORT	XFRMNLGRP_REPORT
+	XFRMNLGRP_MIGRATE,
+#define XFRMNLGRP_MIGRATE	XFRMNLGRP_MIGRATE
+	XFRMNLGRP_MAPPING,
+#define XFRMNLGRP_MAPPING	XFRMNLGRP_MAPPING
 	__XFRMNLGRP_MAX
 };
 #define XFRMNLGRP_MAX	(__XFRMNLGRP_MAX - 1)

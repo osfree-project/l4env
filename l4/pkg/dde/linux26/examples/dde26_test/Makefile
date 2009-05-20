@@ -13,7 +13,7 @@ endif
 
 SRC_C          = main.c
 
-LIBS          += -ldde_linux26 -lddekit -lio -llist_alloc -lparsecmdline
+LIBS          += -ldde_linux26.o -lddekit -lio -llist_alloc -lparsecmdline
 
 # DDE configuration
 include $(PKGDIR)/linux26/Makeconf

@@ -9,8 +9,6 @@
  * Released under the General Public License (GPL).
  */
 
-#include <linux/lockdep.h>
-
 #ifndef DDE_LINUX
 
 #if defined(CONFIG_SMP)
@@ -19,9 +17,11 @@
 # include <linux/spinlock_types_up.h>
 #endif
 
+#include <linux/lockdep.h>
+
 typedef struct {
 	raw_spinlock_t raw_lock;
-#if defined(CONFIG_PREEMPT) && defined(CONFIG_SMP)
+#ifdef CONFIG_GENERIC_LOCKBREAK
 	unsigned int break_lock;
 #endif
 #ifdef CONFIG_DEBUG_SPINLOCK
@@ -37,7 +37,7 @@ typedef struct {
 
 typedef struct {
 	raw_rwlock_t raw_lock;
-#if defined(CONFIG_PREEMPT) && defined(CONFIG_SMP)
+#ifdef CONFIG_GENERIC_LOCKBREAK
 	unsigned int break_lock;
 #endif
 #ifdef CONFIG_DEBUG_SPINLOCK
@@ -87,6 +87,12 @@ typedef struct {
 				RW_DEP_MAP_INIT(lockname) }
 #endif
 
+/*
+ * SPIN_LOCK_UNLOCKED and RW_LOCK_UNLOCKED defeat lockdep state tracking and
+ * are hence deprecated.
+ * Please use DEFINE_SPINLOCK()/DEFINE_RWLOCK() or
+ * __SPIN_LOCK_UNLOCKED()/__RW_LOCK_UNLOCKED() as appropriate.
+ */
 #define SPIN_LOCK_UNLOCKED	__SPIN_LOCK_UNLOCKED(old_style_spin_init)
 #define RW_LOCK_UNLOCKED	__RW_LOCK_UNLOCKED(old_style_rw_init)
 

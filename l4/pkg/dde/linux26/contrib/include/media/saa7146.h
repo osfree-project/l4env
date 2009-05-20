@@ -12,6 +12,7 @@
 #include <asm/io.h>		/* for accessing devices */
 #include <linux/stringify.h>
 #include <linux/mutex.h>
+#include <linux/scatterlist.h>
 
 #include <linux/vmalloc.h>	/* for vmalloc() */
 #include <linux/mm.h>		/* for vmalloc_to_page() */
@@ -23,13 +24,13 @@
 
 extern unsigned int saa7146_debug;
 
-//#define DEBUG_PROLOG printk("(0x%08x)(0x%08x) %s: %s(): ",(dev==0?-1:(dev->mem==0?-1:saa7146_read(dev,RPS_ADDR0))),(dev==0?-1:(dev->mem==0?-1:saa7146_read(dev,IER))),KBUILD_MODNAME,__FUNCTION__)
+//#define DEBUG_PROLOG printk("(0x%08x)(0x%08x) %s: %s(): ",(dev==0?-1:(dev->mem==0?-1:saa7146_read(dev,RPS_ADDR0))),(dev==0?-1:(dev->mem==0?-1:saa7146_read(dev,IER))),KBUILD_MODNAME,__func__)
 
 #ifndef DEBUG_VARIABLE
 	#define DEBUG_VARIABLE saa7146_debug
 #endif
 
-#define DEBUG_PROLOG printk("%s: %s(): ",KBUILD_MODNAME,__FUNCTION__)
+#define DEBUG_PROLOG printk("%s: %s(): ",KBUILD_MODNAME, __func__)
 #define INFO(x) { printk("%s: ",KBUILD_MODNAME); printk x; }
 
 #define ERR(x) { DEBUG_PROLOG; printk x; }
@@ -52,12 +53,13 @@ struct saa7146_vv;
 /* saa7146 page table */
 struct saa7146_pgtable {
 	unsigned int	size;
-	u32		*cpu;
+	__le32		*cpu;
 	dma_addr_t	dma;
 	/* used for offsets for u,v planes for planar capture modes */
 	unsigned long	offset;
 	/* used for custom pagetables (used for example by budget dvb cards) */
 	struct scatterlist *slist;
+	int		nents;
 };
 
 struct saa7146_pci_extension_data {
@@ -99,7 +101,7 @@ struct saa7146_extension
 struct saa7146_dma
 {
 	dma_addr_t	dma_handle;
-	u32		*cpu_addr;
+	__le32		*cpu_addr;
 };
 
 struct saa7146_dev
@@ -113,7 +115,7 @@ struct saa7146_dev
 	struct mutex			lock;
 
 	unsigned char			__iomem *mem;		/* pointer to mapped IO memory */
-	int				revision;	/* chip revision; needed for bug-workarounds*/
+	u32				revision;	/* chip revision; needed for bug-workarounds*/
 
 	/* pci-device & irq stuff*/
 	char				name[32];
@@ -145,7 +147,6 @@ struct saa7146_dev
 
 /* from saa7146_i2c.c */
 int saa7146_i2c_adapter_prepare(struct saa7146_dev *dev, struct i2c_adapter *i2c_adapter, u32 bitrate);
-int saa7146_i2c_transfer(struct saa7146_dev *saa, const struct i2c_msg *msgs, int num, int retries);
 
 /* from saa7146_core.c */
 extern struct list_head saa7146_devices;
@@ -156,7 +157,8 @@ struct saa7146_format* format_by_fourcc(struct saa7146_dev *dev, int fourcc);
 int saa7146_pgtable_alloc(struct pci_dev *pci, struct saa7146_pgtable *pt);
 void saa7146_pgtable_free(struct pci_dev *pci, struct saa7146_pgtable *pt);
 int saa7146_pgtable_build_single(struct pci_dev *pci, struct saa7146_pgtable *pt, struct scatterlist *list, int length );
-char *saa7146_vmalloc_build_pgtable(struct pci_dev *pci, long length, struct saa7146_pgtable *pt);
+void *saa7146_vmalloc_build_pgtable(struct pci_dev *pci, long length, struct saa7146_pgtable *pt);
+void saa7146_vfree_destroy_pgtable(struct pci_dev *pci, void *mem, struct saa7146_pgtable *pt);
 void saa7146_setgpio(struct saa7146_dev *dev, int port, u32 data);
 int saa7146_wait_for_debi_done(struct saa7146_dev *dev, int nobusyloop);
 

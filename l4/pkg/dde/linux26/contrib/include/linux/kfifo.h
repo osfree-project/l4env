@@ -21,8 +21,6 @@
 #ifndef _LINUX_KFIFO_H
 #define _LINUX_KFIFO_H
 
-#ifdef __KERNEL__
-
 #include <linux/kernel.h>
 #include <linux/spinlock.h>
 
@@ -74,7 +72,7 @@ static inline void kfifo_reset(struct kfifo *fifo)
  * @buffer: the data to be added.
  * @len: the length of the data to be added.
  *
- * This function copies at most 'len' bytes from the 'buffer' into
+ * This function copies at most @len bytes from the @buffer into
  * the FIFO depending on the free space, and returns the number of
  * bytes copied.
  */
@@ -99,8 +97,8 @@ static inline unsigned int kfifo_put(struct kfifo *fifo,
  * @buffer: where the data must be copied.
  * @len: the size of the destination buffer.
  *
- * This function copies at most 'len' bytes from the FIFO into the
- * 'buffer' and returns the number of copied bytes.
+ * This function copies at most @len bytes from the FIFO into the
+ * @buffer and returns the number of copied bytes.
  */
 static inline unsigned int kfifo_get(struct kfifo *fifo,
 				     unsigned char *buffer, unsigned int len)
@@ -151,7 +149,4 @@ static inline unsigned int kfifo_len(struct kfifo *fifo)
 	return ret;
 }
 
-#else
-#warning "don't include kernel headers in userspace"
-#endif /* __KERNEL__ */
 #endif

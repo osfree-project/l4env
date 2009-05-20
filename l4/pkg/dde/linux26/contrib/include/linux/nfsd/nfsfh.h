@@ -14,9 +14,8 @@
 #ifndef _LINUX_NFSD_FH_H
 #define _LINUX_NFSD_FH_H
 
-#include <asm/types.h>
-#ifdef __KERNEL__
 # include <linux/types.h>
+#ifdef __KERNEL__
 # include <linux/string.h>
 # include <linux/fs.h>
 #endif
@@ -68,6 +67,10 @@ struct nfs_fhbase_old {
  *     1  - 4 byte user specified identifier
  *     2  - 4 byte major, 4 byte minor, 4 byte inode number - DEPRECATED
  *     3  - 4 byte device id, encoded for user-space, 4 byte inode number
+ *     4  - 4 byte inode number and 4 byte uuid
+ *     5  - 8 byte uuid
+ *     6  - 16 byte uuid
+ *     7  - 8 byte inode number and 16 byte uuid
  *
  * The fileid_type identified how the file within the filesystem is encoded.
  * This is (will be) passed to, and set by, the underlying filesystem if it supports
@@ -150,53 +153,96 @@ typedef struct svc_fh {
 	struct timespec		fh_pre_ctime;	/* ctime before oper */
 
 	/* Post-op attributes saved in fh_unlock */
-	umode_t			fh_post_mode;	/* i_mode */
-	nlink_t			fh_post_nlink;	/* i_nlink */
-	uid_t			fh_post_uid;	/* i_uid */
-	gid_t			fh_post_gid;	/* i_gid */
-	__u64			fh_post_size;	/* i_size */
-	unsigned long		fh_post_blocks; /* i_blocks */
-	unsigned long		fh_post_blksize;/* i_blksize */
-	__be32			fh_post_rdev[2];/* i_rdev */
-	struct timespec		fh_post_atime;	/* i_atime */
-	struct timespec		fh_post_mtime;	/* i_mtime */
-	struct timespec		fh_post_ctime;	/* i_ctime */
+	struct kstat		fh_post_attr;	/* full attrs after operation */
 #endif /* CONFIG_NFSD_V3 */
 
 } svc_fh;
 
-static inline void mk_fsid_v0(u32 *fsidv, dev_t dev, ino_t ino)
-{
-	fsidv[0] = htonl((MAJOR(dev)<<16) |
-			MINOR(dev));
-	fsidv[1] = ino_t_to_u32(ino);
-}
+enum nfsd_fsid {
+	FSID_DEV = 0,
+	FSID_NUM,
+	FSID_MAJOR_MINOR,
+	FSID_ENCODE_DEV,
+	FSID_UUID4_INUM,
+	FSID_UUID8,
+	FSID_UUID16,
+	FSID_UUID16_INUM,
+};
 
-static inline void mk_fsid_v1(u32 *fsidv, u32 fsid)
-{
-	fsidv[0] = fsid;
-}
+enum fsid_source {
+	FSIDSOURCE_DEV,
+	FSIDSOURCE_FSID,
+	FSIDSOURCE_UUID,
+};
+extern enum fsid_source fsid_source(struct svc_fh *fhp);
 
-static inline void mk_fsid_v2(u32 *fsidv, dev_t dev, ino_t ino)
-{
-	fsidv[0] = htonl(MAJOR(dev));
-	fsidv[1] = htonl(MINOR(dev));
-	fsidv[2] = ino_t_to_u32(ino);
-}
 
-static inline void mk_fsid_v3(u32 *fsidv, dev_t dev, ino_t ino)
+/* This might look a little large to "inline" but in all calls except
+ * one, 'vers' is constant so moste of the function disappears.
+ */
+static inline void mk_fsid(int vers, u32 *fsidv, dev_t dev, ino_t ino,
+			   u32 fsid, unsigned char *uuid)
 {
-	fsidv[0] = new_encode_dev(dev);
-	fsidv[1] = ino_t_to_u32(ino);
+	u32 *up;
+	switch(vers) {
+	case FSID_DEV:
+		fsidv[0] = htonl((MAJOR(dev)<<16) |
+				 MINOR(dev));
+		fsidv[1] = ino_t_to_u32(ino);
+		break;
+	case FSID_NUM:
+		fsidv[0] = fsid;
+		break;
+	case FSID_MAJOR_MINOR:
+		fsidv[0] = htonl(MAJOR(dev));
+		fsidv[1] = htonl(MINOR(dev));
+		fsidv[2] = ino_t_to_u32(ino);
+		break;
+
+	case FSID_ENCODE_DEV:
+		fsidv[0] = new_encode_dev(dev);
+		fsidv[1] = ino_t_to_u32(ino);
+		break;
+
+	case FSID_UUID4_INUM:
+		/* 4 byte fsid and inode number */
+		up = (u32*)uuid;
+		fsidv[0] = ino_t_to_u32(ino);
+		fsidv[1] = up[0] ^ up[1] ^ up[2] ^ up[3];
+		break;
+
+	case FSID_UUID8:
+		/* 8 byte fsid  */
+		up = (u32*)uuid;
+		fsidv[0] = up[0] ^ up[2];
+		fsidv[1] = up[1] ^ up[3];
+		break;
+
+	case FSID_UUID16:
+		/* 16 byte fsid - NFSv3+ only */
+		memcpy(fsidv, uuid, 16);
+		break;
+
+	case FSID_UUID16_INUM:
+		/* 8 byte inode and 16 byte fsid */
+		*(u64*)fsidv = (u64)ino;
+		memcpy(fsidv+2, uuid, 16);
+		break;
+	default: BUG();
+	}
 }
 
 static inline int key_len(int type)
 {
 	switch(type) {
-	case 0: return 8;
-	case 1: return 4;
-	case 2: return 12;
-	case 3: return 8;
+	case FSID_DEV:		return 8;
+	case FSID_NUM: 		return 4;
+	case FSID_MAJOR_MINOR:	return 12;
+	case FSID_ENCODE_DEV:	return 8;
+	case FSID_UUID4_INUM:	return 8;
+	case FSID_UUID8:	return 8;
+	case FSID_UUID16:	return 16;
+	case FSID_UUID16_INUM:	return 24;
 	default: return 0;
 	}
 }
@@ -244,36 +290,12 @@ fill_pre_wcc(struct svc_fh *fhp)
 	if (!fhp->fh_pre_saved) {
 		fhp->fh_pre_mtime = inode->i_mtime;
 		fhp->fh_pre_ctime = inode->i_ctime;
-			fhp->fh_pre_size  = inode->i_size;
-			fhp->fh_pre_saved = 1;
+		fhp->fh_pre_size  = inode->i_size;
+		fhp->fh_pre_saved = 1;
 	}
 }
 
-/*
- * Fill in the post_op attr for the wcc data
- */
-static inline void
-fill_post_wcc(struct svc_fh *fhp)
-{
-	struct inode    *inode = fhp->fh_dentry->d_inode;
-
-	if (fhp->fh_post_saved)
-		printk("nfsd: inode locked twice during operation.\n");
-
-	fhp->fh_post_mode       = inode->i_mode;
-	fhp->fh_post_nlink      = inode->i_nlink;
-	fhp->fh_post_uid	= inode->i_uid;
-	fhp->fh_post_gid	= inode->i_gid;
-	fhp->fh_post_size       = inode->i_size;
-	fhp->fh_post_blksize    = BLOCK_SIZE;
-	fhp->fh_post_blocks     = inode->i_blocks;
-	fhp->fh_post_rdev[0]    = htonl((u32)imajor(inode));
-	fhp->fh_post_rdev[1]    = htonl((u32)iminor(inode));
-	fhp->fh_post_atime      = inode->i_atime;
-	fhp->fh_post_mtime      = inode->i_mtime;
-	fhp->fh_post_ctime      = inode->i_ctime;
-	fhp->fh_post_saved      = 1;
-}
+extern void fill_post_wcc(struct svc_fh *);
 #else
 #define	fill_pre_wcc(ignored)
 #define fill_post_wcc(notused)

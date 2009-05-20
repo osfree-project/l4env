@@ -42,6 +42,7 @@ nitpicker.bin:		dope.bin
 examples.bin:		dope.bin l4con.bin
 lyon.headers:		stpm.headers
 stpm.headers:		libcrypto.headers
+stpm.lib:		dde.lib
 tftp.bin:		ore.lib
 log.headers:		uclibc.headers
 bootstrap.bin:		sigma0.bin

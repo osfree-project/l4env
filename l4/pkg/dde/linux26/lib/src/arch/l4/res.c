@@ -2,8 +2,6 @@
 
 #include <linux/ioport.h>
 
-
-
 /** Request an IO port region.
  *
  * \param start start port
@@ -16,7 +14,7 @@
  * \bug Since no one in Linux uses this function's return value,
  *      we do not allocate and fill a resource struct.
  */
-struct resource *request_region(resource_size_t start,
+static struct resource *l4dde26_request_region(resource_size_t start,
                                 resource_size_t n,
                                 const char *name)
 {
@@ -42,6 +40,8 @@ struct dde_mem_region {
 	struct list_head list;
 };
 
+void __iomem * ioremap(unsigned long phys_addr, unsigned long size);
+
 /** Request an IO memory region.
  *
  * \param start start address
@@ -54,17 +54,21 @@ struct dde_mem_region {
  * \bug Since no one in Linux uses this function's return value,
  *      we do not allocate and fill a resource struct.
  */
-struct resource *request_mem_region(resource_size_t start,
+static struct resource *l4dde26_request_mem_region(resource_size_t start,
                                     resource_size_t n,
                                     const char *name)
 {
-	ddekit_addr_t va;
+	ddekit_addr_t va = 0;
 	struct dde_mem_region *mreg;
+
+	// do not a resource request twice
+	if (ioremap(start, n))
+	  return (struct resource *)1;
 
 	int i = ddekit_request_mem(start, n, &va);
 
 	if (i) {
-		ddekit_printf("request_mem_region() failed (start %, size %d)", start, n);
+		ddekit_printf("request_mem_region() failed (start %lx, size %x)", start, n);
 		return NULL;
 	}
 
@@ -84,9 +88,29 @@ struct resource *request_mem_region(resource_size_t start,
 }
 
 
+struct resource * __request_region(struct resource *parent,
+								   resource_size_t start,
+								   resource_size_t n,
+								   const char *name, int flags)
+{
+	Assert(parent);
+	Assert(parent->flags & IORESOURCE_IO || parent->flags & IORESOURCE_MEM);
+
+	switch (parent->flags)
+	{
+		case IORESOURCE_IO:
+			return l4dde26_request_region(start, n, name);
+		case IORESOURCE_MEM:
+			return l4dde26_request_mem_region(start, n, name);
+	}
+
+	return NULL;
+}
+
+
 /** Release IO port region.
   */
-void release_region(resource_size_t start, resource_size_t n)
+static void l4dde26_release_region(resource_size_t start, resource_size_t n)
 {
 	/* FIXME: we need a list of "struct resource"s that have been
 	 *        allocated by request_region() and then need to
@@ -97,24 +121,29 @@ void release_region(resource_size_t start, resource_size_t n)
 
 /** Release IO memory region.
  */
-void release_mem_region(resource_size_t start, resource_size_t n)
+static void l4dde26_release_mem_region(resource_size_t start, resource_size_t n)
 {
 	ddekit_release_mem(start, n);
 	ddekit_pgtab_clear_region((void *)start, PTE_TYPE_OTHER);
 }
 
 
-int check_region(resource_size_t start, resource_size_t n)
+int __check_region(struct resource *root, resource_size_t s, resource_size_t n)
 {
 	WARN_UNIMPL;
 	return -1;
 }
 
-
-int check_mem_region(resource_size_t start, resource_size_t n)
+void __release_region(struct resource *root, resource_size_t start,
+                      resource_size_t n)
 {
-	WARN_UNIMPL;
-	return -2;
+	switch (root->flags)
+	{
+		case IORESOURCE_IO:
+			return l4dde26_release_region(start, n);
+		case IORESOURCE_MEM:
+			return l4dde26_release_mem_region(start, n);
+	}
 }
 
 
@@ -131,7 +160,7 @@ void __iomem * ioremap(unsigned long phys_addr, unsigned long size)
 	list_for_each(pos, head) {
 		struct dde_mem_region *mreg = list_entry(pos, struct dde_mem_region,
 		                                         list);
-		if (mreg->pa <= phys_addr && mreg->pa + mreg->size > phys_addr)
+		if (mreg->pa <= phys_addr && mreg->pa + mreg->size >= phys_addr + size)
 			return (void *)(mreg->va + (phys_addr - mreg->pa));
 	}
 

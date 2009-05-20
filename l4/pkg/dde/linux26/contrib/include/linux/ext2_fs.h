@@ -29,11 +29,12 @@
 #undef EXT2FS_DEBUG
 
 /*
- * Define EXT2_PREALLOCATE to preallocate data blocks for expanding files
+ * Define EXT2_RESERVATION to reserve data blocks for expanding files
  */
-#define EXT2_PREALLOCATE
-#define EXT2_DEFAULT_PREALLOC_BLOCKS	8
-
+#define EXT2_DEFAULT_RESERVE_BLOCKS     8
+/*max window size: 1024(direct blocks) + 3([t,d]indirect blocks) */
+#define EXT2_MAX_RESERVE_BLOCKS         1027
+#define EXT2_RESERVE_WINDOW_NOT_ALLOCATED 0
 /*
  * The second extended file system version
  */
@@ -46,7 +47,7 @@
 #ifdef EXT2FS_DEBUG
 #	define ext2_debug(f, a...)	{ \
 					printk ("EXT2-fs DEBUG (%s, %d): %s:", \
-						__FILE__, __LINE__, __FUNCTION__); \
+						__FILE__, __LINE__, __func__); \
 				  	printk (f, ## a); \
 					}
 #else
@@ -193,6 +194,30 @@ struct ext2_group_desc
 #define EXT2_FL_USER_VISIBLE		FS_FL_USER_VISIBLE	/* User visible flags */
 #define EXT2_FL_USER_MODIFIABLE		FS_FL_USER_MODIFIABLE	/* User modifiable flags */
 
+/* Flags that should be inherited by new inodes from their parent. */
+#define EXT2_FL_INHERITED (EXT2_SECRM_FL | EXT2_UNRM_FL | EXT2_COMPR_FL |\
+			   EXT2_SYNC_FL | EXT2_IMMUTABLE_FL | EXT2_APPEND_FL |\
+			   EXT2_NODUMP_FL | EXT2_NOATIME_FL | EXT2_COMPRBLK_FL|\
+			   EXT2_NOCOMP_FL | EXT2_JOURNAL_DATA_FL |\
+			   EXT2_NOTAIL_FL | EXT2_DIRSYNC_FL)
+
+/* Flags that are appropriate for regular files (all but dir-specific ones). */
+#define EXT2_REG_FLMASK (~(EXT2_DIRSYNC_FL | EXT2_TOPDIR_FL))
+
+/* Flags that are appropriate for non-directories/regular files. */
+#define EXT2_OTHER_FLMASK (EXT2_NODUMP_FL | EXT2_NOATIME_FL)
+
+/* Mask out flags that are inappropriate for the given type of inode. */
+static inline __u32 ext2_mask_flags(umode_t mode, __u32 flags)
+{
+	if (S_ISDIR(mode))
+		return flags;
+	else if (S_ISREG(mode))
+		return flags & EXT2_REG_FLMASK;
+	else
+		return flags & EXT2_OTHER_FLMASK;
+}
+
 /*
  * ioctl commands
  */
@@ -200,6 +225,8 @@ struct ext2_group_desc
 #define	EXT2_IOC_SETFLAGS		FS_IOC_SETFLAGS
 #define	EXT2_IOC_GETVERSION		FS_IOC_GETVERSION
 #define	EXT2_IOC_SETVERSION		FS_IOC_SETVERSION
+#define	EXT2_IOC_GETRSVSZ		_IOR('f', 5, long)
+#define	EXT2_IOC_SETRSVSZ		_IOW('f', 6, long)
 
 /*
  * ioctl commands in 32 bit emulation
@@ -281,8 +308,8 @@ struct ext2_inode {
 
 #ifdef	__hurd__
 #define i_translator	osd1.hurd1.h_i_translator
-#define i_frag		osd2.hurd2.h_i_frag;
-#define i_fsize		osd2.hurd2.h_i_fsize;
+#define i_frag		osd2.hurd2.h_i_frag
+#define i_fsize		osd2.hurd2.h_i_fsize
 #define i_uid_high	osd2.hurd2.h_i_uid_high
 #define i_gid_high	osd2.hurd2.h_i_gid_high
 #define i_author	osd2.hurd2.h_i_author
@@ -317,8 +344,9 @@ struct ext2_inode {
 #define EXT2_MOUNT_XATTR_USER		0x004000  /* Extended user attributes */
 #define EXT2_MOUNT_POSIX_ACL		0x008000  /* POSIX Access Control Lists */
 #define EXT2_MOUNT_XIP			0x010000  /* Execute in place */
-#define EXT2_MOUNT_USRQUOTA		0x020000 /* user quota */
-#define EXT2_MOUNT_GRPQUOTA		0x040000 /* group quota */
+#define EXT2_MOUNT_USRQUOTA		0x020000  /* user quota */
+#define EXT2_MOUNT_GRPQUOTA		0x040000  /* group quota */
+#define EXT2_MOUNT_RESERVATION		0x080000  /* Preallocation */
 
 
 #define clear_opt(o, opt)		o &= ~EXT2_MOUNT_##opt
@@ -557,5 +585,6 @@ enum {
 #define EXT2_DIR_ROUND 			(EXT2_DIR_PAD - 1)
 #define EXT2_DIR_REC_LEN(name_len)	(((name_len) + 8 + EXT2_DIR_ROUND) & \
 					 ~EXT2_DIR_ROUND)
+#define EXT2_MAX_REC_LEN		((1<<16)-1)
 
 #endif	/* _LINUX_EXT2_FS_H */

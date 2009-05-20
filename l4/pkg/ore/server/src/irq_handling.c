@@ -44,8 +44,10 @@ static int __netif_rx(struct sk_buff *skb)
 	// find out who will receive this skb
 	channel = find_channel_for_skb(skb, 0);
 
-	if (ORE_DEBUG_PACKET)
+	if (ORE_DEBUG_PACKET) {
 		LOG_SKB(skb);
+		LOG_MAC(ORE_DEBUG_PACKET, skb->mac_header);
+	}
 
 	// if the first channel lookup fails, the packet is not for us
 	if (channel < 0)

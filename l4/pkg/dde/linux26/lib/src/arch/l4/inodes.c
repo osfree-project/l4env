@@ -100,7 +100,6 @@ static struct inode *dde_alloc_inode(struct super_block *sb)
 {
 	struct inode *inode;
 	
-	DEBUG_MSG("alloc_inode fn %p", sb->s_op->alloc_inode);
 	if (sb->s_op->alloc_inode)
 		inode = sb->s_op->alloc_inode(sb);
 	else
@@ -263,7 +262,7 @@ int set_anon_super(struct super_block *s, void *data)
 }
 
 int get_sb_pseudo(struct file_system_type *fs_type, char *name,
-                  struct super_operations *ops, unsigned long magic,
+                  const struct super_operations *ops, unsigned long magic,
                   struct vfsmount *mnt)
 {
 	struct super_block *s = sget(fs_type, NULL, set_anon_super, NULL);

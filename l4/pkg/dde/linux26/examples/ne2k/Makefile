@@ -13,7 +13,7 @@ endif
 
 SRC_C			= ne2k-pci.c 8390.c main.c arping.c
 
-LIBS			+= -ldde_linux26_net -ldde_linux26 -lddekit -lio -lomega0 -llist_alloc
+LIBS			+= -ldde_linux26_net -ldde_linux26.o -lddekit -lio -lomega0 -llist_alloc
 
 PRIVATE_INCDIR 	= $(PKGDIR_ABS)/linux26/include $(MY_DDE_INCDIR) $(MY_LINUX26_INCDIR)  \
 				  $(OBJ_BASE)/include/uclibc

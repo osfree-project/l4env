@@ -2,7 +2,7 @@
 #define __SOUND_AC97_CODEC_H
 
 /*
- *  Copyright (c) by Jaroslav Kysela <perex@suse.cz>
+ *  Copyright (c) by Jaroslav Kysela <perex@perex.cz>
  *  Universal interface for Audio Codec '97
  *
  *  For more details look to AC '97 component specification revision 2.1
@@ -281,10 +281,12 @@
 /* specific - Analog Devices */
 #define AC97_AD_TEST		0x5a	/* test register */
 #define AC97_AD_TEST2		0x5c	/* undocumented test register 2 */
+#define AC97_AD_HPFD_SHIFT	12	/* High Pass Filter Disable */
 #define AC97_AD_CODEC_CFG	0x70	/* codec configuration */
 #define AC97_AD_JACK_SPDIF	0x72	/* Jack Sense & S/PDIF */
 #define AC97_AD_SERIAL_CFG	0x74	/* Serial Configuration */
 #define AC97_AD_MISC		0x76	/* Misc Control Bits */
+#define AC97_AD_VREFD_SHIFT	2	/* V_REFOUT Disable (AD1888) */
 
 /* specific - Cirrus Logic */
 #define AC97_CSR_ACMODE		0x5e	/* AC Mode Register */
@@ -345,9 +347,9 @@
 #define AC97_ALC650_GPIO_STATUS		0x78
 #define AC97_ALC650_CLOCK		0x7a
 
-/* specific - Yamaha YMF753 */
-#define AC97_YMF753_DIT_CTRL2	0x66	/* DIT Control 2 */
-#define AC97_YMF753_3D_MODE_SEL	0x68	/* 3D Mode Select */
+/* specific - Yamaha YMF7x3 */
+#define AC97_YMF7X3_DIT_CTRL	0x66	/* DIT Control (YMF743) / 2 (YMF753) */
+#define AC97_YMF7X3_3D_MODE_SEL	0x68	/* 3D Mode Select */
 
 /* specific - C-Media */
 #define AC97_CM9738_VENDOR_CTRL	0x5a
@@ -375,6 +377,7 @@
 #define AC97_SCAP_DETECT_BY_VENDOR (1<<8) /* use vendor registers for read tests */
 #define AC97_SCAP_NO_SPDIF	(1<<9)	/* don't build SPDIF controls */
 #define AC97_SCAP_EAPD_LED	(1<<10)	/* EAPD as mute LED */
+#define AC97_SCAP_POWER_SAVE	(1<<11)	/* capable for aggresive power-saving */
 
 /* ac97->flags */
 #define AC97_HAS_PC_BEEP	(1<<0)	/* force PC Speaker usage */
@@ -396,6 +399,7 @@
 #define AC97_HAS_NO_TONE	(1<<16) /* no Tone volume */
 #define AC97_HAS_NO_STD_PCM	(1<<17)	/* no standard AC97 PCM volume and mute */
 #define AC97_HAS_NO_AUX		(1<<18) /* no standard AC97 AUX volume and mute */
+#define AC97_HAS_8CH		(1<<19) /* supports 8-channel output */
 
 /* rates indexes */
 #define AC97_RATES_FRONT_DAC	0
@@ -425,6 +429,7 @@ struct snd_ac97_build_ops {
 
 struct snd_ac97_bus_ops {
 	void (*reset) (struct snd_ac97 *ac97);
+	void (*warm_reset)(struct snd_ac97 *ac97);
 	void (*write) (struct snd_ac97 *ac97, unsigned short reg, unsigned short val);
 	unsigned short (*read) (struct snd_ac97 *ac97, unsigned short reg);
 	void (*wait) (struct snd_ac97 *ac97);
@@ -501,6 +506,8 @@ struct snd_ac97 {
 			unsigned short id[3];		// codec IDs (lower 16-bit word)
 			unsigned short pcmreg[3];	// PCM registers
 			unsigned short codec_cfg[3];	// CODEC_CFG bits
+			unsigned char swap_mic_linein;	// AD1986/AD1986A only
+			unsigned char lo_as_master;	/* LO as master */
 		} ad18xx;
 		unsigned int dev_flags;		/* device specific */
 	} spec;
@@ -510,7 +517,6 @@ struct snd_ac97 {
 
 #ifdef CONFIG_SND_AC97_POWER_SAVE
 	unsigned int power_up;	/* power states */
-	struct workqueue_struct *power_workq;
 	struct delayed_work power_work;
 #endif
 	struct device dev;

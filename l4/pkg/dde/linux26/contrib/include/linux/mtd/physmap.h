@@ -2,8 +2,6 @@
  * For boards with physically mapped flash and using
  * drivers/mtd/maps/physmap.c mapping driver.
  *
- * $Id: physmap.h,v 1.4 2005/11/07 11:14:55 gleixner Exp $
- *
  * Copyright (C) 2003 MontaVista Software Inc.
  * Author: Jun Sun, jsun@mvista.com or jsun@junsun.net
  *
@@ -18,13 +16,15 @@
 #define __LINUX_MTD_PHYSMAP__
 
 #include <linux/mtd/mtd.h>
-#include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
+
+struct map_info;
 
 struct physmap_flash_data {
 	unsigned int		width;
 	void			(*set_vpp)(struct map_info *, int);
 	unsigned int		nr_parts;
+	unsigned int		pfow_base;
 	struct mtd_partition	*parts;
 };
 

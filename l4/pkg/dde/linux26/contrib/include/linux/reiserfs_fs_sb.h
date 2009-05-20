@@ -120,7 +120,7 @@ struct reiserfs_journal_cnode {
 	struct buffer_head *bh;	/* real buffer head */
 	struct super_block *sb;	/* dev of real buffer head */
 	__u32 blocknr;		/* block number of real buffer head, == 0 when buffer on disk */
-	long state;
+	unsigned long state;
 	struct reiserfs_journal_list *jlist;	/* journal list this cnode lives in */
 	struct reiserfs_journal_cnode *next;	/* next in transaction list */
 	struct reiserfs_journal_cnode *prev;	/* prev in transaction list */
@@ -152,7 +152,7 @@ struct reiserfs_journal_list {
 	atomic_t j_nonzerolen;
 	atomic_t j_commit_left;
 	atomic_t j_older_commits_done;	/* all commits older than this on disk */
-	struct semaphore j_commit_lock;
+	struct mutex j_commit_mutex;
 	unsigned long j_trans_id;
 	time_t j_timestamp;
 	struct reiserfs_list_bitmap *j_list_bitmap;
@@ -177,15 +177,15 @@ struct reiserfs_journal {
 	struct reiserfs_journal_cnode *j_last;	/* newest journal block */
 	struct reiserfs_journal_cnode *j_first;	/*  oldest journal block.  start here for traverse */
 
-	struct file *j_dev_file;
 	struct block_device *j_dev_bd;
+	fmode_t j_dev_mode;
 	int j_1st_reserved_block;	/* first block on s_dev of reserved area journal */
 
-	long j_state;
+	unsigned long j_state;
 	unsigned long j_trans_id;
 	unsigned long j_mount_id;
 	unsigned long j_start;	/* start of current waiting commit (index into j_ap_blocks) */
-	unsigned long j_len;	/* lenght of current waiting commit */
+	unsigned long j_len;	/* length of current waiting commit */
 	unsigned long j_len_alloc;	/* number of buffers requested by journal_begin() */
 	atomic_t j_wcount;	/* count of writers for current commit */
 	unsigned long j_bcount;	/* batch count. allows turning X transactions into 1 */
@@ -194,8 +194,8 @@ struct reiserfs_journal {
 	struct buffer_head *j_header_bh;
 
 	time_t j_trans_start_time;	/* time this transaction started */
-	struct semaphore j_lock;
-	struct semaphore j_flush_sem;
+	struct mutex j_mutex;
+	struct mutex j_flush_mutex;
 	wait_queue_head_t j_join_wait;	/* wait for current transaction to finish before starting new one */
 	atomic_t j_jlock;	/* lock for j_join_wait */
 	int j_list_bitmap_index;	/* number of next list bitmap to use */
@@ -265,9 +265,7 @@ enum journal_state_bits {
 typedef __u32(*hashf_t) (const signed char *, int);
 
 struct reiserfs_bitmap_info {
-	// FIXME: Won't work with block sizes > 8K
-	__u16 first_zero_hint;
-	__u16 free_count;
+	__u32 free_count;
 };
 
 struct proc_dir_entry;
@@ -401,9 +399,10 @@ struct reiserfs_sb_info {
 	int reserved_blocks;	/* amount of blocks reserved for further allocations */
 	spinlock_t bitmap_lock;	/* this lock on now only used to protect reserved_blocks variable */
 	struct dentry *priv_root;	/* root of /.reiserfs_priv */
+#ifdef CONFIG_REISERFS_FS_XATTR
 	struct dentry *xattr_root;	/* root of /.reiserfs_priv/.xa */
 	struct rw_semaphore xattr_dir_sem;
-
+#endif
 	int j_errno;
 #ifdef CONFIG_QUOTA
 	char *s_qf_names[MAXQUOTAS];

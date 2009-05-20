@@ -180,7 +180,9 @@ struct rfcomm_dlc {
 	u8            addr;
 	u8            priority;
 	u8            v24_sig;
+	u8            remote_v24_sig;
 	u8            mscex;
+	u8            out;
 
 	u32           link_mode;
 
@@ -252,8 +254,8 @@ static inline void rfcomm_dlc_put(struct rfcomm_dlc *d)
 		rfcomm_dlc_free(d);
 }
 
-extern void FASTCALL(__rfcomm_dlc_throttle(struct rfcomm_dlc *d));
-extern void FASTCALL(__rfcomm_dlc_unthrottle(struct rfcomm_dlc *d));
+extern void __rfcomm_dlc_throttle(struct rfcomm_dlc *d);
+extern void __rfcomm_dlc_unthrottle(struct rfcomm_dlc *d);
 
 static inline void rfcomm_dlc_throttle(struct rfcomm_dlc *d)
 {
@@ -323,6 +325,7 @@ int  rfcomm_connect_ind(struct rfcomm_session *s, u8 channel, struct rfcomm_dlc 
 #define RFCOMM_RELEASE_ONHUP  1
 #define RFCOMM_HANGUP_NOW     2
 #define RFCOMM_TTY_ATTACHED   3
+#define RFCOMM_TTY_RELEASED   4
 
 struct rfcomm_dev_req {
 	s16      dev_id;

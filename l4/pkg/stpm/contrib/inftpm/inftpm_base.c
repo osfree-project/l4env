@@ -15,6 +15,8 @@
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/miscdevice.h>
+#include <linux/ioctl.h>
+#include <linux/fs.h>
 #include <asm/uaccess.h>
 
 #include "inftpm.h"

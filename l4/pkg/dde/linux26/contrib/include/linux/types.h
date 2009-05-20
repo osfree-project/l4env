@@ -3,12 +3,9 @@
 
 #ifdef	__KERNEL__
 
-#define BITS_TO_LONGS(bits) \
-	(((bits)+BITS_PER_LONG-1)/BITS_PER_LONG)
 #define DECLARE_BITMAP(name,bits) \
 	unsigned long name[BITS_TO_LONGS(bits)]
 
-#define BITS_PER_BYTE 8
 #endif
 
 #include <linux/posix_types.h>
@@ -40,6 +37,8 @@ typedef __kernel_gid32_t	gid_t;
 typedef __kernel_uid16_t        uid16_t;
 typedef __kernel_gid16_t        gid16_t;
 
+typedef unsigned long		uintptr_t;
+
 #ifdef CONFIG_UID16
 /* This is defined by include/asm-{arch}/posix_types.h */
 typedef __kernel_old_uid_t	old_uid_t;
@@ -54,7 +53,7 @@ typedef __kernel_uid_t		uid_t;
 typedef __kernel_gid_t		gid_t;
 #endif /* __KERNEL__ */
 
-#if defined(__GNUC__) && !defined(__STRICT_ANSI__)
+#if defined(__GNUC__)
 typedef __kernel_loff_t		loff_t;
 #endif
 
@@ -120,14 +119,14 @@ typedef		__u8		uint8_t;
 typedef		__u16		uint16_t;
 typedef		__u32		uint32_t;
 
-#if defined(__GNUC__) && !defined(__STRICT_ANSI__)
+#if defined(__GNUC__)
 typedef		__u64		uint64_t;
 typedef		__u64		u_int64_t;
 typedef		__s64		int64_t;
 #endif
 
 /* this is a special 64bit data type that is 8-byte aligned */
-#define aligned_u64 unsigned long long __attribute__((aligned(8)))
+#define aligned_u64 __u64 __attribute__((aligned(8)))
 #define aligned_be64 __be64 __attribute__((aligned(8)))
 #define aligned_le64 __le64 __attribute__((aligned(8)))
 
@@ -136,19 +135,14 @@ typedef		__s64		int64_t;
  *
  * Linux always considers sectors to be 512 bytes long independently
  * of the devices real block size.
+ *
+ * blkcnt_t is the type of the inode's block count.
  */
 #ifdef CONFIG_LBD
 typedef u64 sector_t;
-#else
-typedef unsigned long sector_t;
-#endif
-
-/*
- * The type of the inode's block count.
- */
-#ifdef CONFIG_LSF
 typedef u64 blkcnt_t;
 #else
+typedef unsigned long sector_t;
 typedef unsigned long blkcnt_t;
 #endif
 
@@ -182,23 +176,33 @@ typedef __u16 __bitwise __le16;
 typedef __u16 __bitwise __be16;
 typedef __u32 __bitwise __le32;
 typedef __u32 __bitwise __be32;
-#if defined(__GNUC__) && !defined(__STRICT_ANSI__)
 typedef __u64 __bitwise __le64;
 typedef __u64 __bitwise __be64;
-#endif
+
 typedef __u16 __bitwise __sum16;
 typedef __u32 __bitwise __wsum;
 
 #ifdef __KERNEL__
 typedef unsigned __bitwise__ gfp_t;
+typedef unsigned __bitwise__ fmode_t;
 
-#ifdef CONFIG_RESOURCES_64BIT
-typedef u64 resource_size_t;
+#ifdef CONFIG_PHYS_ADDR_T_64BIT
+typedef u64 phys_addr_t;
 #else
-typedef u32 resource_size_t;
+typedef u32 phys_addr_t;
 #endif
 
-#endif	/* __KERNEL__ */
+typedef phys_addr_t resource_size_t;
+
+typedef struct {
+	volatile int counter;
+} atomic_t;
+
+#ifdef CONFIG_64BIT
+typedef struct {
+	volatile long counter;
+} atomic64_t;
+#endif
 
 struct ustat {
 	__kernel_daddr_t	f_tfree;
@@ -206,5 +210,7 @@ struct ustat {
 	char			f_fname[6];
 	char			f_fpack[6];
 };
+
+#endif	/* __KERNEL__ */
 
 #endif /* _LINUX_TYPES_H */

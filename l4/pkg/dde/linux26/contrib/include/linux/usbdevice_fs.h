@@ -22,8 +22,6 @@
  *
  *  History:
  *   0.1  04.01.2000  Created
- *
- *  $Id: usbdevice_fs.h,v 1.1 2000/01/06 18:40:41 tom Exp $
  */
 
 /*****************************************************************************/
@@ -77,8 +75,11 @@ struct usbdevfs_connectinfo {
 	unsigned char slow;
 };
 
-#define USBDEVFS_URB_SHORT_NOT_OK          1
-#define USBDEVFS_URB_ISO_ASAP              2
+#define USBDEVFS_URB_SHORT_NOT_OK	0x01
+#define USBDEVFS_URB_ISO_ASAP		0x02
+#define USBDEVFS_URB_NO_FSBR		0x20
+#define USBDEVFS_URB_ZERO_PACKET	0x40
+#define USBDEVFS_URB_NO_INTERRUPT	0x80
 
 #define USBDEVFS_URB_TYPE_ISO		   0
 #define USBDEVFS_URB_TYPE_INTERRUPT	   1
@@ -102,8 +103,9 @@ struct usbdevfs_urb {
 	int start_frame;
 	int number_of_packets;
 	int error_count;
-	unsigned int signr;  /* signal to be sent on error, -1 if none should be sent */
-	void *usercontext;
+	unsigned int signr;	/* signal to be sent on completion,
+				  or 0 if none should be sent. */
+	void __user *usercontext;
 	struct usbdevfs_iso_packet_desc iso_frame_desc[0];
 };
 
@@ -159,9 +161,9 @@ struct usbdevfs_ioctl32 {
 #define USBDEVFS_SUBMITURB32       _IOR('U', 10, struct usbdevfs_urb32)
 #define USBDEVFS_DISCARDURB        _IO('U', 11)
 #define USBDEVFS_REAPURB           _IOW('U', 12, void *)
-#define USBDEVFS_REAPURB32         _IOW('U', 12, u32)
+#define USBDEVFS_REAPURB32         _IOW('U', 12, __u32)
 #define USBDEVFS_REAPURBNDELAY     _IOW('U', 13, void *)
-#define USBDEVFS_REAPURBNDELAY32   _IOW('U', 13, u32)
+#define USBDEVFS_REAPURBNDELAY32   _IOW('U', 13, __u32)
 #define USBDEVFS_DISCSIGNAL        _IOR('U', 14, struct usbdevfs_disconnectsignal)
 #define USBDEVFS_CLAIMINTERFACE    _IOR('U', 15, unsigned int)
 #define USBDEVFS_RELEASEINTERFACE  _IOR('U', 16, unsigned int)

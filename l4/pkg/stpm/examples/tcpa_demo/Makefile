@@ -18,7 +18,7 @@ LIBS			= -ltcg -ltcg_crypt -ltcg -lcrypto_sha1_linux
 LIBS_tcpa_demo		= -lstpm-client -llist_alloc
 LIBS_tcpa_demo-ux	= -lstpm-ux -lclxfux.o
 LIBS_tcpa_demo-emu	= -lstpm-emu -lclxfux.o
-LIBS_tcpa_demo-l4	= -lstpm-l4.o -ldde_linux26 -lddekit -lio -llist_alloc
+LIBS_tcpa_demo-l4	= -lstpm-l4.o -ldde_linux26.o -lddekit -lio -llist_alloc
 LIBS_tcpa_demo-l4-tis	= -lstpm-l4-tis.o -lio
 
 

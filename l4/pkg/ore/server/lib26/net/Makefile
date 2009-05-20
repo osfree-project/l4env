@@ -41,7 +41,9 @@ E1000_FILES = e1000_hw.c e1000_main.c e1000_param.c e1000_ethtool.c
 src-$(CONFIG_ORE_E1000) += $(addprefix e1000/, $(E1000_FILES))
 PRIVATE_INCDIR-$(CONFIG_ORE_E1000) += $(PKGDIR)/server/lib26/net/e1000
 
-SRC_C = loopback.c $(src-y)
+PHY_FILES = $(addprefix phy/, phy.c phy_device.c mdio_bus.c)
+
+SRC_C = loopback.c $(src-y) $(PHY_FILES)
 PRIVATE_INCDIR += $(PRIVATE_INCDIR-y)
 
 ifneq ($(L4CHECK_RUNNING),)

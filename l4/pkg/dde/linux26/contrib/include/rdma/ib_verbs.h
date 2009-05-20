@@ -5,7 +5,7 @@
  * Copyright (c) 2004 Topspin Corporation.  All rights reserved.
  * Copyright (c) 2004 Voltaire Corporation.  All rights reserved.
  * Copyright (c) 2005 Sun Microsystems, Inc. All rights reserved.
- * Copyright (c) 2005, 2006 Cisco Systems.  All rights reserved.
+ * Copyright (c) 2005, 2006, 2007 Cisco Systems.  All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU
@@ -34,8 +34,6 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
- * $Id: ib_verbs.h 1349 2004-12-16 21:09:43Z roland $
  */
 
 #if !defined(IB_VERBS_H)
@@ -45,9 +43,12 @@
 #include <linux/device.h>
 #include <linux/mm.h>
 #include <linux/dma-mapping.h>
+#include <linux/kref.h>
+#include <linux/list.h>
+#include <linux/rwsem.h>
+#include <linux/scatterlist.h>
 
 #include <asm/atomic.h>
-#include <asm/scatterlist.h>
 #include <asm/uaccess.h>
 
 union ib_gid {
@@ -90,9 +91,20 @@ enum ib_device_cap_flags {
 	IB_DEVICE_RC_RNR_NAK_GEN	= (1<<12),
 	IB_DEVICE_SRQ_RESIZE		= (1<<13),
 	IB_DEVICE_N_NOTIFY_CQ		= (1<<14),
-	IB_DEVICE_ZERO_STAG		= (1<<15),
-	IB_DEVICE_SEND_W_INV		= (1<<16),
-	IB_DEVICE_MEM_WINDOW		= (1<<17)
+	IB_DEVICE_LOCAL_DMA_LKEY	= (1<<15),
+	IB_DEVICE_RESERVED		= (1<<16), /* old SEND_W_INV */
+	IB_DEVICE_MEM_WINDOW		= (1<<17),
+	/*
+	 * Devices should set IB_DEVICE_UD_IP_SUM if they support
+	 * insertion of UDP and TCP checksum on outgoing UD IPoIB
+	 * messages and can verify the validity of checksum for
+	 * incoming messages.  Setting this flag implies that the
+	 * IPoIB driver may set NETIF_F_IP_CSUM for datagram mode.
+	 */
+	IB_DEVICE_UD_IP_CSUM		= (1<<18),
+	IB_DEVICE_UD_TSO		= (1<<19),
+	IB_DEVICE_MEM_MGT_EXTENSIONS	= (1<<21),
+	IB_DEVICE_BLOCK_MULTICAST_LOOPBACK = (1<<22),
 };
 
 enum ib_atomic_cap {
@@ -138,6 +150,7 @@ struct ib_device_attr {
 	int			max_srq;
 	int			max_srq_wr;
 	int			max_srq_sge;
+	unsigned int		max_fast_reg_page_list_len;
 	u16			max_pkeys;
 	u8			local_ca_ack_delay;
 };
@@ -213,6 +226,57 @@ static inline int ib_width_enum_to_int(enum ib_port_width width)
 	default: 	  return -1;
 	}
 }
+
+struct ib_protocol_stats {
+	/* TBD... */
+};
+
+struct iw_protocol_stats {
+	u64	ipInReceives;
+	u64	ipInHdrErrors;
+	u64	ipInTooBigErrors;
+	u64	ipInNoRoutes;
+	u64	ipInAddrErrors;
+	u64	ipInUnknownProtos;
+	u64	ipInTruncatedPkts;
+	u64	ipInDiscards;
+	u64	ipInDelivers;
+	u64	ipOutForwDatagrams;
+	u64	ipOutRequests;
+	u64	ipOutDiscards;
+	u64	ipOutNoRoutes;
+	u64	ipReasmTimeout;
+	u64	ipReasmReqds;
+	u64	ipReasmOKs;
+	u64	ipReasmFails;
+	u64	ipFragOKs;
+	u64	ipFragFails;
+	u64	ipFragCreates;
+	u64	ipInMcastPkts;
+	u64	ipOutMcastPkts;
+	u64	ipInBcastPkts;
+	u64	ipOutBcastPkts;
+
+	u64	tcpRtoAlgorithm;
+	u64	tcpRtoMin;
+	u64	tcpRtoMax;
+	u64	tcpMaxConn;
+	u64	tcpActiveOpens;
+	u64	tcpPassiveOpens;
+	u64	tcpAttemptFails;
+	u64	tcpEstabResets;
+	u64	tcpCurrEstab;
+	u64	tcpInSegs;
+	u64	tcpOutSegs;
+	u64	tcpRetransSegs;
+	u64	tcpInErrs;
+	u64	tcpOutRsts;
+};
+
+union rdma_protocol_stats {
+	struct ib_protocol_stats	ib;
+	struct iw_protocol_stats	iw;
+};
 
 struct ib_port_attr {
 	enum ib_port_state	state;
@@ -400,6 +464,9 @@ enum ib_wc_opcode {
 	IB_WC_COMP_SWAP,
 	IB_WC_FETCH_ADD,
 	IB_WC_BIND_MW,
+	IB_WC_LSO,
+	IB_WC_LOCAL_INV,
+	IB_WC_FAST_REG_MR,
 /*
  * Set value of IB_WC_RECV so consumers can test if a completion is a
  * receive by testing (opcode & IB_WC_RECV).
@@ -410,7 +477,8 @@ enum ib_wc_opcode {
 
 enum ib_wc_flags {
 	IB_WC_GRH		= 1,
-	IB_WC_WITH_IMM		= (1<<1)
+	IB_WC_WITH_IMM		= (1<<1),
+	IB_WC_WITH_INVALIDATE	= (1<<2),
 };
 
 struct ib_wc {
@@ -419,8 +487,11 @@ struct ib_wc {
 	enum ib_wc_opcode	opcode;
 	u32			vendor_err;
 	u32			byte_len;
-	__be32			imm_data;
-	u32			qp_num;
+	struct ib_qp	       *qp;
+	union {
+		__be32		imm_data;
+		u32		invalidate_rkey;
+	} ex;
 	u32			src_qp;
 	int			wc_flags;
 	u16			pkey_index;
@@ -428,11 +499,14 @@ struct ib_wc {
 	u8			sl;
 	u8			dlid_path_bits;
 	u8			port_num;	/* valid only for DR SMPs on switches */
+	int			csum_ok;
 };
 
-enum ib_cq_notify {
-	IB_CQ_SOLICITED,
-	IB_CQ_NEXT_COMP
+enum ib_cq_notify_flags {
+	IB_CQ_SOLICITED			= 1 << 0,
+	IB_CQ_NEXT_COMP			= 1 << 1,
+	IB_CQ_SOLICITED_MASK		= IB_CQ_SOLICITED | IB_CQ_NEXT_COMP,
+	IB_CQ_REPORT_MISSED_EVENTS	= 1 << 2,
 };
 
 enum ib_srq_attr_mask {
@@ -481,6 +555,11 @@ enum ib_qp_type {
 	IB_QPT_RAW_ETY
 };
 
+enum ib_qp_create_flags {
+	IB_QP_CREATE_IPOIB_UD_LSO		= 1 << 0,
+	IB_QP_CREATE_BLOCK_MULTICAST_LOOPBACK	= 1 << 1,
+};
+
 struct ib_qp_init_attr {
 	void                  (*event_handler)(struct ib_event *, void *);
 	void		       *qp_context;
@@ -490,6 +569,7 @@ struct ib_qp_init_attr {
 	struct ib_qp_cap	cap;
 	enum ib_sig_type	sq_sig_type;
 	enum ib_qp_type		qp_type;
+	enum ib_qp_create_flags	create_flags;
 	u8			port_num; /* special QP types only */
 };
 
@@ -603,20 +683,32 @@ enum ib_wr_opcode {
 	IB_WR_SEND_WITH_IMM,
 	IB_WR_RDMA_READ,
 	IB_WR_ATOMIC_CMP_AND_SWP,
-	IB_WR_ATOMIC_FETCH_AND_ADD
+	IB_WR_ATOMIC_FETCH_AND_ADD,
+	IB_WR_LSO,
+	IB_WR_SEND_WITH_INV,
+	IB_WR_RDMA_READ_WITH_INV,
+	IB_WR_LOCAL_INV,
+	IB_WR_FAST_REG_MR,
 };
 
 enum ib_send_flags {
 	IB_SEND_FENCE		= 1,
 	IB_SEND_SIGNALED	= (1<<1),
 	IB_SEND_SOLICITED	= (1<<2),
-	IB_SEND_INLINE		= (1<<3)
+	IB_SEND_INLINE		= (1<<3),
+	IB_SEND_IP_CSUM		= (1<<4)
 };
 
 struct ib_sge {
 	u64	addr;
 	u32	length;
 	u32	lkey;
+};
+
+struct ib_fast_reg_page_list {
+	struct ib_device       *device;
+	u64		       *page_list;
+	unsigned int		max_page_list_len;
 };
 
 struct ib_send_wr {
@@ -626,7 +718,10 @@ struct ib_send_wr {
 	int			num_sge;
 	enum ib_wr_opcode	opcode;
 	int			send_flags;
-	__be32			imm_data;
+	union {
+		__be32		imm_data;
+		u32		invalidate_rkey;
+	} ex;
 	union {
 		struct {
 			u64	remote_addr;
@@ -640,11 +735,23 @@ struct ib_send_wr {
 		} atomic;
 		struct {
 			struct ib_ah *ah;
+			void   *header;
+			int     hlen;
+			int     mss;
 			u32	remote_qpn;
 			u32	remote_qkey;
 			u16	pkey_index; /* valid for GSI only */
 			u8	port_num;   /* valid for DR SMPs on switch only */
 		} ud;
+		struct {
+			u64				iova_start;
+			struct ib_fast_reg_page_list   *page_list;
+			unsigned int			page_shift;
+			unsigned int			page_list_len;
+			u32				length;
+			int				access_flags;
+			u32				rkey;
+		} fast_reg;
 	} wr;
 };
 
@@ -707,6 +814,7 @@ struct ib_ucontext {
 	struct list_head	qp_list;
 	struct list_head	srq_list;
 	struct list_head	ah_list;
+	int			closing;
 };
 
 struct ib_uobject {
@@ -714,27 +822,10 @@ struct ib_uobject {
 	struct ib_ucontext     *context;	/* associated user context */
 	void		       *object;		/* containing object */
 	struct list_head	list;		/* link to context's list */
-	u32			id;		/* index into kernel idr */
+	int			id;		/* index into kernel idr */
 	struct kref		ref;
 	struct rw_semaphore	mutex;		/* protects .live */
 	int			live;
-};
-
-struct ib_umem {
-	unsigned long		user_base;
-	unsigned long		virt_base;
-	size_t			length;
-	int			offset;
-	int			page_size;
-	int                     writable;
-	struct list_head	chunk_list;
-};
-
-struct ib_umem_chunk {
-	struct list_head	list;
-	int                     nents;
-	int                     nmap;
-	struct scatterlist      page_list[0];
 };
 
 struct ib_udata {
@@ -742,16 +833,6 @@ struct ib_udata {
 	void __user *outbuf;
 	size_t       inlen;
 	size_t       outlen;
-};
-
-#define IB_UMEM_MAX_PAGE_CHUNK						\
-	((PAGE_SIZE - offsetof(struct ib_umem_chunk, page_list)) /	\
-	 ((void *) &((struct ib_umem_chunk *) 0)->page_list[1] -	\
-	  (void *) &((struct ib_umem_chunk *) 0)->page_list[0]))
-
-struct ib_umem_object {
-	struct ib_uobject	uobject;
-	struct ib_umem		umem;
 };
 
 struct ib_pd {
@@ -773,7 +854,7 @@ struct ib_cq {
 	struct ib_uobject      *uobject;
 	ib_comp_handler   	comp_handler;
 	void                  (*event_handler)(struct ib_event *, void *);
-	void *            	cq_context;
+	void                   *cq_context;
 	int               	cqe;
 	atomic_t          	usecnt; /* count number of work queues */
 };
@@ -879,7 +960,7 @@ struct ib_dma_mapping_ops {
 	void		(*sync_single_for_cpu)(struct ib_device *dev,
 					       u64 dma_handle,
 					       size_t size,
-				               enum dma_data_direction dir);
+					       enum dma_data_direction dir);
 	void		(*sync_single_for_device)(struct ib_device *dev,
 						  u64 dma_handle,
 						  size_t size,
@@ -908,11 +989,15 @@ struct ib_device {
 	spinlock_t                    client_data_lock;
 
 	struct ib_cache               cache;
+	int                          *pkey_tbl_len;
+	int                          *gid_tbl_len;
 
-	u32                           flags;
+	int			      num_comp_vectors;
 
 	struct iw_cm_verbs	     *iwcm;
 
+	int		           (*get_protocol_stats)(struct ib_device *device,
+							 union rdma_protocol_stats *stats);
 	int		           (*query_device)(struct ib_device *device,
 						   struct ib_device_attr *device_attr);
 	int		           (*query_port)(struct ib_device *device,
@@ -977,8 +1062,11 @@ struct ib_device {
 						struct ib_recv_wr *recv_wr,
 						struct ib_recv_wr **bad_recv_wr);
 	struct ib_cq *             (*create_cq)(struct ib_device *device, int cqe,
+						int comp_vector,
 						struct ib_ucontext *context,
 						struct ib_udata *udata);
+	int                        (*modify_cq)(struct ib_cq *cq, u16 cq_count,
+						u16 cq_period);
 	int                        (*destroy_cq)(struct ib_cq *cq);
 	int                        (*resize_cq)(struct ib_cq *cq, int cqe,
 						struct ib_udata *udata);
@@ -986,7 +1074,7 @@ struct ib_device {
 					      struct ib_wc *wc);
 	int                        (*peek_cq)(struct ib_cq *cq, int wc_cnt);
 	int                        (*req_notify_cq)(struct ib_cq *cq,
-						    enum ib_cq_notify cq_notify);
+						    enum ib_cq_notify_flags flags);
 	int                        (*req_ncomp_notif)(struct ib_cq *cq,
 						      int wc_cnt);
 	struct ib_mr *             (*get_dma_mr)(struct ib_pd *pd,
@@ -997,12 +1085,18 @@ struct ib_device {
 						  int mr_access_flags,
 						  u64 *iova_start);
 	struct ib_mr *             (*reg_user_mr)(struct ib_pd *pd,
-						  struct ib_umem *region,
+						  u64 start, u64 length,
+						  u64 virt_addr,
 						  int mr_access_flags,
 						  struct ib_udata *udata);
 	int                        (*query_mr)(struct ib_mr *mr,
 					       struct ib_mr_attr *mr_attr);
 	int                        (*dereg_mr)(struct ib_mr *mr);
+	struct ib_mr *		   (*alloc_fast_reg_mr)(struct ib_pd *pd,
+					       int max_page_list_len);
+	struct ib_fast_reg_page_list * (*alloc_fast_reg_page_list)(struct ib_device *device,
+								   int page_list_len);
+	void			   (*free_fast_reg_page_list)(struct ib_fast_reg_page_list *page_list);
 	int                        (*rereg_phys_mr)(struct ib_mr *mr,
 						    int mr_rereg_mask,
 						    struct ib_pd *pd,
@@ -1040,8 +1134,8 @@ struct ib_device {
 	struct ib_dma_mapping_ops   *dma_ops;
 
 	struct module               *owner;
-	struct class_device          class_dev;
-	struct kobject               ports_parent;
+	struct device                dev;
+	struct kobject               *ports_parent;
 	struct list_head             port_list;
 
 	enum {
@@ -1055,6 +1149,7 @@ struct ib_device {
 
 	char			     node_desc[64];
 	__be64			     node_guid;
+	u32			     local_dma_lkey;
 	u8                           node_type;
 	u8                           phys_port_cnt;
 };
@@ -1131,6 +1226,12 @@ int ib_modify_device(struct ib_device *device,
 int ib_modify_port(struct ib_device *device,
 		   u8 port_num, int port_modify_mask,
 		   struct ib_port_modify *port_modify);
+
+int ib_find_gid(struct ib_device *device, union ib_gid *gid,
+		u8 *port_num, u16 *index);
+
+int ib_find_pkey(struct ib_device *device,
+		 u8 port_num, u16 pkey, u16 *index);
 
 /**
  * ib_alloc_pd - Allocates an unused protection domain.
@@ -1357,13 +1458,15 @@ static inline int ib_post_recv(struct ib_qp *qp,
  * @cq_context: Context associated with the CQ returned to the user via
  *   the associated completion and event handlers.
  * @cqe: The minimum size of the CQ.
+ * @comp_vector - Completion vector used to signal completion events.
+ *     Must be >= 0 and < context->num_comp_vectors.
  *
  * Users can examine the cq structure to determine the actual CQ size.
  */
 struct ib_cq *ib_create_cq(struct ib_device *device,
 			   ib_comp_handler comp_handler,
 			   void (*event_handler)(struct ib_event *, void *),
-			   void *cq_context, int cqe);
+			   void *cq_context, int cqe, int comp_vector);
 
 /**
  * ib_resize_cq - Modifies the capacity of the CQ.
@@ -1373,6 +1476,15 @@ struct ib_cq *ib_create_cq(struct ib_device *device,
  * Users can examine the cq structure to determine the actual CQ size.
  */
 int ib_resize_cq(struct ib_cq *cq, int cqe);
+
+/**
+ * ib_modify_cq - Modifies moderation params of the CQ
+ * @cq: The CQ to modify.
+ * @cq_count: number of CQEs that will trigger an event
+ * @cq_period: max period of time in usec before triggering an event
+ *
+ */
+int ib_modify_cq(struct ib_cq *cq, u16 cq_count, u16 cq_period);
 
 /**
  * ib_destroy_cq - Destroys the specified CQ.
@@ -1413,14 +1525,34 @@ int ib_peek_cq(struct ib_cq *cq, int wc_cnt);
 /**
  * ib_req_notify_cq - Request completion notification on a CQ.
  * @cq: The CQ to generate an event for.
- * @cq_notify: If set to %IB_CQ_SOLICITED, completion notification will
- *   occur on the next solicited event. If set to %IB_CQ_NEXT_COMP,
- *   notification will occur on the next completion.
+ * @flags:
+ *   Must contain exactly one of %IB_CQ_SOLICITED or %IB_CQ_NEXT_COMP
+ *   to request an event on the next solicited event or next work
+ *   completion at any type, respectively. %IB_CQ_REPORT_MISSED_EVENTS
+ *   may also be |ed in to request a hint about missed events, as
+ *   described below.
+ *
+ * Return Value:
+ *    < 0 means an error occurred while requesting notification
+ *   == 0 means notification was requested successfully, and if
+ *        IB_CQ_REPORT_MISSED_EVENTS was passed in, then no events
+ *        were missed and it is safe to wait for another event.  In
+ *        this case is it guaranteed that any work completions added
+ *        to the CQ since the last CQ poll will trigger a completion
+ *        notification event.
+ *    > 0 is only returned if IB_CQ_REPORT_MISSED_EVENTS was passed
+ *        in.  It means that the consumer must poll the CQ again to
+ *        make sure it is empty to avoid missing an event because of a
+ *        race between requesting notification and an entry being
+ *        added to the CQ.  This return value means it is possible
+ *        (but not guaranteed) that a work completion has been added
+ *        to the CQ since the last poll without triggering a
+ *        completion notification event.
  */
 static inline int ib_req_notify_cq(struct ib_cq *cq,
-				   enum ib_cq_notify cq_notify)
+				   enum ib_cq_notify_flags flags)
 {
-	return cq->device->req_notify_cq(cq, cq_notify);
+	return cq->device->req_notify_cq(cq, flags);
 }
 
 /**
@@ -1458,7 +1590,7 @@ static inline int ib_dma_mapping_error(struct ib_device *dev, u64 dma_addr)
 {
 	if (dev->dma_ops)
 		return dev->dma_ops->mapping_error(dev, dma_addr);
-	return dma_mapping_error(dma_addr);
+	return dma_mapping_error(dev->dma_device, dma_addr);
 }
 
 /**
@@ -1492,6 +1624,24 @@ static inline void ib_dma_unmap_single(struct ib_device *dev,
 		dev->dma_ops->unmap_single(dev, addr, size, direction);
 	else
 		dma_unmap_single(dev->dma_device, addr, size, direction);
+}
+
+static inline u64 ib_dma_map_single_attrs(struct ib_device *dev,
+					  void *cpu_addr, size_t size,
+					  enum dma_data_direction direction,
+					  struct dma_attrs *attrs)
+{
+	return dma_map_single_attrs(dev->dma_device, cpu_addr, size,
+				    direction, attrs);
+}
+
+static inline void ib_dma_unmap_single_attrs(struct ib_device *dev,
+					     u64 addr, size_t size,
+					     enum dma_data_direction direction,
+					     struct dma_attrs *attrs)
+{
+	return dma_unmap_single_attrs(dev->dma_device, addr, size,
+				      direction, attrs);
 }
 
 /**
@@ -1563,6 +1713,21 @@ static inline void ib_dma_unmap_sg(struct ib_device *dev,
 		dma_unmap_sg(dev->dma_device, sg, nents, direction);
 }
 
+static inline int ib_dma_map_sg_attrs(struct ib_device *dev,
+				      struct scatterlist *sg, int nents,
+				      enum dma_data_direction direction,
+				      struct dma_attrs *attrs)
+{
+	return dma_map_sg_attrs(dev->dma_device, sg, nents, direction, attrs);
+}
+
+static inline void ib_dma_unmap_sg_attrs(struct ib_device *dev,
+					 struct scatterlist *sg, int nents,
+					 enum dma_data_direction direction,
+					 struct dma_attrs *attrs)
+{
+	dma_unmap_sg_attrs(dev->dma_device, sg, nents, direction, attrs);
+}
 /**
  * ib_sg_dma_address - Return the DMA address from a scatter/gather entry
  * @dev: The device for which the DMA addresses were created
@@ -1725,6 +1890,54 @@ int ib_query_mr(struct ib_mr *mr, struct ib_mr_attr *mr_attr);
  * @mr: The memory region to deregister.
  */
 int ib_dereg_mr(struct ib_mr *mr);
+
+/**
+ * ib_alloc_fast_reg_mr - Allocates memory region usable with the
+ *   IB_WR_FAST_REG_MR send work request.
+ * @pd: The protection domain associated with the region.
+ * @max_page_list_len: requested max physical buffer list length to be
+ *   used with fast register work requests for this MR.
+ */
+struct ib_mr *ib_alloc_fast_reg_mr(struct ib_pd *pd, int max_page_list_len);
+
+/**
+ * ib_alloc_fast_reg_page_list - Allocates a page list array
+ * @device - ib device pointer.
+ * @page_list_len - size of the page list array to be allocated.
+ *
+ * This allocates and returns a struct ib_fast_reg_page_list * and a
+ * page_list array that is at least page_list_len in size.  The actual
+ * size is returned in max_page_list_len.  The caller is responsible
+ * for initializing the contents of the page_list array before posting
+ * a send work request with the IB_WC_FAST_REG_MR opcode.
+ *
+ * The page_list array entries must be translated using one of the
+ * ib_dma_*() functions just like the addresses passed to
+ * ib_map_phys_fmr().  Once the ib_post_send() is issued, the struct
+ * ib_fast_reg_page_list must not be modified by the caller until the
+ * IB_WC_FAST_REG_MR work request completes.
+ */
+struct ib_fast_reg_page_list *ib_alloc_fast_reg_page_list(
+				struct ib_device *device, int page_list_len);
+
+/**
+ * ib_free_fast_reg_page_list - Deallocates a previously allocated
+ *   page list array.
+ * @page_list - struct ib_fast_reg_page_list pointer to be deallocated.
+ */
+void ib_free_fast_reg_page_list(struct ib_fast_reg_page_list *page_list);
+
+/**
+ * ib_update_fast_reg_key - updates the key portion of the fast_reg MR
+ *   R_Key and L_Key.
+ * @mr - struct ib_mr pointer to be updated.
+ * @newkey - new key to be used.
+ */
+static inline void ib_update_fast_reg_key(struct ib_mr *mr, u8 newkey)
+{
+	mr->lkey = (mr->lkey & 0xffffff00) | newkey;
+	mr->rkey = (mr->rkey & 0xffffff00) | newkey;
+}
 
 /**
  * ib_alloc_mw - Allocates a memory window.

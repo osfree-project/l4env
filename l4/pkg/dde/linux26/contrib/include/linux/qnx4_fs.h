@@ -2,14 +2,12 @@
  *  Name                         : qnx4_fs.h
  *  Author                       : Richard Frowijn
  *  Function                     : qnx4 global filesystem definitions
- *  Version                      : 1.0.2
- *  Last modified                : 2000-01-31
- *
  *  History                      : 23-03-1998 created
  */
 #ifndef _LINUX_QNX4_FS_H
 #define _LINUX_QNX4_FS_H
 
+#include <linux/types.h>
 #include <linux/qnxtypes.h>
 #include <linux/magic.h>
 
@@ -110,14 +108,15 @@ struct qnx4_inode_info {
 	struct inode vfs_inode;
 };
 
+extern struct inode *qnx4_iget(struct super_block *, unsigned long);
 extern struct dentry *qnx4_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd);
 extern unsigned long qnx4_count_free_blocks(struct super_block *sb);
 extern unsigned long qnx4_block_map(struct inode *inode, long iblock);
 
 extern struct buffer_head *qnx4_bread(struct inode *, int, int);
 
-extern struct inode_operations qnx4_file_inode_operations;
-extern struct inode_operations qnx4_dir_inode_operations;
+extern const struct inode_operations qnx4_file_inode_operations;
+extern const struct inode_operations qnx4_dir_inode_operations;
 extern const struct file_operations qnx4_file_operations;
 extern const struct file_operations qnx4_dir_operations;
 extern int qnx4_is_free(struct super_block *sb, long block);

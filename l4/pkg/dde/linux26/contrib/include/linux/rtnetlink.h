@@ -1,6 +1,7 @@
 #ifndef __LINUX_RTNETLINK_H
 #define __LINUX_RTNETLINK_H
 
+#include <linux/types.h>
 #include <linux/netlink.h>
 #include <linux/if_link.h>
 #include <linux/if_addr.h>
@@ -96,6 +97,21 @@ enum {
 #define RTM_GETNEIGHTBL	RTM_GETNEIGHTBL
 	RTM_SETNEIGHTBL,
 #define RTM_SETNEIGHTBL	RTM_SETNEIGHTBL
+
+	RTM_NEWNDUSEROPT = 68,
+#define RTM_NEWNDUSEROPT RTM_NEWNDUSEROPT
+
+	RTM_NEWADDRLABEL = 72,
+#define RTM_NEWADDRLABEL RTM_NEWADDRLABEL
+	RTM_DELADDRLABEL,
+#define RTM_NEWADDRLABEL RTM_NEWADDRLABEL
+	RTM_GETADDRLABEL,
+#define RTM_GETADDRLABEL RTM_GETADDRLABEL
+
+	RTM_GETDCB = 78,
+#define RTM_GETDCB RTM_GETDCB
+	RTM_SETDCB,
+#define RTM_SETDCB RTM_SETDCB
 
 	__RTM_MAX,
 #define RTM_MAX		(((__RTM_MAX + 3) & ~3) - 1)
@@ -236,6 +252,7 @@ enum rt_class_t
 {
 	RT_TABLE_UNSPEC=0,
 /* User defined values */
+	RT_TABLE_COMPAT=252,
 	RT_TABLE_DEFAULT=253,
 	RT_TABLE_MAIN=254,
 	RT_TABLE_LOCAL=255,
@@ -257,11 +274,11 @@ enum rtattr_type_t
 	RTA_PREFSRC,
 	RTA_METRICS,
 	RTA_MULTIPATH,
-	RTA_PROTOINFO,
+	RTA_PROTOINFO, /* no longer used */
 	RTA_FLOW,
 	RTA_CACHEINFO,
-	RTA_SESSION,
-	RTA_MP_ALGO,
+	RTA_SESSION, /* no longer used */
+	RTA_MP_ALGO, /* no longer used */
 	RTA_TABLE,
 	__RTA_MAX
 };
@@ -351,6 +368,8 @@ enum
 #define RTAX_INITCWND RTAX_INITCWND
 	RTAX_FEATURES,
 #define RTAX_FEATURES RTAX_FEATURES
+	RTAX_RTO_MIN,
+#define RTAX_RTO_MIN RTAX_RTO_MIN
 	__RTAX_MAX
 };
 
@@ -469,6 +488,7 @@ enum
 	TCA_RATE,
 	TCA_FCNT,
 	TCA_STATS2,
+	TCA_STAB,
 	__TCA_MAX
 };
 
@@ -476,6 +496,32 @@ enum
 
 #define TCA_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct tcmsg))))
 #define TCA_PAYLOAD(n) NLMSG_PAYLOAD(n,sizeof(struct tcmsg))
+
+/********************************************************************
+ *		Neighbor Discovery userland options
+ ****/
+
+struct nduseroptmsg
+{
+	unsigned char	nduseropt_family;
+	unsigned char	nduseropt_pad1;
+	unsigned short	nduseropt_opts_len;	/* Total length of options */
+	int		nduseropt_ifindex;
+	__u8		nduseropt_icmp_type;
+	__u8		nduseropt_icmp_code;
+	unsigned short	nduseropt_pad2;
+	unsigned int	nduseropt_pad3;
+	/* Followed by one or more ND options */
+};
+
+enum
+{
+	NDUSEROPT_UNSPEC,
+	NDUSEROPT_SRCADDR,
+	__NDUSEROPT_MAX
+};
+
+#define NDUSEROPT_MAX	(__NDUSEROPT_MAX - 1)
 
 #ifndef __KERNEL__
 /* RTnetlink multicast groups - backwards compatibility for userspace */
@@ -540,6 +586,12 @@ enum rtnetlink_groups {
 #define RTNLGRP_IPV6_PREFIX	RTNLGRP_IPV6_PREFIX
 	RTNLGRP_IPV6_RULE,
 #define RTNLGRP_IPV6_RULE	RTNLGRP_IPV6_RULE
+	RTNLGRP_ND_USEROPT,
+#define RTNLGRP_ND_USEROPT	RTNLGRP_ND_USEROPT
+	RTNLGRP_PHONET_IFADDR,
+#define RTNLGRP_PHONET_IFADDR	RTNLGRP_PHONET_IFADDR
+	RTNLGRP_PHONET_ROUTE,
+#define RTNLGRP_PHONET_ROUTE	RTNLGRP_PHONET_ROUTE
 	__RTNLGRP_MAX
 };
 #define RTNLGRP_MAX	(__RTNLGRP_MAX - 1)
@@ -562,30 +614,17 @@ struct tcamsg
 
 #include <linux/mutex.h>
 
-extern size_t rtattr_strlcpy(char *dest, const struct rtattr *rta, size_t size);
 static __inline__ int rtattr_strcmp(const struct rtattr *rta, const char *str)
 {
 	int len = strlen(str) + 1;
 	return len > rta->rta_len || memcmp(RTA_DATA(rta), str, len);
 }
 
-extern int rtattr_parse(struct rtattr *tb[], int maxattr, struct rtattr *rta, int len);
-
-#define rtattr_parse_nested(tb, max, rta) \
-	rtattr_parse((tb), (max), RTA_DATA((rta)), RTA_PAYLOAD((rta)))
-
-struct rtnetlink_link
-{
-	int (*doit)(struct sk_buff *, struct nlmsghdr*, void *attr);
-	int (*dumpit)(struct sk_buff *, struct netlink_callback *cb);
-};
-
-extern struct rtnetlink_link * rtnetlink_links[NPROTO];
-extern int rtnetlink_send(struct sk_buff *skb, u32 pid, u32 group, int echo);
-extern int rtnl_unicast(struct sk_buff *skb, u32 pid);
-extern int rtnl_notify(struct sk_buff *skb, u32 pid, u32 group,
+extern int rtnetlink_send(struct sk_buff *skb, struct net *net, u32 pid, u32 group, int echo);
+extern int rtnl_unicast(struct sk_buff *skb, struct net *net, u32 pid);
+extern int rtnl_notify(struct sk_buff *skb, struct net *net, u32 pid, u32 group,
 		       struct nlmsghdr *nlh, gfp_t flags);
-extern void rtnl_set_sk_err(u32 group, int error);
+extern void rtnl_set_sk_err(struct net *net, u32 group, int error);
 extern int rtnetlink_put_metrics(struct sk_buff *skb, u32 *metrics);
 extern int rtnl_put_cacheinfo(struct sk_buff *skb, struct dst_entry *dst,
 			      u32 id, u32 ts, u32 tsage, long expires,
@@ -605,7 +644,7 @@ extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const voi
 
 #define RTA_PUT_NOHDR(skb, attrlen, data) \
 ({	RTA_APPEND(skb, RTA_ALIGN(attrlen), data); \
-	memset(skb->tail - (RTA_ALIGN(attrlen) - attrlen), 0, \
+	memset(skb_tail_pointer(skb) - (RTA_ALIGN(attrlen) - attrlen), 0, \
 	       RTA_ALIGN(attrlen) - attrlen); })
 
 #define RTA_PUT_U8(skb, attrtype, value) \
@@ -637,12 +676,24 @@ extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const voi
 	RTA_PUT(skb, attrtype, 0, NULL);
 
 #define RTA_NEST(skb, type) \
-({	struct rtattr *__start = (struct rtattr *) (skb)->tail; \
+({	struct rtattr *__start = (struct rtattr *)skb_tail_pointer(skb); \
 	RTA_PUT(skb, type, 0, NULL); \
 	__start;  })
 
 #define RTA_NEST_END(skb, start) \
-({	(start)->rta_len = ((skb)->tail - (unsigned char *) (start)); \
+({	(start)->rta_len = skb_tail_pointer(skb) - (unsigned char *)(start); \
+	(skb)->len; })
+
+#define RTA_NEST_COMPAT(skb, type, attrlen, data) \
+({	struct rtattr *__start = (struct rtattr *)skb_tail_pointer(skb); \
+	RTA_PUT(skb, type, attrlen, data); \
+	RTA_NEST(skb, type); \
+	__start; })
+
+#define RTA_NEST_COMPAT_END(skb, start) \
+({	struct rtattr *__nest = (void *)(start) + NLMSG_ALIGN((start)->rta_len); \
+	(start)->rta_len = skb_tail_pointer(skb) - (unsigned char *)(start); \
+	RTA_NEST_END(skb, __nest); \
 	(skb)->len; })
 
 #define RTA_NEST_CANCEL(skb, start) \
@@ -701,25 +752,22 @@ extern void rtmsg_ifinfo(int type, struct net_device *dev, unsigned change);
 extern void rtnl_lock(void);
 extern void rtnl_unlock(void);
 extern int rtnl_trylock(void);
+extern int rtnl_is_locked(void);
 
 extern void rtnetlink_init(void);
 extern void __rtnl_unlock(void);
 
+#ifndef DDE_LINUX
 #define ASSERT_RTNL() do { \
-	if (unlikely(rtnl_trylock())) { \
-		rtnl_unlock(); \
+	if (unlikely(!rtnl_is_locked())) { \
 		printk(KERN_ERR "RTNL: assertion failed at %s (%d)\n", \
 		       __FILE__,  __LINE__); \
 		dump_stack(); \
 	} \
 } while(0)
-
-#define BUG_TRAP(x) do { \
-	if (unlikely(!(x))) { \
-		printk(KERN_ERR "KERNEL: assertion (%s) failed at %s (%d)\n", \
-			#x,  __FILE__ , __LINE__); \
-	} \
-} while(0)
+#else
+#define ASSERT_RTNL() do { } while (0)
+#endif
 
 static inline u32 rtm_get_table(struct rtattr **rta, u8 table)
 {

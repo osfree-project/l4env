@@ -30,7 +30,7 @@ unsigned long __raw_local_save_flags(void)
 /* Restore IRQ state. */
 void raw_local_irq_restore(unsigned long flags)
 {
-	raw_local_irq_enable();
+	atomic_set(&_refcnt, flags);
 }
 
 /* Disable IRQs by grabbing the IRQ lock. */
@@ -42,9 +42,7 @@ void raw_local_irq_disable(void)
 /* Unlock the IRQ lock until refcnt is 0. */
 void raw_local_irq_enable(void)
 {
-	int i = atomic_read(&_refcnt);
-	for (i; i > 0; --i)
-		atomic_dec(&_refcnt);
+	atomic_set(&_refcnt, 0);
 }
 
 

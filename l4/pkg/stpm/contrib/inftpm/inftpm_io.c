@@ -8,6 +8,7 @@
 
 #include <linux/init.h>
 #include <linux/pci.h>
+#include <linux/sched.h>
 
 #include "inftpm.h"
 #include "inftpm_io.h"
@@ -98,7 +99,7 @@ tpm_io_wait_ready(u16 base_addr, u8 bit, u8 value)
 			// every 10 times we wait some time
 			if ((timeout>=10) && (timeout%10==0))
 			{
-				current->state = TASK_UNINTERRUPTIBLE;
+				set_task_state(current, TASK_UNINTERRUPTIBLE);
 				schedule_timeout((timeout/10)-1);
 			}
 		}

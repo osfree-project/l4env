@@ -27,6 +27,7 @@ enum cx2341x_port {
 
 enum cx2341x_cap {
 	CX2341X_CAP_HAS_SLICED_VBI = 1 << 0,
+	CX2341X_CAP_HAS_TS 	   = 1 << 1,
 };
 
 struct cx2341x_mpeg_params {
@@ -40,6 +41,7 @@ struct cx2341x_mpeg_params {
 	/* stream */
 	enum v4l2_mpeg_stream_type stream_type;
 	enum v4l2_mpeg_stream_vbi_fmt stream_vbi_fmt;
+	u16 stream_insert_nav_packets;
 
 	/* audio */
 	enum v4l2_mpeg_audio_sampling_freq audio_sampling_freq;
@@ -50,6 +52,7 @@ struct cx2341x_mpeg_params {
 	enum v4l2_mpeg_audio_emphasis audio_emphasis;
 	enum v4l2_mpeg_audio_crc audio_crc;
 	u16 audio_properties;
+	u16 audio_mute;
 
 	/* video */
 	enum v4l2_mpeg_video_encoding video_encoding;
@@ -57,11 +60,12 @@ struct cx2341x_mpeg_params {
 	u16 video_b_frames;
 	u16 video_gop_size;
 	u16 video_gop_closure;
-	u16 video_pulldown;
 	enum v4l2_mpeg_video_bitrate_mode video_bitrate_mode;
 	u32 video_bitrate;
 	u32 video_bitrate_peak;
 	u16 video_temporal_decimation;
+	u16 video_mute;
+	u32 video_mute_yuv;
 
 	/* encoding filters */
 	enum v4l2_mpeg_cx2341x_video_spatial_filter_mode video_spatial_filter_mode;
@@ -80,18 +84,18 @@ struct cx2341x_mpeg_params {
 #define CX2341X_MBOX_MAX_DATA 16
 
 extern const u32 cx2341x_mpeg_ctrls[];
-typedef int (*cx2341x_mbox_func)(void *priv, int cmd, int in, int out,
+typedef int (*cx2341x_mbox_func)(void *priv, u32 cmd, int in, int out,
 		u32 data[CX2341X_MBOX_MAX_DATA]);
 int cx2341x_update(void *priv, cx2341x_mbox_func func,
 		const struct cx2341x_mpeg_params *old,
 		const struct cx2341x_mpeg_params *new);
-int cx2341x_ctrl_query(struct cx2341x_mpeg_params *params,
+int cx2341x_ctrl_query(const struct cx2341x_mpeg_params *params,
 		struct v4l2_queryctrl *qctrl);
-const char **cx2341x_ctrl_get_menu(u32 id);
-int cx2341x_ext_ctrls(struct cx2341x_mpeg_params *params,
+const char **cx2341x_ctrl_get_menu(const struct cx2341x_mpeg_params *p, u32 id);
+int cx2341x_ext_ctrls(struct cx2341x_mpeg_params *params, int busy,
 		struct v4l2_ext_controls *ctrls, unsigned int cmd);
 void cx2341x_fill_defaults(struct cx2341x_mpeg_params *p);
-void cx2341x_log_status(struct cx2341x_mpeg_params *p, const char *prefix);
+void cx2341x_log_status(const struct cx2341x_mpeg_params *p, const char *prefix);
 
 /* Firmware names */
 #define CX2341X_FIRM_ENC_FILENAME "v4l-cx2341x-enc.fw"
@@ -121,8 +125,6 @@ void cx2341x_log_status(struct cx2341x_mpeg_params *p, const char *prefix);
 #define CX2341X_DEC_SET_DISPLAY_BUFFERS		0x18
 #define CX2341X_DEC_EXTRACT_VBI 		0x19
 #define CX2341X_DEC_SET_DECODER_SOURCE 		0x1a
-#define CX2341X_DEC_SET_AUDIO_OUTPUT 		0x1b
-#define CX2341X_DEC_SET_AV_DELAY 		0x1c
 #define CX2341X_DEC_SET_PREBUFFERING		0x1e
 
 /* MPEG encoder API */
@@ -141,7 +143,6 @@ void cx2341x_log_status(struct cx2341x_mpeg_params *p, const char *prefix);
 #define CX2341X_ENC_SET_DNR_FILTER_PROPS 	0x9d
 #define CX2341X_ENC_SET_CORING_LEVELS 		0x9f
 #define CX2341X_ENC_SET_SPATIAL_FILTER_TYPE 	0xa1
-#define CX2341X_ENC_SET_3_2_PULLDOWN 		0xb1
 #define CX2341X_ENC_SET_VBI_LINE 		0xb7
 #define CX2341X_ENC_SET_STREAM_TYPE 		0xb9
 #define CX2341X_ENC_SET_OUTPUT_PORT 		0xbb
@@ -166,7 +167,7 @@ void cx2341x_log_status(struct cx2341x_mpeg_params *p, const char *prefix);
 #define CX2341X_ENC_SET_PLACEHOLDER 		0xd7
 #define CX2341X_ENC_MUTE_VIDEO 			0xd9
 #define CX2341X_ENC_MUTE_AUDIO 			0xda
-#define CX2341X_ENC_UNKNOWN			0xdb
+#define CX2341X_ENC_SET_VERT_CROP_LINE		0xdb
 #define CX2341X_ENC_MISC 			0xdc
 
 /* OSD API, specific to the cx23415 */

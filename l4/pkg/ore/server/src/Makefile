@@ -36,7 +36,7 @@ include $(PKGDIR)/../dde/linux26/Makeconf
 PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include \
 		 		  $(PKGDIR_OBJ)/server/include \
 
-LIBS 		+= -llinuxnetdrv26.o -ldde_linux26_net -ldde_linux26 -lddekit
+LIBS 		+= -llinuxnetdrv26.o -ldde_linux26_net -ldde_linux26.o -lddekit
 
 else # using DDE2.4
 

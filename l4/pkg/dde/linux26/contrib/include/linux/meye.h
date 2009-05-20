@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2001-2003 Stelian Pop <stelian@popies.net>
  *
- * Copyright (C) 2001-2002 Alcôve <www.alcove.com>
+ * Copyright (C) 2001-2002 AlcÃ´ve <www.alcove.com>
  *
  * Copyright (C) 2000 Andrew Tridgell <tridge@valinux.com>
  *
@@ -58,7 +58,7 @@ struct meye_params {
 
 /* V4L2 private controls */
 #define V4L2_CID_AGC		V4L2_CID_PRIVATE_BASE
-#define V4L2_CID_SHARPNESS	(V4L2_CID_PRIVATE_BASE + 1)
+#define V4L2_CID_MEYE_SHARPNESS	(V4L2_CID_PRIVATE_BASE + 1)
 #define V4L2_CID_PICTURE	(V4L2_CID_PRIVATE_BASE + 2)
 #define V4L2_CID_JPEGQUAL	(V4L2_CID_PRIVATE_BASE + 3)
 #define V4L2_CID_FRAMERATE	(V4L2_CID_PRIVATE_BASE + 4)

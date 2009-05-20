@@ -15,7 +15,9 @@
 
 #include <linux/types.h>
 
+#define NFS4_BITMAP_SIZE	2
 #define NFS4_VERIFIER_SIZE	8
+#define NFS4_STATEID_SIZE	16
 #define NFS4_FHSIZE		128
 #define NFS4_MAXPATHLEN		PATH_MAX
 #define NFS4_MAXNAMLEN		NAME_MAX
@@ -63,9 +65,6 @@
 #define NFS4_ACE_SUCCESSFUL_ACCESS_ACE_FLAG   0x00000010
 #define NFS4_ACE_FAILED_ACCESS_ACE_FLAG       0x00000020
 #define NFS4_ACE_IDENTIFIER_GROUP             0x00000040
-#define NFS4_ACE_OWNER                        0x00000080
-#define NFS4_ACE_GROUP                        0x00000100
-#define NFS4_ACE_EVERYONE                     0x00000200
 
 #define NFS4_ACE_READ_DATA                    0x00000001
 #define NFS4_ACE_LIST_DIRECTORY               0x00000001
@@ -89,6 +88,8 @@
 #define NFS4_ACE_GENERIC_EXECUTE              0x001200A0
 #define NFS4_ACE_MASK_ALL                     0x001F01FF
 
+#define NFS4_MAX_UINT64	(~(u64)0)
+
 enum nfs4_acl_whotype {
 	NFS4_ACL_WHO_NAMED = 0,
 	NFS4_ACL_WHO_OWNER,
@@ -105,16 +106,15 @@ struct nfs4_ace {
 	uint32_t	access_mask;
 	int		whotype;
 	uid_t		who;
-	struct list_head l_ace;
 };
 
 struct nfs4_acl {
 	uint32_t	naces;
-	struct list_head ace_head;
+	struct nfs4_ace	aces[0];
 };
 
 typedef struct { char data[NFS4_VERIFIER_SIZE]; } nfs4_verifier;
-typedef struct { char data[16]; } nfs4_stateid;
+typedef struct { char data[NFS4_STATEID_SIZE]; } nfs4_stateid;
 
 enum nfs_opnum4 {
 	OP_ACCESS = 3,

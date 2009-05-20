@@ -135,6 +135,36 @@ ddekit_pci_dev_t *ddekit_pci_find_device(int *bus, int *slot, int *func,
 	return NULL;
 }
 
+int ddekit_pci_read(int bus, int slot, int func, int pos, int len, ddekit_uint32_t *val)
+{
+	switch(len)
+	{
+		case 1:
+			return ddekit_pci_readb(bus, slot, func, pos, (ddekit_uint8_t *)val);
+		case 2:
+			return ddekit_pci_readw(bus, slot, func, pos, (ddekit_uint16_t *)val);
+		case 4:
+			return ddekit_pci_readl(bus, slot, func, pos, val);
+	}
+
+	return -1;
+}
+
+int ddekit_pci_write(int bus, int slot, int func, int pos, int len, ddekit_uint32_t val)
+{
+	switch(len)
+	{
+		case 1:
+			return ddekit_pci_writeb(bus, slot, func, pos, val);
+		case 2:
+			return ddekit_pci_writew(bus, slot, func, pos, val);
+		case 4:
+			return ddekit_pci_writel(bus, slot, func, pos, val);
+	}
+
+	return -1;
+}
+
 
 /** Find PCI device for a given (bus, slot, func) tuple.
 *
@@ -354,4 +384,9 @@ ddekit_pci_res_t *ddekit_pci_get_resource(struct ddekit_pci_dev *dev, unsigned i
 void ddekit_pci_set_master(struct ddekit_pci_dev *dev)
 {
 	l4io_pci_set_master(dev->l4dev.handle);
+}
+
+int ddekit_pci_irq_enable(int bus, int slot, int func, int pin, int *irq)
+{
+	return 0;
 }

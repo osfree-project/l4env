@@ -21,9 +21,12 @@ include: all_includes
 lib: all_libs
 
 all_includes:
+ifeq ($(BUILD_ARCH), x86)
 	$(VERBOSE)PWD=$(PWD)/include                 $(MAKE) -C include
 	$(VERBOSE)PWD=$(PWD)/linux26/include         $(MAKE) -C linux26/include
 	$(VERBOSE)PWD=$(PWD)/linux26/contrib/include $(MAKE) -C linux26/contrib/include
+	$(VERBOSE)PWD=$(PWD)/linux26/contrib/arch/$(BUILD_ARCH)/include $(MAKE) -C linux26/contrib/arch/$(BUILD_ARCH)/include
+endif
 
 all_libs:
 	$(VERBOSE)PWD=$(PWD)/ddekit/src              $(MAKE) -C ddekit/src

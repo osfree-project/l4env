@@ -70,11 +70,11 @@ int find_channel_for_skb(struct sk_buff *skb, int start)
         continue;
 
       // check for equality
-      if (mac_equal(ore_connection_table[i].mac, skb->mac.raw))
+      if (mac_equal(ore_connection_table[i].mac, skb->mac_header))
         return i;
 
       // check for broadcast
-      if (mac_equal(skb->mac.raw, broadcast_mac)
+      if (mac_equal(skb->mac_header, broadcast_mac)
           && ore_connection_table[i].config.rw_broadcast)
         return i;
     }

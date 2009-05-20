@@ -28,9 +28,6 @@
 #include <linux/skbuff.h>
 #include <net/sock.h>
 
-#define MIP6_OPT_PAD_1	0
-#define MIP6_OPT_PAD_N	1
-
 /*
  * Mobility Header
  */
@@ -53,9 +50,5 @@ struct ip6_mh {
 #define IP6_MH_TYPE_BACK	6   /* Binding ACK */
 #define IP6_MH_TYPE_BERROR	7   /* Binding Error */
 #define IP6_MH_TYPE_MAX		IP6_MH_TYPE_BERROR
-
-extern int mip6_init(void);
-extern void mip6_fini(void);
-extern int mip6_mh_filter(struct sock *sk, struct sk_buff *skb);
 
 #endif

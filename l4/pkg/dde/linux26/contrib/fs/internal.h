@@ -9,9 +9,8 @@
  * 2 of the License, or (at your option) any later version.
  */
 
-#include <linux/ioctl32.h>
-
 struct super_block;
+struct linux_binprm;
 
 /*
  * block_dev.c
@@ -42,14 +41,22 @@ static inline int sb_is_blkdev_sb(struct super_block *sb)
 extern void __init chrdev_init(void);
 
 /*
- * compat_ioctl.c
+ * exec.c
  */
-#ifdef CONFIG_COMPAT
-extern struct ioctl_trans ioctl_start[];
-extern int ioctl_table_size;
-#endif
+extern void check_unsafe_exec(struct linux_binprm *, struct files_struct *);
 
 /*
  * namespace.c
  */
 extern int copy_mount_options(const void __user *, unsigned long *);
+
+extern void free_vfsmnt(struct vfsmount *);
+extern struct vfsmount *alloc_vfsmnt(const char *);
+extern struct vfsmount *__lookup_mnt(struct vfsmount *, struct dentry *, int);
+extern void mnt_set_mountpoint(struct vfsmount *, struct dentry *,
+				struct vfsmount *);
+extern void release_mounts(struct list_head *);
+extern void umount_tree(struct vfsmount *, int, struct list_head *);
+extern struct vfsmount *copy_tree(struct vfsmount *, struct dentry *, int);
+
+extern void __init mnt_init(void);

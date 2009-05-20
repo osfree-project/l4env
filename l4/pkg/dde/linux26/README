@@ -1,4 +1,4 @@
-  This is DDELinux 2.6
+  This is DDELinux 2.6.29
 
 Directory structure
 ###################
@@ -6,15 +6,9 @@ Directory structure
 'contrib/'
 ==========
 
-This directory tree holds unmodified Linux sources. The files residing here are
-sourced by Makefiles in 'examples' and 'lib'. All unmodified C headers are also
-kept here.
-
-
-'examples/'
-==========
-
-Here reside test code and example drivers.
+This directory tree holds unmodified Linux sources. The files residing here
+are sourced by Makefiles in 'examples' and 'lib'. All unmodified C headers are
+also kept here.
 
 
 'include/'
@@ -23,17 +17,30 @@ Here reside test code and example drivers.
 Currently reimplemented and modified C headers as well as the DDELinux 2.6 API
 definition are kept in this directory tree.
 
-
-'lib/src/<linux subdir name>'
-=============================
-
-When taking a function from Linux, the complete Linux file it belongs to is
-copied to 'lib/src/<linux subdir name>' if only parts of the file are used by
-DDELinux and others are commented out ('#ifndef DDE_LINUX...#endif').
+Include stuff works as following. First, we install all Linux headers from
+contrib/include to the build directory. Thereafter, we pull in our
+modifications by installing all header files from include/ to the appropriate
+include paths, thereby overwriting the original versions. 
 
 
 'lib/src/arch/l4'
 =================
 
-Implementations that map Linux functions to DDEKit reside here. This code does
-_not_ contain any Linux code, but only reimplements some functions
+Contains reimplementations of Linux functions that are implemented differently
+in our environment or that are mapped to DDEKit calls. There are no Linux
+functions included here.
+
+
+'lib/src/<linux subdir name>'
+=============================
+
+When we import functions from Linux instead of reimplementing them, we copy
+the whole Linux source file containing this function to this location. We then
+modify the file according to our needs, mostly by wrapping unneeded parts with
+'#ifndef DDE_LINUX .. #endif' blocks.
+
+
+'examples/'
+==========
+
+Here reside test code and example drivers.

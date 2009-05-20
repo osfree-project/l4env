@@ -1,0 +1,1 @@
+#LIBS += -lferret_client -lferret_producer -lferret_util -lferret_comm -lferret_fpages -lferret_local_names

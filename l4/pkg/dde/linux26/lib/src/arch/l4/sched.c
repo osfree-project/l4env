@@ -55,7 +55,11 @@ void __sched yield(void)
  */
 int try_to_wake_up(struct task_struct *p, unsigned int state, int sync)
 {
+	Assert(p);
 	dde26_thread_data *t = lxtask_to_ddethread(p);
+
+	Assert(t);
+	Assert(SLEEP_LOCK(t));
 
 	p->state = TASK_RUNNING;
 	ddekit_sem_up(SLEEP_LOCK(t));
@@ -70,7 +74,7 @@ static void process_timeout(unsigned long data)
 }
 
 
-fastcall signed long __sched schedule_timeout(signed long timeout)
+signed long __sched schedule_timeout(signed long timeout)
 {
 	struct timer_list timer;
 	unsigned long expire = timeout + jiffies;
@@ -78,9 +82,24 @@ fastcall signed long __sched schedule_timeout(signed long timeout)
 	setup_timer(&timer, process_timeout, (unsigned long)current);
 	timer.expires = expire;
 
-	add_timer(&timer);
-	schedule();
-	del_timer(&timer);
+	switch(timeout)
+	{
+		/*
+		 * Hah!
+		 *
+		 * Specifying a @timeout value of %MAX_SCHEDULE_TIMEOUT will schedule
+		 * the CPU away without a bound on the timeout. In this case the return
+		 * value will be %MAX_SCHEDULE_TIMEOUT.
+		 */
+		case MAX_SCHEDULE_TIMEOUT:
+			schedule();
+			break;
+		default:
+			add_timer(&timer);
+			schedule();
+			del_timer(&timer);
+			break;
+	}
 
 	timeout = expire - jiffies;
 
@@ -105,14 +124,14 @@ signed long __sched schedule_timeout_uninterruptible(signed long timeout)
  *  we only emulate a SMP-environment for the sake of having multiple
  *  threads, we do not need to implement this.
  */
-int set_cpus_allowed(struct task_struct *p, cpumask_t new_mask)
+int set_cpus_allowed_ptr(struct task_struct *p, const struct cpumask *new_mask)
 {
 	return 0;
 }
 
 void set_user_nice(struct task_struct *p, long nice)
 {
-	WARN_UNIMPL;
+	//WARN_UNIMPL;
 }
 
 void __sched io_schedule(void)
@@ -125,3 +144,12 @@ long __sched io_schedule_timeout(long timeout)
 	WARN_UNIMPL;
 	return -1;
 }
+
+extern int sched_setscheduler_nocheck(struct task_struct *t, int flags,
+									  struct sched_param *p)
+{
+	WARN_UNIMPL;
+	return -1;
+}
+
+void ignore_signals(struct task_struct *t) { }

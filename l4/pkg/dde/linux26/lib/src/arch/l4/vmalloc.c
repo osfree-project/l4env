@@ -24,7 +24,7 @@ void *vmalloc(unsigned long size)
 	return ddekit_simple_malloc(size);
 }
 
-void vfree(void *addr)
+void vfree(const void *addr)
 {
-	ddekit_simple_free(addr);
+	ddekit_simple_free((void*)addr);
 }
