@@ -3,6 +3,11 @@
 
 #include <l4/dde/ddekit/thread.h>
 
+enum
+{
+	DDEKIT_INVALID_TIMER_ID = -1,
+};
+
 /** \defgroup DDEKit_timer 
  *
  * Timer subsystem

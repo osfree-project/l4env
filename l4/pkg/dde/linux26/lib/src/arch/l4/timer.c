@@ -45,7 +45,7 @@ static DEFINE_PER_CPU(struct tvec_base *, tvec_bases) __attribute__((unused)) = 
 
 void init_timer(struct timer_list *timer)
 {
-	timer->ddekit_timer_id = -1;
+	timer->ddekit_timer_id = DDEKIT_INVALID_TIMER_ID;
 }
 
 void add_timer(struct timer_list *timer)
@@ -67,8 +67,12 @@ void add_timer_on(struct timer_list *timer, int cpu)
 
 int del_timer(struct timer_list * timer)
 {
+	int ret;
 	CHECK_INITVAR(dde26_timer);
-	return (ddekit_del_timer(timer->ddekit_timer_id) >= 0);
+	ret = ddekit_del_timer(timer->ddekit_timer_id);
+	timer->ddekit_timer_id = DDEKIT_INVALID_TIMER_ID;
+
+	return ret >= 0;
 }
 
 int del_timer_sync(struct timer_list *timer)
@@ -108,7 +112,7 @@ int timer_pending(const struct timer_list *timer)
 	/* There must be a valid DDEKit timer ID in the timer field
 	 * *AND* it must be pending in the DDEKit.
 	 */
-	return ((timer->ddekit_timer_id >= 0) 
+	return ((timer->ddekit_timer_id != DDEKIT_INVALID_TIMER_ID) 
 	        && ddekit_timer_pending(timer->ddekit_timer_id));
 }
 
