@@ -108,7 +108,7 @@ Cpu:: set_cs ()
 PUBLIC static inline
 void
 Cpu::set_ss (Unsigned32 val)
-{ asm volatile ("movl %0, %%ss" : : "rm" (val)); }
+{ asm volatile ("movl %0, %%ss" : : "r" (val)); }
 
 PUBLIC static inline
 void
