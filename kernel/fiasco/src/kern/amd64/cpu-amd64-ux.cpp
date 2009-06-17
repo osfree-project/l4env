@@ -95,7 +95,7 @@ Unsigned64
 Cpu::get_flags()
 {
   Unsigned64 efl;
-  asm volatile ("pushf ; popq %0" : "=rm"(efl));
+  asm volatile ("pushf ; popq %0" : "=r"(efl));
   return efl;
 }
 

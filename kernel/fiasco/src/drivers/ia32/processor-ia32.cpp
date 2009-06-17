@@ -13,7 +13,7 @@ IMPLEMENT static inline
 Mword Proc::program_counter ()
 {
   Mword pc;
-  asm volatile ("call 1f ; 1: pop %0" : "=rm"(pc));
+  asm volatile ("call 1f ; 1: pop %0" : "=r"(pc));
   return pc;
 }
 

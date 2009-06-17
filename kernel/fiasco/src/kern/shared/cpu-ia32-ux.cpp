@@ -111,7 +111,7 @@ Cpu::rdtsc (void)
 PUBLIC static inline
 Unsigned32
 Cpu::get_flags()
-{ Unsigned32 efl; asm volatile ("pushfl ; popl %0" : "=rm"(efl)); return efl; }
+{ Unsigned32 efl; asm volatile ("pushfl ; popl %0" : "=r"(efl)); return efl; }
 
 PUBLIC static inline
 void
