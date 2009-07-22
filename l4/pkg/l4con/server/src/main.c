@@ -570,7 +570,10 @@ con_if_openqry_component (CORBA_Object _dice_corba_obj,
   vc_tid = l4thread_create_long(L4THREAD_INVALID_ID,
 				(l4thread_fn_t) vc_loop, name,
 				L4THREAD_INVALID_SP, L4THREAD_DEFAULT_SIZE,
-				priority, (void *) vc[vc_num],
+                                // priority is reduced to 0xff by the char
+                                // parameter...
+				priority == 0xff ? L4THREAD_DEFAULT_PRIO : priority,
+                                (void *) vc[vc_num],
 				L4THREAD_CREATE_SYNC);
 
   vc_l4id = l4thread_l4_id(vc_tid);
