@@ -416,7 +416,7 @@ uninstall-am:
 @HAS_LATEX_TRUE@manual.pdf:	$(TEXFILES)
 
 version.tex:
-	@${ECHO} \\newcommand{\\Version}{${VERSION}} > $@
+	@/bin/echo '\newcommand{\Version}{$(VERSION)}' > $@
 
 tex-stamp: $(TEXFILES)
 	@${ECHO} Generating tex-stamp ...

@@ -94,7 +94,7 @@ manual.pdf:	$(TEXFILES)
 endif
 
 version.tex:
-	@${ECHO} \\newcommand{\\Version}{${VERSION}} > $@
+	@/bin/echo '\newcommand{\Version}{$(VERSION)}' > $@
 
 tex-stamp: $(TEXFILES)
 	@${ECHO} Generating tex-stamp ...

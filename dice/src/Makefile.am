@@ -43,9 +43,9 @@ dice_LDADD=	\
 		-lstdc++ $(LIBLTDL)
 
 if HOST_DARWIN
-# Darwin's _toupper and _tolower are macros, so using these as function
-# pointers creates a linker error, which we avoid with some symbol mapping.
-dice_LDFLAGS =
+# FIXME: we need to get something equivalent to -export-dynamic for the
+# tracing library in the dice-testsuite package to link properly
+# (this uses reverse linking of dice symbols into a dlopen()ed plugin)
 else
 dice_LDFLAGS = -export-dynamic
 endif
