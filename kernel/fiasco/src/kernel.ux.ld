@@ -26,6 +26,9 @@ SECTIONS {
 
   .rodata : {
     *(.rodata .rodata.* .gnu.linkonce.r.*)
+    /* Discarding the build-id section will yield to an error from the
+     * linker so just put it here */
+    *(.note.gnu.build-id)
   }
 
   .preinit_array : {
