@@ -172,7 +172,7 @@ kconfig_call = $(MAKE) -C $(tooldir)/kconfig O=$(objbase) \
 	       KCONFIG_CONFIG=globalconfig.out \
 	       KCONFIG_AUTOCONFIG=config/auto.conf \
 	       KERNELVERSION=SVN MENUCONFIG_COLOR=blackbg \
-	       fiasco_srcdir=$(srcdir)
+	       fiasco_srcdir=$(srcdir)/..
 
 $(KCONFIG_FILE): $(KCONFIG_SRC_FILE) $(KCONFIG_BSP_FILES) $(srcdir)/Makefile
 	@$(tooldir)/gen_kconfig $(KCONFIG_SRC_FILE) $(KCONFIG_FILE) $(KCONFIG_BSP_FILES)
