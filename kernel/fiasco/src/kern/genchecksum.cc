@@ -99,7 +99,8 @@ read_byte(int fd, unsigned *byte)
   
   for (i=0; i<2; i++)
     {
-      char c, *idx;
+      char c;
+      const char *idx;
       
       if (! this_char(fd, &c))
 	return 0;
