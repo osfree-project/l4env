@@ -366,6 +366,8 @@ base_cpu_setup(void)
   base_idt_init();
   base_gdt_init();
   base_tss_init();
+  // force tables to memory before loading segment registers
+  asm volatile ("" : : : "memory");
   base_gdt_load();
   base_idt_load();
   base_tss_load();
