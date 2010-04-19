@@ -77,7 +77,7 @@ task_trampoline(l4_addr_t entry, void* mbi)
   /* NORETURN */
 }
 
-#elif
+#else
 
 #error Unknown architecture!
 
