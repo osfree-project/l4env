@@ -227,7 +227,7 @@ Boot_info::init()
             unsigned len;
             if (owner + 1 == modcount)
               {
-                if ((cmd = strchr (_modules[owner], ' ')))
+                if ((cmd = strchr (const_cast<char *>(_modules[owner]), ' ')))
                   *cmd = 0;
 
                 if ((ptr = strrchr (_modules[owner], '/')))
@@ -460,7 +460,7 @@ Boot_info::init()
         continue;
 
       // Cut off between module name and command line
-      if ((cmd = strchr (*m, ' ')))
+      if ((cmd = strchr (const_cast<char *>(*m), ' ')))
         *cmd = 0;
 
       if (m == _modules)
