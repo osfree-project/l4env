@@ -34,7 +34,7 @@ IMPLEMENTATION:
 #include "initcalls.h"
 #include "std_macros.h"
 
-Irq_alloc::Irq_alloc *Irq_alloc::irqs[Config::Max_num_irqs];
+Irq_alloc *Irq_alloc::irqs[Config::Max_num_irqs];
 
 IMPLEMENT FIASCO_INIT FIASCO_NOINLINE 
 void 
