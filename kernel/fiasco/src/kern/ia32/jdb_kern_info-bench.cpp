@@ -477,7 +477,7 @@ Jdb_kern_info_bench::show()
       asm volatile ("call  *%%ecx"
 		    : "=a"(dummy)
 		    : "c"(Mem_layout::Jdb_bench_page + 0xff0), "a"(200000)
-		    : "edx");
+		    : "edx", "memory");
 
       time = Cpu::rdtsc() - time - time_reload_cr3;
       show_time (time, 200000, "load code TLB (4k)");
