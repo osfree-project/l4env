@@ -49,7 +49,7 @@ installscript = perl -e '                                                     \
   chomp($$srcdir="$(INCSRC_DIR)");                                            \
   $$notify=1;                                                                 \
   while(<>) {                                                                 \
-    split; while(@_) {                                                        \
+    @_ = split; while(@_) {                                                        \
       $$_=shift @_; s|^\./||; $$src=$$_;                                      \
       if(s|^ARCH-([^/]*)/L4API-([^/]*)/([^ ]*)$$|\1/\2/$(INSTALL_INC_PREFIX)/\3| ||\
 	 s|^ARCH-([^/]*)/([^ ]*)$$|\1/$(INSTALL_INC_PREFIX)/\2| ||            \
